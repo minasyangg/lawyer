@@ -1,0 +1,27 @@
+// Prisma schema for Service table
+// SQLite database
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Service {
+  id          Int              @id @default(autoincrement())
+  title       String
+  description String
+  extraInfo   String?
+  details     ServiceDetails[]
+}
+
+model ServiceDetails {
+  id          Int     @id @default(autoincrement())
+  category    String
+  services    String
+  serviceId   Int?
+  service     Service? @relation(fields: [serviceId], references: [id])
+}
