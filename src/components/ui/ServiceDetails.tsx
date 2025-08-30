@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 
 export interface ServiceDetailsProps {
   fullDescription: string;
@@ -68,7 +69,7 @@ export default function ServiceDetails({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {portfolio.map((item, idx) => (
               <a key={idx} href={item.link || "#"} target="_blank" rel="noopener noreferrer" className="block">
-                <img src={item.image} alt={item.title} className="rounded-lg w-full h-40 object-cover mb-2" />
+                <Image src={item.image} alt={item.title} className="rounded-lg w-full h-40 object-cover mb-2" width={300} height={160} />
                 <div className="text-base font-medium text-gray-800 text-center">{item.title}</div>
               </a>
             ))}

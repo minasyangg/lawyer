@@ -4,7 +4,8 @@
       "Bash(claude config list)",
       "Bash(claude mcp add:*)",
       "Bash(claude mcp:*)",
-      "Bash(mcp list:*)"
+      "Bash(mcp list:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

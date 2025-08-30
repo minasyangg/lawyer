@@ -2,7 +2,7 @@
 
 import ServiceDescription, { ServiceDescriptionProps } from './ServiceDescription'
 
-interface ServiceDescriptionClientProps extends Omit<ServiceDescriptionProps, 'onOrder'> {}
+type ServiceDescriptionClientProps = Omit<ServiceDescriptionProps, 'onOrder'>
 
 export default function ServiceDescriptionClient(props: ServiceDescriptionClientProps) {
   const handleOrderService = () => {

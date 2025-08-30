@@ -27,8 +27,7 @@ export default async function ServicePage({ params }: ServicePageProps) {
     notFound()
   }
 
-  // Transform service details for ServiceDetails component
-  const serviceDetailsData = service.details.map(detail => detail.services).join('\n\n')
+  // Parse services into features array
   
   // Parse services into features array
   const features = service.details
