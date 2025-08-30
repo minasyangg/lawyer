@@ -1,14 +1,34 @@
-import { Users, LayoutDashboard, Settings } from "lucide-react"
+import { Users, LayoutDashboard, Settings, FileText } from "lucide-react"
 import Link from "next/link"
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import LogoutButton from '@/components/admin/LogoutButton'
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const cookieStore = await cookies()
+  const session = cookieStore.get('admin-session')
+  
+  // This layout only applies to protected admin routes
+  // Login page has its own layout
+  if (!session) {
+    redirect('/admin/login')
+  }
+  
+  let user
+  try {
+    user = JSON.parse(session.value)
+  } catch {
+    redirect('/admin/login')
+  }
+
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Users', href: '/admin/users', icon: Users },
+    { name: 'Articles', href: '/admin/articles', icon: FileText },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ]
 
@@ -37,14 +57,17 @@ export default function AdminLayout({
         </nav>
         
         <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-white text-sm font-bold">A</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                <span className="text-white text-sm font-bold">{user.name[0]}</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-700">{user.name}</p>
+                <p className="text-xs text-gray-500">{user.email}</p>
+              </div>
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-700">Admin</p>
-              <p className="text-xs text-gray-500">admin@example.com</p>
-            </div>
+            <LogoutButton />
           </div>
         </div>
       </div>
