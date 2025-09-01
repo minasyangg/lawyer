@@ -337,8 +337,15 @@ export function EditArticleForm({ article, services: initialServices }: EditArti
             </CardHeader>
             <CardContent>
               <Select 
-                value={categoryId?.toString() || ""} 
-                onValueChange={(value) => setCategoryId(value ? parseInt(value) : null)}
+                value={categoryId ? services.find(s => s.id === categoryId)?.title || "" : ""} 
+                onValueChange={(value) => {
+                  if (!value) {
+                    setCategoryId(null)
+                  } else {
+                    const selectedService = services.find(s => s.title === value)
+                    setCategoryId(selectedService ? selectedService.id : null)
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Выберите категорию" />
@@ -346,7 +353,7 @@ export function EditArticleForm({ article, services: initialServices }: EditArti
                 <SelectContent>
                   <SelectItem value="">Без категории</SelectItem>
                   {services.map((service) => (
-                    <SelectItem key={service.id} value={service.id.toString()}>
+                    <SelectItem key={service.id} value={service.title}>
                       {service.title}
                     </SelectItem>
                   ))}
