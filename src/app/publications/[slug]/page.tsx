@@ -96,10 +96,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           <div className="prose prose-lg max-w-none mb-12">
             <div 
               className="text-gray-800 leading-relaxed"
-              style={{ whiteSpace: 'pre-wrap' }}
-            >
-              {article.content}
-            </div>
+              dangerouslySetInnerHTML={{ __html: article.content }}
+            />
           </div>
 
           {/* Related Articles */}
