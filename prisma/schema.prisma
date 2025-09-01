@@ -36,6 +36,8 @@ model User {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   articles  Article[]
+  files     File[]
+  folders   Folder[]
 }
 
 model Article {
@@ -52,4 +54,58 @@ model Article {
   
   author      User     @relation(fields: [authorId], references: [id])
   category    Service? @relation(fields: [categoryId], references: [id])
+  tags        ArticleTag[]
+}
+
+model Tag {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  slug        String   @unique
+  color       String?
+  createdAt   DateTime @default(now())
+  
+  articles    ArticleTag[]
+}
+
+model ArticleTag {
+  articleId   Int
+  tagId       Int
+  
+  article     Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag         Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  @@id([articleId, tagId])
+}
+
+model File {
+  id          Int      @id @default(autoincrement())
+  originalName String
+  filename     String   @unique
+  path         String
+  mimeType     String
+  size         Int
+  uploadedBy   Int
+  folderId     Int?
+  createdAt    DateTime @default(now())
+  
+  uploader     User     @relation(fields: [uploadedBy], references: [id])
+  folder       Folder?  @relation(fields: [folderId], references: [id])
+  
+  @@index([uploadedBy])
+}
+
+model Folder {
+  id          Int      @id @default(autoincrement())
+  name        String
+  path        String
+  ownerId     Int
+  parentId    Int?
+  createdAt   DateTime @default(now())
+  
+  owner       User     @relation(fields: [ownerId], references: [id])
+  parent      Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children    Folder[] @relation("FolderHierarchy")
+  files       File[]
+  
+  @@unique([ownerId, path])
 }

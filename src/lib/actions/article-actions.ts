@@ -36,6 +36,12 @@ export type Article = {
     id: number
     title: string
   } | null
+  tags: {
+    id: number
+    name: string
+    slug: string
+    color: string | null
+  }[]
 }
 
 export async function getArticles(): Promise<Article[]> {
@@ -54,11 +60,27 @@ export async function getArticles(): Promise<Article[]> {
             id: true,
             title: true,
           }
+        },
+        tags: {
+          include: {
+            tag: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                color: true
+              }
+            }
+          }
         }
       },
       orderBy: { createdAt: 'desc' }
     })
-    return articles
+    
+    return articles.map(article => ({
+      ...article,
+      tags: article.tags.map(at => at.tag)
+    }))
   } catch (error) {
     console.error('Error fetching articles:', error)
     throw new Error('Failed to fetch articles')
@@ -85,12 +107,28 @@ export async function getPublishedArticles(categoryId?: number, limit?: number):
             id: true,
             title: true,
           }
+        },
+        tags: {
+          include: {
+            tag: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                color: true
+              }
+            }
+          }
         }
       },
       orderBy: { createdAt: 'desc' },
       take: limit
     })
-    return articles
+    
+    return articles.map(article => ({
+      ...article,
+      tags: article.tags.map(at => at.tag)
+    }))
   } catch (error) {
     console.error('Error fetching published articles:', error)
     throw new Error('Failed to fetch published articles')
@@ -114,10 +152,28 @@ export async function getArticleById(id: number): Promise<Article | null> {
             id: true,
             title: true,
           }
+        },
+        tags: {
+          include: {
+            tag: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                color: true
+              }
+            }
+          }
         }
       }
     })
-    return article
+    
+    if (!article) return null
+    
+    return {
+      ...article,
+      tags: article.tags.map(at => at.tag)
+    }
   } catch (error) {
     console.error('Error fetching article:', error)
     throw new Error('Failed to fetch article')
@@ -141,10 +197,28 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
             id: true,
             title: true,
           }
+        },
+        tags: {
+          include: {
+            tag: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                color: true
+              }
+            }
+          }
         }
       }
     })
-    return article
+    
+    if (!article) return null
+    
+    return {
+      ...article,
+      tags: article.tags.map(at => at.tag)
+    }
   } catch (error) {
     console.error('Error fetching article by slug:', error)
     throw new Error('Failed to fetch article')

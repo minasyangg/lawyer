@@ -10,11 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ArticleDialog } from "./ArticleDialog"
 import { DeleteArticleDialog } from "./DeleteArticleDialog"
 import { Article } from "@/lib/actions/article-actions"
 import { useState } from "react"
 import { toggleArticlePublished } from "@/lib/actions/article-actions"
+import Link from "next/link"
 
 interface ArticleTableProps {
   articles: Article[]
@@ -22,9 +22,7 @@ interface ArticleTableProps {
   users: { id: number; name: string }[]
 }
 
-export function ArticleTable({ articles, services, users }: ArticleTableProps) {
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [editArticle, setEditArticle] = useState<Article | null>(null)
+export function ArticleTable({ articles }: ArticleTableProps) {
   const [deleteArticle, setDeleteArticle] = useState<Article | null>(null)
 
   const formatDate = (date: Date) => {
@@ -48,10 +46,12 @@ export function ArticleTable({ articles, services, users }: ArticleTableProps) {
           <h3 className="text-lg font-semibold">Articles Management</h3>
           <p className="text-sm text-gray-600">Create and manage articles for your website</p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Article
-        </Button>
+        <Link href="/admin/articles/create">
+          <Button>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Article
+          </Button>
+        </Link>
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
@@ -115,13 +115,14 @@ export function ArticleTable({ articles, services, users }: ArticleTableProps) {
                   <TableCell>{formatDate(article.createdAt)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditArticle(article)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
+                      <Link href={`/admin/articles/${article.id}/edit`}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </Link>
                       <Button
                         variant="destructive"
                         size="sm"
@@ -138,21 +139,6 @@ export function ArticleTable({ articles, services, users }: ArticleTableProps) {
         </Table>
       </div>
 
-      <ArticleDialog
-        open={isCreateOpen}
-        onOpenChange={setIsCreateOpen}
-        article={null}
-        services={services}
-        users={users}
-      />
-      
-      <ArticleDialog
-        open={!!editArticle}
-        onOpenChange={() => setEditArticle(null)}
-        article={editArticle}
-        services={services}
-        users={users}
-      />
 
       <DeleteArticleDialog
         open={!!deleteArticle}

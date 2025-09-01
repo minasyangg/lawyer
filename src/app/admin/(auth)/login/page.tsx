@@ -21,6 +21,8 @@ export default function AdminLogin() {
     const password = formData.get('password') as string
 
     try {
+      console.log('Attempting login with:', { email, password: '***' })
+      
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -30,14 +32,18 @@ export default function AdminLogin() {
       })
 
       const result = await response.json()
+      console.log('Login response:', { status: response.status, result })
 
       if (response.ok && result.success) {
+        console.log('Login successful, redirecting...')
         router.push('/admin')
         router.refresh()
       } else {
+        console.log('Login failed:', result.error)
         setError(result.error || 'Invalid credentials')
       }
-    } catch {
+    } catch (error) {
+      console.error('Login error:', error)
       setError('Something went wrong')
     } finally {
       setIsLoading(false)
@@ -94,7 +100,7 @@ export default function AdminLogin() {
 
         <div className="mt-6 text-center text-sm text-gray-500">
           <p>Demo credentials:</p>
-          <p>Email: admin@example.com</p>
+          <p>Email: admin@lawyer.com</p>
           <p>Password: admin123</p>
         </div>
       </div>
