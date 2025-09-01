@@ -19,6 +19,8 @@ import { FileManager } from "./FileManager"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { Article } from "@/lib/actions/article-actions"
+import { generateSlug, isValidSlug } from "@/lib/utils/slug-utils"
+import { useCallback, useRef } from "react"
 
 interface Service {
   id: number
@@ -61,8 +63,40 @@ export function EditArticleForm({ article, services: initialServices }: EditArti
   const [services] = useState<Service[]>(initialServices)
   const [loading, setLoading] = useState(false)
   const [fileManagerOpen, setFileManagerOpen] = useState(false)
+  const [isCheckingSlug, setIsCheckingSlug] = useState(false)
+  const slugCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
   const router = useRouter()
+
+  type CheckSlugResponse = {
+    success: boolean
+    available: boolean
+    message?: string
+  }
+
+  const checkSlugAvailability = useCallback(async (slugToCheck: string): Promise<void> => {
+    if (!slugToCheck.trim() || !isValidSlug(slugToCheck)) return
+
+    setIsCheckingSlug(true)
+    
+    try {
+      const response = await fetch('/api/articles/check-slug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: slugToCheck, excludeId: article.id })
+      })
+      
+      const data: CheckSlugResponse = await response.json()
+      
+      if (data.success && !data.available && data.message) {
+        toast.error(data.message)
+      }
+    } catch (error) {
+      console.error('Ошибка проверки slug:', error)
+    } finally {
+      setIsCheckingSlug(false)
+    }
+  }, [article.id])
 
   useEffect(() => {
     setTitle(article.title)
@@ -80,6 +114,23 @@ export function EditArticleForm({ article, services: initialServices }: EditArti
   }, [article])
 
   useEffect(() => {
+    if (title) {
+      const generatedSlug = generateSlug(title)
+      if (generatedSlug && generatedSlug !== slug) {
+        setSlug(generatedSlug)
+        
+        if (slugCheckTimeoutRef.current) {
+          clearTimeout(slugCheckTimeoutRef.current)
+        }
+        
+        slugCheckTimeoutRef.current = setTimeout(() => {
+          checkSlugAvailability(generatedSlug)
+        }, 1000)
+      }
+    }
+  }, [title, slug, checkSlugAvailability])
+
+  useEffect(() => {
     const handleOpenFileManager = () => {
       setFileManagerOpen(true)
     }
@@ -87,6 +138,9 @@ export function EditArticleForm({ article, services: initialServices }: EditArti
     window.addEventListener('openFileManager', handleOpenFileManager)
     return () => {
       window.removeEventListener('openFileManager', handleOpenFileManager)
+      if (slugCheckTimeoutRef.current) {
+        clearTimeout(slugCheckTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -130,6 +184,7 @@ export function EditArticleForm({ article, services: initialServices }: EditArti
       setLoading(false)
     }
   }
+
 
   const handleDelete = async () => {
     if (!confirm('Вы уверены, что хотите удалить эту статью? Это действие нельзя отменить.')) {
@@ -181,14 +236,25 @@ export function EditArticleForm({ article, services: initialServices }: EditArti
               </div>
 
               <div>
-                <Label htmlFor="slug">Слаг *</Label>
+                <Label htmlFor="slug">
+                  Слаг * 
+                  {isCheckingSlug && (
+                    <span className="ml-2 text-xs text-gray-500">проверяется...</span>
+                  )}
+                </Label>
                 <Input
                   id="slug"
                   value={slug}
-                  onChange={(e) => setSlug(e.target.value)}
-                  placeholder="url-статьи"
+                  readOnly
+                  placeholder="url-статьи (генерируется автоматически)"
                   required
+                  className="bg-gray-50 cursor-not-allowed"
                 />
+                {slug && !isValidSlug(slug) && (
+                  <p className="text-xs text-red-600 mt-1">
+                    Слаг может содержать только латинские буквы, цифры и дефисы
+                  </p>
+                )}
               </div>
 
               <div>
