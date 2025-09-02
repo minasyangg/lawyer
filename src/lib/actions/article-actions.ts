@@ -4,6 +4,22 @@ import { PrismaClient } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
+interface DocumentItem {
+  id: number
+  name: string
+  url: string
+  size: number
+  mimeType: string
+}
+
+interface ActionError {
+  errors: { [key: string]: string[] } | { general: string[] }
+}
+
+interface ActionSuccess {
+  success: boolean
+}
+
 const prisma = new PrismaClient()
 
 const ArticleSchema = z.object({
@@ -27,6 +43,7 @@ export type Article = {
   authorId: number
   createdAt: Date
   updatedAt: Date
+  documents?: DocumentItem[]
   author: {
     id: number
     name: string
@@ -47,7 +64,18 @@ export type Article = {
 export async function getArticles(): Promise<Article[]> {
   try {
     const articles = await prisma.article.findMany({
-      include: {
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        excerpt: true,
+        slug: true,
+        published: true,
+        categoryId: true,
+        authorId: true,
+        createdAt: true,
+        updatedAt: true,
+        documents: true,
         author: {
           select: {
             id: true,
@@ -79,7 +107,8 @@ export async function getArticles(): Promise<Article[]> {
     
     return articles.map(article => ({
       ...article,
-      tags: article.tags.map(at => at.tag)
+      tags: article.tags.map(at => at.tag),
+      documents: Array.isArray(article.documents) ? (article.documents as unknown as DocumentItem[]) : undefined
     }))
   } catch (error) {
     console.error('Error fetching articles:', error)
@@ -94,7 +123,18 @@ export async function getPublishedArticles(categoryId?: number, limit?: number):
         published: true,
         ...(categoryId ? { categoryId } : {})
       },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        excerpt: true,
+        slug: true,
+        published: true,
+        categoryId: true,
+        authorId: true,
+        createdAt: true,
+        updatedAt: true,
+        documents: true,
         author: {
           select: {
             id: true,
@@ -127,7 +167,8 @@ export async function getPublishedArticles(categoryId?: number, limit?: number):
     
     return articles.map(article => ({
       ...article,
-      tags: article.tags.map(at => at.tag)
+      tags: article.tags.map(at => at.tag),
+      documents: Array.isArray(article.documents) ? (article.documents as unknown as DocumentItem[]) : undefined
     }))
   } catch (error) {
     console.error('Error fetching published articles:', error)
@@ -139,7 +180,18 @@ export async function getArticleById(id: number): Promise<Article | null> {
   try {
     const article = await prisma.article.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        excerpt: true,
+        slug: true,
+        published: true,
+        categoryId: true,
+        authorId: true,
+        createdAt: true,
+        updatedAt: true,
+        documents: true,
         author: {
           select: {
             id: true,
@@ -172,7 +224,8 @@ export async function getArticleById(id: number): Promise<Article | null> {
     
     return {
       ...article,
-      tags: article.tags.map(at => at.tag)
+      tags: article.tags.map(at => at.tag),
+      documents: Array.isArray(article.documents) ? (article.documents as unknown as DocumentItem[]) : undefined
     }
   } catch (error) {
     console.error('Error fetching article:', error)
@@ -184,7 +237,18 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
   try {
     const article = await prisma.article.findUnique({
       where: { slug, published: true },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        excerpt: true,
+        slug: true,
+        published: true,
+        categoryId: true,
+        authorId: true,
+        createdAt: true,
+        updatedAt: true,
+        documents: true,
         author: {
           select: {
             id: true,
@@ -217,7 +281,8 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
     
     return {
       ...article,
-      tags: article.tags.map(at => at.tag)
+      tags: article.tags.map(at => at.tag),
+      documents: Array.isArray(article.documents) ? (article.documents as unknown as DocumentItem[]) : undefined
     }
   } catch (error) {
     console.error('Error fetching article by slug:', error)
@@ -234,7 +299,7 @@ function generateSlug(title: string): string {
     .trim()
 }
 
-export async function createArticle(data: FormData) {
+export async function createArticle(data: FormData): Promise<ActionSuccess | ActionError> {
   const title = data.get('title') as string
   
   const validatedFields = ArticleSchema.safeParse({
@@ -276,7 +341,7 @@ export async function createArticle(data: FormData) {
   }
 }
 
-export async function updateArticle(id: number, data: FormData) {
+export async function updateArticle(id: number, data: FormData): Promise<ActionSuccess | ActionError> {
   const title = data.get('title') as string
   
   const validatedFields = ArticleSchema.safeParse({
@@ -319,7 +384,7 @@ export async function updateArticle(id: number, data: FormData) {
   }
 }
 
-export async function deleteArticle(id: number) {
+export async function deleteArticle(id: number): Promise<ActionSuccess | ActionError> {
   try {
     await prisma.article.delete({
       where: { id }
@@ -336,7 +401,7 @@ export async function deleteArticle(id: number) {
   }
 }
 
-export async function toggleArticlePublished(id: number) {
+export async function toggleArticlePublished(id: number): Promise<ActionSuccess | ActionError> {
   try {
     const article = await prisma.article.findUnique({
       where: { id }

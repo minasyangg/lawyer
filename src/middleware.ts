@@ -48,6 +48,13 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Защищаем доступ к загруженным файлам
+  if (pathname.startsWith('/uploads/')) {
+    // Для простоты, пока разрешаем доступ ко всем файлам из uploads
+    // В продакшене нужно добавить проверку на использование файла в опубликованных статьях
+    return NextResponse.next()
+  }
+
   return NextResponse.next()
 }
 
@@ -56,6 +63,7 @@ export const config = {
     '/api/files/:path*',
     '/api/upload/:path*', 
     '/api/tags/:path*',
-    '/admin/:path*'
+    '/admin/:path*',
+    '/uploads/:path*'
   ]
 }

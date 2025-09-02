@@ -2,7 +2,7 @@ import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import crypto from 'crypto'
 
-export const UPLOAD_DIR = join(process.cwd(), 'private/uploads')
+export const UPLOAD_DIR = join(process.cwd(), 'public/uploads')
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
 export const ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -29,9 +29,30 @@ export async function saveFile(buffer: Buffer, filename: string, userId: number)
   const filePath = join(userDir, filename)
   await writeFile(filePath, buffer)
   
-  return filePath
+  // Возвращаем относительный путь от public для статических файлов
+  const relativePath = `uploads/user_${userId}/${filename}`
+  return relativePath
 }
 
 export function getUserUploadPath(userId: number): string {
   return join(UPLOAD_DIR, `user_${userId}`)
+}
+
+export function getPublicFileUrl(filePath: string): string {
+  // Если путь уже относительный (начинается с uploads/), просто добавляем слеш
+  if (filePath.startsWith('uploads/')) {
+    return '/' + filePath
+  }
+  
+  // Если абсолютный путь, преобразуем в относительный
+  const publicDir = join(process.cwd(), 'public')
+  let relativePath = filePath.replace(publicDir, '')
+  
+  // Убираем начальный слеш если есть и добавляем правильный
+  relativePath = relativePath.replace(/^[\\/]/, '')
+  
+  // Заменяем Windows backslashes на forward slashes
+  const url = '/' + relativePath.replace(/\\/g, '/')
+  
+  return url
 }

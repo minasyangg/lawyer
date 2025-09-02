@@ -11,6 +11,10 @@ import {
 } from "@/components/ui/dialog"
 import { deleteArticle, Article } from "@/lib/actions/article-actions"
 
+type ActionResult = 
+  | { success: true }
+  | { errors: { [key: string]: string[] } | { general: string[] } }
+
 interface DeleteArticleDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -30,11 +34,11 @@ export function DeleteArticleDialog({ open, onOpenChange, article }: DeleteArtic
     setError('')
 
     try {
-      const result = await deleteArticle(article.id)
+      const result: ActionResult = await deleteArticle(article.id) as ActionResult
       
-      if (result.success) {
+      if ('success' in result) {
         onOpenChange(false)
-      } else if (result.errors) {
+      } else if ('errors' in result) {
         setError(result.errors.general?.[0] || 'Failed to delete article')
       }
     } catch {

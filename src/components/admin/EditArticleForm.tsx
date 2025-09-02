@@ -16,6 +16,7 @@ import {
 import { RichTextEditor } from "./RichTextEditor"
 import { TagSelector } from "./TagSelector"
 import { FileManager } from "./FileManager"
+import { DocumentManager } from "./DocumentManager"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { Article } from "@/lib/actions/article-actions"
@@ -59,6 +60,17 @@ export function EditArticleForm({ article, services: initialServices }: EditArti
       ...tag,
       color: tag.color || undefined
     }))
+  )
+interface DocumentItem {
+  id: number
+  name: string
+  url: string
+  size: number
+  mimeType: string
+}
+
+  const [documents, setDocuments] = useState<DocumentItem[]>(
+    Array.isArray(article.documents) ? article.documents : []
   )
   const [services] = useState<Service[]>(initialServices)
   const [loading, setLoading] = useState(false)
@@ -111,6 +123,9 @@ export function EditArticleForm({ article, services: initialServices }: EditArti
         color: tag.color || undefined
       }))
     )
+    setDocuments(
+      Array.isArray(article.documents) ? article.documents : []
+    )
   }, [article])
 
   useEffect(() => {
@@ -131,13 +146,18 @@ export function EditArticleForm({ article, services: initialServices }: EditArti
   }, [title, slug, checkSlugAvailability])
 
   useEffect(() => {
-    const handleOpenFileManager = () => {
+    const handleOpenFileManager = (event: CustomEvent) => {
+      const { selectMode, onSelect } = event.detail || {}
       setFileManagerOpen(true)
+      // Сохраняем коллбэк для выбора файла
+      if (selectMode && onSelect) {
+        window.fileManagerSelectCallback = onSelect
+      }
     }
 
-    window.addEventListener('openFileManager', handleOpenFileManager)
+    window.addEventListener('openFileManager', handleOpenFileManager as EventListener)
     return () => {
-      window.removeEventListener('openFileManager', handleOpenFileManager)
+      window.removeEventListener('openFileManager', handleOpenFileManager as EventListener)
       if (slugCheckTimeoutRef.current) {
         clearTimeout(slugCheckTimeoutRef.current)
       }
@@ -146,6 +166,10 @@ export function EditArticleForm({ article, services: initialServices }: EditArti
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Дебаг: проверяем что именно триггерит submit
+    console.log('Form submitted, event target:', e.target, 'nativeEvent:', e.nativeEvent)
+    
     if (!title || !content || !slug) {
       toast.error('Заполните все обязательные поля')
       return
@@ -166,13 +190,15 @@ export function EditArticleForm({ article, services: initialServices }: EditArti
           slug,
           published,
           categoryId,
-          tagIds: selectedTags.map(tag => tag.id)
+          tagIds: selectedTags.map(tag => tag.id),
+          documents: documents.length > 0 ? documents : null
         }),
       })
 
       if (response.ok) {
         toast.success('Статья обновлена успешно')
-        router.push('/admin/articles')
+        // НЕ делаем редирект, остаемся на странице редактирования
+        // router.push('/admin/articles')
       } else {
         const error = await response.json()
         toast.error(error.error || 'Ошибка при обновлении статьи')
@@ -373,6 +399,11 @@ export function EditArticleForm({ article, services: initialServices }: EditArti
               />
             </CardContent>
           </Card>
+
+          <DocumentManager
+            documents={documents}
+            onDocumentsChange={setDocuments}
+          />
         </div>
       </div>
 

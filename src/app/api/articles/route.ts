@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
 
+interface DocumentItem {
+  id: number
+  name: string
+  url: string
+  size: number
+  mimeType: string
+}
+
 const prisma = new PrismaClient()
 
 export async function GET() {
@@ -39,7 +47,8 @@ export async function GET() {
     
     const articlesWithTags = articles.map(article => ({
       ...article,
-      tags: article.tags.map(at => at.tag)
+      tags: article.tags.map(at => at.tag),
+      documents: Array.isArray(article.documents) ? (article.documents as unknown as DocumentItem[]) : undefined
     }))
     
     return NextResponse.json({ articles: articlesWithTags })
@@ -74,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, content, excerpt, slug, published, categoryId, tagIds = [] } = body
+    const { title, content, excerpt, slug, published, categoryId, tagIds = [], documents = null } = body
 
     if (!title || !content || !slug) {
       return NextResponse.json(
@@ -104,6 +113,7 @@ export async function POST(request: NextRequest) {
         published: published || false,
         categoryId: categoryId || null,
         authorId: user.id,
+        documents: documents,
         tags: {
           create: tagIds.map((tagId: number) => ({
             tagId
@@ -141,7 +151,8 @@ export async function POST(request: NextRequest) {
 
     const articleWithTags = {
       ...article,
-      tags: article.tags.map(at => at.tag)
+      tags: article.tags.map(at => at.tag),
+      documents: Array.isArray(article.documents) ? (article.documents as unknown as DocumentItem[]) : undefined
     }
 
     return NextResponse.json(articleWithTags, { status: 201 })

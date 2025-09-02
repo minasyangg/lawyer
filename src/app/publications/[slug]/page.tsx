@@ -3,7 +3,16 @@ import Link from 'next/link'
 import { Calendar, User, ArrowLeft, Tag } from 'lucide-react'
 import Header from '@/components/ui/Header'
 import Footer from '@/components/ui/Footer'
+import { ArticleDocuments } from '@/components/ui/ArticleDocuments'
 import { getArticleBySlug, getPublishedArticles } from '@/lib/actions/article-actions'
+
+interface DocumentItem {
+  id: number
+  name: string
+  url: string
+  size: number
+  mimeType: string
+}
 
 interface ArticlePageProps {
   params: Promise<{
@@ -99,6 +108,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
               dangerouslySetInnerHTML={{ __html: article.content }}
             />
           </div>
+
+          {/* Article Documents */}
+          {article.documents && (
+            <ArticleDocuments documents={article.documents} />
+          )}
 
           {/* Related Articles */}
           {relatedArticles.length > 0 && (

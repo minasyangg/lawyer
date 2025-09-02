@@ -27,6 +27,7 @@ interface TinyMCEEditor {
       }) => void
     }
   }
+  insertContent: (content: string) => void
 }
 
 export function RichTextEditor({ 
@@ -53,6 +54,7 @@ export function RichTextEditor({
       .then(response => response.json())
       .then(result => {
         if (result.success) {
+          // Используем статический путь к файлу
           resolve(result.file.url)
         } else {
           reject(result.error || 'Upload failed')
@@ -79,7 +81,7 @@ export function RichTextEditor({
         plugins: [
           'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
           'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-          'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+          'insertdatetime', 'media', 'table', 'help', 'wordcount'
         ],
         toolbar: 'undo redo | blocks | ' +
           'bold italic forecolor | alignleft aligncenter ' +
@@ -109,6 +111,7 @@ export function RichTextEditor({
                 .then(response => response.json())
                 .then(result => {
                   if (result.success) {
+                    // Используем статический путь к файлу
                     callback(result.file.url, { alt: file.name })
                   } else {
                     console.error('Upload failed:', result.error)
@@ -131,7 +134,19 @@ export function RichTextEditor({
             icon: 'browse',
             onAction: () => {
               // Отправляем событие для открытия файлового менеджера
-              const event = new CustomEvent('openFileManager')
+              const event = new CustomEvent('openFileManager', {
+                detail: {
+                  selectMode: true,
+                  onSelect: (file: { id: number; url: string; originalName: string; mimeType: string }) => {
+                    if (file.mimeType.startsWith('image/')) {
+                      // Используем статический путь к изображению
+                      editor.insertContent(`<img src="${file.url}" alt="${file.originalName}" style="max-width: 100%; height: auto;" />`)
+                    } else {
+                      editor.insertContent(`<a href="${file.url}" target="_blank">${file.originalName}</a>`)
+                    }
+                  }
+                }
+              })
               window.dispatchEvent(event)
             }
           })

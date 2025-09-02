@@ -16,6 +16,7 @@ import {
 import { RichTextEditor } from "./RichTextEditor"
 import { TagSelector } from "./TagSelector"
 import { FileManager } from "./FileManager"
+import { DocumentManager } from "./DocumentManager"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { generateSlug, isValidSlug } from "@/lib/utils/slug-utils"
@@ -58,6 +59,15 @@ export function CreateArticleForm({ services: initialServices }: CreateArticleFo
   const [published, setPublished] = useState(false)
   const [categoryId, setCategoryId] = useState<number | null>(null)
   const [selectedTags, setSelectedTags] = useState<Tag[]>([])
+  const [documents, setDocuments] = useState<DocumentItem[]>([])
+
+interface DocumentItem {
+  id: number
+  name: string
+  url: string
+  size: number
+  mimeType: string
+}
   const [services] = useState<Service[]>(initialServices)
   const [loading, setLoading] = useState(false)
   const [fileManagerOpen, setFileManagerOpen] = useState(false)
@@ -112,13 +122,18 @@ export function CreateArticleForm({ services: initialServices }: CreateArticleFo
   }, [title, slug, checkSlugAvailability])
 
   useEffect(() => {
-    const handleOpenFileManager = () => {
+    const handleOpenFileManager = (event: CustomEvent) => {
+      const { selectMode, onSelect } = event.detail || {}
       setFileManagerOpen(true)
+      // Сохраняем коллбэк для выбора файла
+      if (selectMode && onSelect) {
+        window.fileManagerSelectCallback = onSelect
+      }
     }
 
-    window.addEventListener('openFileManager', handleOpenFileManager)
+    window.addEventListener('openFileManager', handleOpenFileManager as EventListener)
     return () => {
-      window.removeEventListener('openFileManager', handleOpenFileManager)
+      window.removeEventListener('openFileManager', handleOpenFileManager as EventListener)
       // Очищаем timeout при размонтировании
       if (slugCheckTimeoutRef.current) {
         clearTimeout(slugCheckTimeoutRef.current)
@@ -149,7 +164,8 @@ export function CreateArticleForm({ services: initialServices }: CreateArticleFo
           slug,
           published,
           categoryId,
-          tagIds: selectedTags.map(tag => tag.id)
+          tagIds: selectedTags.map(tag => tag.id),
+          documents: documents.length > 0 ? documents : null
         }),
       })
 
@@ -314,6 +330,11 @@ export function CreateArticleForm({ services: initialServices }: CreateArticleFo
               />
             </CardContent>
           </Card>
+
+          <DocumentManager
+            documents={documents}
+            onDocumentsChange={setDocuments}
+          />
         </div>
       </div>
 

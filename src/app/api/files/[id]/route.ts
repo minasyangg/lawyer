@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
 import { readFile, unlink } from 'fs/promises'
+import { join } from 'path'
 
 const prisma = new PrismaClient()
 
@@ -89,7 +90,11 @@ export async function DELETE(
 
     // Delete file from filesystem
     try {
-      await unlink(file.path)
+      // Если путь относительный, преобразуем в абсолютный для удаления
+      const absolutePath = file.path.startsWith('uploads/') 
+        ? join(process.cwd(), 'public', file.path)
+        : file.path
+      await unlink(absolutePath)
     } catch (fsError) {
       console.error('Failed to delete file from filesystem:', fsError)
     }

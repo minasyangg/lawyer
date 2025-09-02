@@ -20,6 +20,10 @@ import {
 } from "@/components/ui/select"
 import { createArticle, updateArticle, Article } from "@/lib/actions/article-actions"
 
+type ActionResult = 
+  | { success: true }
+  | { errors: { [key: string]: string[] } | { general: string[] } }
+
 interface ArticleDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -84,16 +88,16 @@ export function ArticleDialog({ open, onOpenChange, article, services, users }: 
     setErrors({})
 
     try {
-      let result
+      let result: ActionResult
       if (isEditing && article) {
-        result = await updateArticle(article.id, formData)
+        result = await updateArticle(article.id, formData) as ActionResult
       } else {
-        result = await createArticle(formData)
+        result = await createArticle(formData) as ActionResult
       }
 
-      if (result.success) {
+      if ('success' in result) {
         onOpenChange(false)
-      } else if (result.errors) {
+      } else if ('errors' in result) {
         setErrors(result.errors)
       }
     } catch {

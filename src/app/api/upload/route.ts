@@ -6,7 +6,8 @@ import {
   isAllowedFileType, 
   saveFile, 
   MAX_FILE_SIZE,
-  isImageFile 
+  isImageFile,
+  getPublicFileUrl 
 } from '@/lib/utils/file-utils'
 import sharp from 'sharp'
 
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
         size: savedFile.size,
         folder: savedFile.folder,
         createdAt: savedFile.createdAt,
-        url: `/api/files/${savedFile.id}`
+        url: getPublicFileUrl(savedFile.path)
       }
     })
 

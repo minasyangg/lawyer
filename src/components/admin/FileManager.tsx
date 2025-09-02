@@ -18,7 +18,9 @@ import {
   Download,
   Search,
   Grid,
-  List
+  List,
+  FolderPlus,
+  Folder
 } from "lucide-react"
 
 interface FileItem {
@@ -29,6 +31,8 @@ interface FileItem {
   size: number
   createdAt: string
   url: string
+  isFolder?: boolean
+  path?: string
 }
 
 interface FileManagerProps {
@@ -45,6 +49,9 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
   const [searchTerm, setSearchTerm] = useState("")
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set())
+  const [showCreateFolder, setShowCreateFolder] = useState(false)
+  const [newFolderName, setNewFolderName] = useState("")
+  const [currentPath, setCurrentPath] = useState("")
 
   useEffect(() => {
     if (isOpen) {
@@ -52,10 +59,11 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
     }
   }, [isOpen])
 
-  const fetchFiles = async () => {
+  const fetchFiles = async (folderId?: number) => {
     setLoading(true)
     try {
-      const response = await fetch('/api/files')
+      const url = folderId ? `/api/files?folderId=${folderId}` : '/api/files'
+      const response = await fetch(url)
       if (response.ok) {
         const data = await response.json()
         setFiles(data.files)
@@ -118,16 +126,23 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
       onSelect(file)
       onClose()
     } else {
-      // Toggle selection for multi-select
-      setSelectedFiles(prev => {
-        const newSet = new Set(prev)
-        if (newSet.has(file.id)) {
-          newSet.delete(file.id)
-        } else {
-          newSet.add(file.id)
-        }
-        return newSet
-      })
+      // Проверяем, есть ли глобальный коллбэк
+      if (window.fileManagerSelectCallback) {
+        window.fileManagerSelectCallback(file)
+        delete window.fileManagerSelectCallback
+        onClose()
+      } else {
+        // Toggle selection for multi-select
+        setSelectedFiles(prev => {
+          const newSet = new Set(prev)
+          if (newSet.has(file.id)) {
+            newSet.delete(file.id)
+          } else {
+            newSet.add(file.id)
+          }
+          return newSet
+        })
+      }
     }
   }
 
@@ -145,6 +160,39 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
 
   const isImage = (mimeType: string) => {
     return mimeType.startsWith('image/')
+  }
+
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return
+
+    try {
+      const response = await fetch('/api/files/folders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newFolderName.trim(),
+          parentId: null // TODO: поддержка подпапок
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setFiles(prev => [data.folder, ...prev])
+        setNewFolderName("")
+        setShowCreateFolder(false)
+      }
+    } catch (error) {
+      console.error('Failed to create folder:', error)
+    }
+  }
+
+  const handleFolderClick = (folder: FileItem) => {
+    if (folder.isFolder) {
+      setCurrentPath(folder.path || folder.originalName)
+      fetchFiles()
+    }
   }
 
   return (
@@ -171,6 +219,14 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
               className="hidden"
               accept="image/*,application/pdf,.doc,.docx"
             />
+            
+            <Button 
+              variant="outline"
+              onClick={() => setShowCreateFolder(true)}
+            >
+              <FolderPlus className="w-4 h-4 mr-2" />
+              New Folder
+            </Button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -221,10 +277,12 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                   className={`border rounded-lg p-3 cursor-pointer hover:border-blue-300 transition-colors ${
                     selectedFiles.has(file.id) ? 'border-blue-500 bg-blue-50' : ''
                   }`}
-                  onClick={() => handleFileSelect(file)}
+                  onClick={() => file.isFolder ? handleFolderClick(file) : handleFileSelect(file)}
                 >
                   <div className="aspect-square bg-gray-100 rounded mb-2 flex items-center justify-center overflow-hidden">
-                    {isImage(file.mimeType) ? (
+                    {file.isFolder ? (
+                      <Folder className="w-8 h-8 text-blue-500" />
+                    ) : isImage(file.mimeType) ? (
                       <img
                         src={file.url}
                         alt={file.originalName}
@@ -264,10 +322,12 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                     className={`flex items-center gap-3 p-3 border rounded cursor-pointer hover:border-blue-300 transition-colors ${
                       selectedFiles.has(file.id) ? 'border-blue-500 bg-blue-50' : ''
                     }`}
-                    onClick={() => handleFileSelect(file)}
+                    onClick={() => file.isFolder ? handleFolderClick(file) : handleFileSelect(file)}
                   >
                     <div className="flex-shrink-0">
-                      {isImage(file.mimeType) ? (
+                      {file.isFolder ? (
+                        <Folder className="w-6 h-6 text-blue-500" />
+                      ) : isImage(file.mimeType) ? (
                         <Image className="w-6 h-6 text-blue-500" />
                       ) : (
                         <File className="w-6 h-6 text-gray-500" />
@@ -309,6 +369,42 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
             </div>
           )}
         </div>
+
+        {/* Create Folder Dialog */}
+        {showCreateFolder && (
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-80">
+              <h3 className="text-lg font-semibold mb-4">Создать папку</h3>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="folder-name">Название папки</Label>
+                  <Input
+                    id="folder-name"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    placeholder="Введите название папки"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleCreateFolder()
+                      }
+                    }}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => {
+                    setShowCreateFolder(false)
+                    setNewFolderName("")
+                  }}>
+                    Отмена
+                  </Button>
+                  <Button onClick={handleCreateFolder} disabled={!newFolderName.trim()}>
+                    Создать
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="flex justify-between items-center pt-4 border-t">

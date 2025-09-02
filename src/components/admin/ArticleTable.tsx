@@ -14,6 +14,10 @@ import { DeleteArticleDialog } from "./DeleteArticleDialog"
 import { Article } from "@/lib/actions/article-actions"
 import { useState } from "react"
 import { toggleArticlePublished } from "@/lib/actions/article-actions"
+
+type ActionResult = 
+  | { success: true }
+  | { errors: { [key: string]: string[] } | { general: string[] } }
 import Link from "next/link"
 
 interface ArticleTableProps {
@@ -36,7 +40,11 @@ export function ArticleTable({ articles }: ArticleTableProps) {
   }
 
   const handleTogglePublished = async (id: number) => {
-    await toggleArticlePublished(id)
+    const result: ActionResult = await toggleArticlePublished(id) as ActionResult
+    
+    if ('errors' in result) {
+      console.error('Failed to toggle published status:', result.errors)
+    }
   }
 
   return (

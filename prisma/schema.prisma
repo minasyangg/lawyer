@@ -49,6 +49,7 @@ model Article {
   published   Boolean  @default(false)
   categoryId  Int?
   authorId    Int
+  documents   Json?    // Список документов к статье в формате JSON
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   

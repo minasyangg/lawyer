@@ -15,7 +15,7 @@ async function getServices() {
 }
 
 interface PageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 function EditArticleFormSkeleton() {
@@ -85,8 +85,9 @@ async function EditArticleFormWrapper({ articleId }: { articleId: number }) {
   return <EditArticleForm article={article} services={services} users={users} />
 }
 
-export default function EditArticlePage({ params }: PageProps) {
-  const articleId = parseInt(params.id)
+export default async function EditArticlePage({ params }: PageProps) {
+  const { id } = await params
+  const articleId = parseInt(id)
 
   if (isNaN(articleId)) {
     notFound()
