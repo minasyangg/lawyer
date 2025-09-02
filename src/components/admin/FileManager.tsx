@@ -207,7 +207,12 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
           <div className="flex items-center gap-2">
             <Button 
               disabled={uploading}
-              onClick={() => document.getElementById('file-upload')?.click()}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                document.getElementById('file-upload')?.click();
+              }}
+              type="button"
             >
               <Upload className="w-4 h-4 mr-2" />
               {uploading ? 'Uploading...' : 'Upload Files'}
@@ -215,7 +220,11 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
             <input
               id="file-upload"
               type="file"
-              onChange={handleFileUpload}
+              onChange={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleFileUpload(e);
+              }}
               className="hidden"
               accept="image/*,application/pdf,.doc,.docx"
             />

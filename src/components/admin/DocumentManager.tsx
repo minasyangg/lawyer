@@ -68,7 +68,10 @@ interface FileItem {
         <Button 
           type="button" 
           variant="outline" 
-          onClick={() => setFileManagerOpen(true)}
+          onClick={(e) => {
+            e.preventDefault(); // Предотвращаем отправку формы
+            setFileManagerOpen(true);
+          }}
           className="w-full"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -93,7 +96,10 @@ interface FileItem {
           type="button" 
           variant="outline" 
           size="sm"
-          onClick={() => setFileManagerOpen(true)}
+          onClick={(e) => {
+            e.preventDefault(); // Предотвращаем отправку формы
+            setFileManagerOpen(true);
+          }}
         >
           <Plus className="w-4 h-4 mr-2" />
           Добавить
