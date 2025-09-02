@@ -30,11 +30,24 @@ interface TinyMCEEditor {
   insertContent: (content: string) => void
 }
 
+// Функция для показа диалога выбора размера изображения
+const showImageSizeDialog = () => {
+  const width = prompt('Введите ширину изображения (в пикселях или процентах):', '100%')
+  const height = prompt('Введите высоту изображения (в пикселях или оставьте пустым для авто):', '')
+  return { width: width || '100%', height }
+}
+
+// Функция для создания стиля изображения
+const createImageStyle = (width: string, height: string | null) => {
+  return `max-width: 100%; width: ${width}; ${height ? `height: ${height};` : 'height: auto;'}`
+}
+
 export function RichTextEditor({ 
   value, 
   onChange, 
   onInit,
-  height = 500
+  height = 500,
+  placeholder
 }: RichTextEditorProps) {
   const editorRef = useRef<Editor | null>(null)
 
@@ -54,7 +67,6 @@ export function RichTextEditor({
       .then(response => response.json())
       .then(result => {
         if (result.success) {
-          // Используем статический путь к файлу
           resolve(result.file.url)
         } else {
           reject(result.error || 'Upload failed')
@@ -91,7 +103,7 @@ export function RichTextEditor({
         images_upload_handler: handleImageUpload,
         automatic_uploads: true,
         file_picker_types: 'image',
-        file_picker_callback: (callback: (url: string, meta?: { alt?: string }) => void, value: string, meta: { filetype: string }) => {
+        file_picker_callback: (callback: (url: string, meta?: { alt?: string, style?: string }) => void, value: string, meta: { filetype: string }) => {
           if (meta.filetype === 'image') {
             const input = document.createElement('input')
             input.setAttribute('type', 'file')
@@ -111,8 +123,15 @@ export function RichTextEditor({
                 .then(response => response.json())
                 .then(result => {
                   if (result.success) {
-                    // Используем статический путь к файлу
-                    callback(result.file.url, { alt: file.name })
+                    // Показываем диалог выбора размера
+                    const { width, height } = showImageSizeDialog()
+                    const style = createImageStyle(width, height)
+                    
+                    // Вставляем изображение с выбранными размерами
+                    callback(result.file.url, { 
+                      alt: file.name,
+                      style 
+                    })
                   } else {
                     console.error('Upload failed:', result.error)
                   }
@@ -139,10 +158,18 @@ export function RichTextEditor({
                   selectMode: true,
                   onSelect: (file: { id: number; url: string; originalName: string; mimeType: string }) => {
                     if (file.mimeType.startsWith('image/')) {
-                      // Используем статический путь к изображению
-                      editor.insertContent(`<img src="${file.url}" alt="${file.originalName}" style="max-width: 100%; height: auto;" />`)
+                      // Показываем диалог выбора размера
+                      const { width, height } = showImageSizeDialog()
+                      const style = createImageStyle(width, height)
+                      
+                      // Вставляем изображение с выбранными размерами
+                      editor.insertContent(
+                        `<img src="${file.url}" alt="${file.originalName}" style="${style}" />`
+                      )
                     } else {
-                      editor.insertContent(`<a href="${file.url}" target="_blank">${file.originalName}</a>`)
+                      editor.insertContent(
+                        `<a href="${file.url}" target="_blank">${file.originalName}</a>`
+                      )
                     }
                   }
                 }

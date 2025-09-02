@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue 
 } from "@/components/ui/select"
-import { RichTextEditor } from "./RichTextEditor"
+import DynamicRichTextEditor from "./DynamicRichTextEditor"
 import { TagSelector } from "./TagSelector"
 import { FileManager } from "./FileManager"
 import { DocumentManager } from "./DocumentManager"
@@ -244,7 +244,7 @@ interface DocumentItem {
               <CardTitle>Содержание</CardTitle>
             </CardHeader>
             <CardContent>
-              <RichTextEditor
+              <DynamicRichTextEditor
                 value={content}
                 onChange={setContent}
                 placeholder="Начните писать статью..."
