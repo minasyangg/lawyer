@@ -1,41 +1,46 @@
 const { PrismaClient } = require('@prisma/client');
-
 const prisma = new PrismaClient();
 
 async function main() {
-  const tags = [
-    { name: 'Семейное право', color: '#ef4444' },
-    { name: 'Уголовное право', color: '#8b5cf6' },
-    { name: 'Гражданское право', color: '#10b981' },
-    { name: 'Трудовое право', color: '#f59e0b' },
-    { name: 'Налоговое право', color: '#3b82f6' }
-  ];
+	const tags = [
+		{ name: 'Консультация', color: '#FF5733' },
+		{ name: 'Суд', color: '#33FF57' },
+		{ name: 'Документы', color: '#5733FF' },
+		{ name: 'Срочно', color: '#FF3333' },
+		{ name: 'Важно', color: '#33FFFF' }
+	];
 
-  for (const tagData of tags) {
-    const slug = tagData.name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim();
+	for (const tag of tags) {
+		const { name, color } = tag;
+		
+		// Create URL-friendly slug from name
+		const slug = name
+			.toLowerCase()
+			.normalize('NFD')
+			.replace(/[\u0300-\u036f]/g, '')
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/-+/g, '-')
+			.trim();
 
-    await prisma.tag.create({
-      data: {
-        name: tagData.name,
-        slug,
-        color: tagData.color
-      }
-    });
-  }
+		await prisma.tag.upsert({
+			where: { slug },
+			update: { name, color },
+			create: {
+				name,
+				slug,
+				color
+			}
+		});
+	}
 
-  console.log('Tags seeded successfully');
+	console.log('Tags seeded successfully');
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+	.catch(e => {
+		console.error(e);
+		process.exit(1);
+	})
+	.finally(async () => {
+		await prisma.$disconnect();
+	});

@@ -1,34 +1,63 @@
-import { NextRequest, NextResponse } from 'next/server'
+"use server"
+
 import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
 import { getPublicFileUrl } from '@/lib/utils/file-utils'
 
 const prisma = new PrismaClient()
 
-export async function GET(request: NextRequest) {
+export interface FileManagerItem {
+  id: number
+  originalName: string
+  filename: string
+  mimeType: string
+  size: number
+  createdAt: string
+  url: string
+  isFolder?: boolean
+  path?: string
+}
+
+export interface ListFilesResult {
+  files: FileManagerItem[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    pages: number
+  }
+}
+
+/**
+ * Получить список файлов и папок для пользователя и выбранной папки
+ * @param folderId id папки (null — корень)
+ * @param page номер страницы
+ * @param limit количество элементов на странице
+ */
+export async function listFiles(
+  folderId: number | null = null, 
+  page: number = 1, 
+  limit: number = 20
+): Promise<ListFilesResult> {
   try {
     const cookieStore = await cookies()
     const sessionCookie = cookieStore.get('admin-session')
     
     if (!sessionCookie?.value) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      throw new Error('Unauthorized')
     }
 
     const user = JSON.parse(sessionCookie.value)
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    if (!user?.id) {
+      throw new Error('User not found')
     }
 
-    const { searchParams } = new URL(request.url)
-    const folderId = searchParams.get('folderId')
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '20')
     const skip = (page - 1) * limit
 
     const where = {
       uploadedBy: user.id,
-      ...(folderId ? { folderId: parseInt(folderId) } : { folderId: null })
+      ...(folderId ? { folderId: folderId } : { folderId: null })
     }
 
     // Получаем файлы и папки
@@ -45,7 +74,7 @@ export async function GET(request: NextRequest) {
       prisma.folder.findMany({
         where: {
           ownerId: user.id,
-          ...(folderId ? { parentId: parseInt(folderId) } : { parentId: null })
+          ...(folderId ? { parentId: folderId } : { parentId: null })
         },
         orderBy: { createdAt: 'desc' }
       }),
@@ -53,13 +82,18 @@ export async function GET(request: NextRequest) {
       prisma.folder.count({
         where: {
           ownerId: user.id,
-          ...(folderId ? { parentId: parseInt(folderId) } : { parentId: null })
+          ...(folderId ? { parentId: folderId } : { parentId: null })
         }
       })
     ])
 
     const filesWithUrls = files.map(file => ({
-      ...file,
+      id: file.id,
+      originalName: file.originalName,
+      filename: file.filename,
+      mimeType: file.mimeType,
+      size: file.size,
+      createdAt: file.createdAt.toISOString(),
       url: getPublicFileUrl(file.path)
     }))
 
@@ -80,7 +114,7 @@ export async function GET(request: NextRequest) {
     const allItems = [...foldersAsFileItems, ...filesWithUrls]
     const totalCount = totalFilesCount + totalFoldersCount
 
-    return NextResponse.json({
+    return {
       files: allItems,
       pagination: {
         page,
@@ -88,10 +122,10 @@ export async function GET(request: NextRequest) {
         total: totalCount,
         pages: Math.ceil(totalCount / limit)
       }
-    })
+    }
 
   } catch (error) {
     console.error('Files fetch error:', error)
-    return NextResponse.json({ error: 'Failed to fetch files' }, { status: 500 })
+    throw error
   }
 }

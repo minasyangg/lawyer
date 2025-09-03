@@ -241,177 +241,178 @@ interface DocumentItem {
 
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Основная информация</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="title">Заголовок *</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Введите заголовок статьи"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="slug">
-                  Слаг * 
-                  {isCheckingSlug && (
-                    <span className="ml-2 text-xs text-gray-500">проверяется...</span>
-                  )}
-                </Label>
-                <Input
-                  id="slug"
-                  value={slug}
-                  readOnly
-                  placeholder="url-статьи (генерируется автоматически)"
-                  required
-                  className="bg-gray-50 cursor-not-allowed"
-                />
-                {slug && !isValidSlug(slug) && (
-                  <p className="text-xs text-red-600 mt-1">
-                    Слаг может содержать только латинские буквы, цифры и дефисы
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="excerpt">Краткое описание</Label>
-                <Input
-                  id="excerpt"
-                  value={excerpt}
-                  onChange={(e) => setExcerpt(e.target.value)}
-                  placeholder="Краткое описание для превью"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Содержание</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <DynamicRichTextEditor
-                value={content}
-                onChange={setContent}
-                placeholder="Начните писать статью..."
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Публикация</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="published"
-                  checked={published}
-                  onCheckedChange={setPublished}
-                />
-                <Label htmlFor="published">Опубликовать</Label>
-              </div>
-
-              <div className="space-y-2">
-                <Button 
-                  type="submit" 
-                  disabled={loading}
-                  className="w-full"
-                >
-                  {loading ? 'Сохранение...' : 'Сохранить изменения'}
-                </Button>
-                
-                <div className="flex gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline"
-                    onClick={() => router.back()}
-                    className="flex-1"
-                  >
-                    Отмена
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="destructive"
-                    onClick={handleDelete}
-                    disabled={loading}
-                    className="flex-1"
-                  >
-                    Удалить
-                  </Button>
+    <>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Основная информация</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Заголовок *</Label>
+                  <Input
+                    id="title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Введите заголовок статьи"
+                    required
+                  />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Категория</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Select 
-                value={categoryId ? services.find(s => s.id === categoryId)?.title || "" : ""} 
-                onValueChange={(value) => {
-                  if (!value) {
-                    setCategoryId(null)
-                  } else {
-                    const selectedService = services.find(s => s.title === value)
-                    setCategoryId(selectedService ? selectedService.id : null)
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Выберите категорию" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Без категории</SelectItem>
-                  {services.map((service) => (
-                    <SelectItem key={service.id} value={service.title}>
-                      {service.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
+                <div>
+                  <Label htmlFor="slug">
+                    Слаг * 
+                    {isCheckingSlug && (
+                      <span className="ml-2 text-xs text-gray-500">проверяется...</span>
+                    )}
+                  </Label>
+                  <Input
+                    id="slug"
+                    value={slug}
+                    readOnly
+                    placeholder="url-статьи (генерируется автоматически)"
+                    required
+                    className="bg-gray-50 cursor-not-allowed"
+                  />
+                  {slug && !isValidSlug(slug) && (
+                    <p className="text-xs text-red-600 mt-1">
+                      Слаг может содержать только латинские буквы, цифры и дефисы
+                    </p>
+                  )}
+                </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Теги</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TagSelector
-                selectedTags={selectedTags}
-                onTagsChange={setSelectedTags}
-              />
-            </CardContent>
-          </Card>
+                <div>
+                  <Label htmlFor="excerpt">Краткое описание</Label>
+                  <Input
+                    id="excerpt"
+                    value={excerpt}
+                    onChange={(e) => setExcerpt(e.target.value)}
+                    placeholder="Краткое описание для превью"
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
-          <DocumentManager
-            documents={documents}
-            onDocumentsChange={setDocuments}
-          />
+            <Card>
+              <CardHeader>
+                <CardTitle>Содержание</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DynamicRichTextEditor
+                  value={content}
+                  onChange={setContent}
+                  placeholder="Начните писать статью..."
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Публикация</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="published"
+                    checked={published}
+                    onCheckedChange={setPublished}
+                  />
+                  <Label htmlFor="published">Опубликовать</Label>
+                </div>
+
+                <div className="space-y-2">
+                  <Button 
+                    type="submit" 
+                    disabled={loading}
+                    className="w-full"
+                  >
+                    {loading ? 'Сохранение...' : 'Сохранить изменения'}
+                  </Button>
+                  
+                  <div className="flex gap-2">
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      onClick={() => router.back()}
+                      className="flex-1"
+                    >
+                      Отмена
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="destructive"
+                      onClick={handleDelete}
+                      disabled={loading}
+                      className="flex-1"
+                    >
+                      Удалить
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Категория</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Select 
+                  value={categoryId ? services.find(s => s.id === categoryId)?.title || "" : ""} 
+                  onValueChange={(value) => {
+                    if (!value) {
+                      setCategoryId(null)
+                    } else {
+                      const selectedService = services.find(s => s.title === value)
+                      setCategoryId(selectedService ? selectedService.id : null)
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите категорию" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Без категории</SelectItem>
+                    {services.map((service) => (
+                      <SelectItem key={service.id} value={service.title}>
+                        {service.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Теги</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TagSelector
+                  selectedTags={selectedTags}
+                  onTagsChange={setSelectedTags}
+                />
+              </CardContent>
+            </Card>
+
+            <DocumentManager
+              documents={documents}
+              onDocumentsChange={setDocuments}
+            />
+          </div>
         </div>
-      </div>
-
+      </form>
       <FileManager
         isOpen={fileManagerOpen}
         onClose={() => setFileManagerOpen(false)}
         selectMode={false}
       />
-    </form>
+    </>
   )
 }

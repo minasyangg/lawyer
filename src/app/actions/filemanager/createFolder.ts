@@ -1,0 +1,108 @@
+"use server"
+
+import { PrismaClient } from '@prisma/client'
+import { cookies } from 'next/headers'
+import { mkdir } from 'fs/promises'
+import { join } from 'path'
+
+const prisma = new PrismaClient()
+
+export interface CreateFolderResult {
+  success: boolean
+  folder?: {
+    id: number
+    originalName: string
+    filename: string
+    mimeType: string
+    size: number
+    createdAt: string
+    url: string
+    isFolder: boolean
+    path: string
+  }
+  error?: string
+}
+
+/**
+ * Создать папку для пользователя
+ * @param name название папки
+ * @param parentId id родительской папки (null — корень)
+ */
+export async function createFolder(name: string, parentId: number | null = null): Promise<CreateFolderResult> {
+  try {
+    const cookieStore = await cookies()
+    const sessionCookie = cookieStore.get('admin-session')
+    
+    if (!sessionCookie?.value) {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    const user = JSON.parse(sessionCookie.value)
+
+    if (!user?.id) {
+      return { success: false, error: 'User not found' }
+    }
+
+    if (!name.trim()) {
+      return { success: false, error: 'Folder name required' }
+    }
+
+    // Определяем путь к папке
+    let fullPath = name
+    let parentFolder = null
+    
+    if (parentId) {
+      parentFolder = await prisma.folder.findUnique({
+        where: { 
+          id: parentId,
+          ownerId: user.id // Проверяем права доступа к родительской папке
+        },
+        select: { path: true }
+      })
+      
+      if (!parentFolder) {
+        return { success: false, error: 'Parent folder not found' }
+      }
+      
+      fullPath = `${parentFolder.path}/${name}`
+    }
+
+    // Создаем папку в базе данных
+    const folder = await prisma.folder.create({
+      data: {
+        name,
+        path: fullPath,
+        ownerId: user.id,
+        parentId: parentId || null
+      }
+    })
+
+    // Создаем физическую папку
+    const uploadsDir = join(process.cwd(), 'public', 'uploads')
+    const physicalPath = join(uploadsDir, fullPath)
+    
+    await mkdir(physicalPath, { recursive: true })
+
+    // Возвращаем папку в формате FileItem
+    const folderResult = {
+      id: folder.id,
+      originalName: folder.name,
+      filename: folder.name,
+      mimeType: 'folder',
+      size: 0,
+      createdAt: folder.createdAt.toISOString(),
+      url: `/uploads/${folder.path}`,
+      isFolder: true,
+      path: folder.path
+    }
+
+    return {
+      success: true,
+      folder: folderResult
+    }
+
+  } catch (error) {
+    console.error('Create folder error:', error)
+    return { success: false, error: 'Failed to create folder' }
+  }
+}

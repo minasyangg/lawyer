@@ -1,3 +1,19 @@
+model FileEntity {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  name      String
+  isFolder  Boolean
+  parentId  Int?
+  path      String?
+  size      Int?
+  mimeType  String?
+  url       String?
+  createdAt DateTime @default(now())
+
+  parent    FileEntity? @relation("FolderParent", fields: [parentId], references: [id])
+  children  FileEntity[] @relation("FolderParent")
+  user      User        @relation(fields: [userId], references: [id])
+}
 // Prisma schema for Service table
 // SQLite database
 
@@ -38,6 +54,7 @@ model User {
   articles  Article[]
   files     File[]
   folders   Folder[]
+  fileEntities FileEntity[]
 }
 
 model Article {

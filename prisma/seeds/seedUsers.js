@@ -4,33 +4,41 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
-  // Создаем админ пользователя
+  // Создаем или обновляем админ пользователя
   const hashedPassword = await bcrypt.hash('admin123', 12);
-  
-  const admin = await prisma.user.create({
-    data: {
+  const admin = await prisma.user.upsert({
+    where: { email: 'admin@lawyer.com' },
+    update: {
+      name: 'Administrator',
+      password: hashedPassword,
+      role: 'admin',
+    },
+    create: {
       name: 'Administrator',
       email: 'admin@lawyer.com',
       password: hashedPassword,
-      role: 'admin'
-    }
+      role: 'admin',
+    },
   });
+  console.log('Admin user created or updated:', admin.email);
 
-  console.log('Admin user created:', admin.email);
-  
-  // Создаем обычного пользователя
+  // Создаем или обновляем обычного пользователя
   const userPassword = await bcrypt.hash('user123', 12);
-  
-  const user = await prisma.user.create({
-    data: {
+  const user = await prisma.user.upsert({
+    where: { email: 'user@lawyer.com' },
+    update: {
       name: 'Test User',
-      email: 'user@lawyer.com', 
       password: userPassword,
-      role: 'user'
-    }
+      role: 'user',
+    },
+    create: {
+      name: 'Test User',
+      email: 'user@lawyer.com',
+      password: userPassword,
+      role: 'user',
+    },
   });
-
-  console.log('Test user created:', user.email);
+  console.log('Test user created or updated:', user.email);
   console.log('Users seeded successfully');
 }
 
