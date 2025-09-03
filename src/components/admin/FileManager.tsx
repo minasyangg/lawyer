@@ -337,6 +337,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
       >
         {folder.children.length > 0 && (
           <button
+            type="button"
             className="mr-1 p-0.5 hover:bg-gray-200 rounded"
             onClick={(e) => {
               e.stopPropagation()
@@ -361,7 +362,13 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent 
+        className="max-w-6xl max-h-[85vh] overflow-hidden flex flex-col"
+        onSubmit={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Файловый менеджер</DialogTitle>
         </DialogHeader>
@@ -371,6 +378,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
           <div className="w-64 border-r pr-4 flex flex-col">
             <div className="flex items-center gap-2 mb-4">
               <Button 
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setShowCreateFolder(true)}
@@ -407,6 +415,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                 <div key={breadcrumb.id || 'root'} className="flex items-center">
                   {index > 0 && <ChevronRight className="w-4 h-4 mx-1 text-gray-400" />}
                   <button
+                    type="button"
                     className="text-sm hover:text-blue-600 hover:underline"
                     onClick={() => navigateToFolder(breadcrumb.id, breadcrumb.name)}
                   >
@@ -446,6 +455,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                 
                 {currentFolderId !== null && (
                   <Button 
+                    type="button"
                     variant="outline"
                     onClick={() => navigateToFolder(null)}
                     size="sm"
@@ -463,12 +473,18 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                     placeholder="Поиск файлов..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                      }
+                    }}
                     className="pl-10 w-64"
                   />
                 </div>
                 
                 <div className="flex border rounded">
                   <Button
+                    type="button"
                     variant={viewMode === 'grid' ? 'default' : 'ghost'}
                     size="sm"
                     onClick={() => setViewMode('grid')}
@@ -476,6 +492,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                     <Grid className="w-4 h-4" />
                   </Button>
                   <Button
+                    type="button"
                     variant={viewMode === 'list' ? 'default' : 'ghost'}
                     size="sm"
                     onClick={() => setViewMode('list')}
@@ -533,6 +550,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                       {!file.isFolder && (
                         <div className="flex justify-end mt-2">
                           <Button
+                            type="button"
                             variant="ghost"
                             size="sm"
                             onClick={(e) => {
@@ -579,6 +597,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                           {!file.isFolder && (
                             <>
                               <Button
+                                type="button"
                                 variant="ghost"
                                 size="sm"
                                 onClick={(e) => {
@@ -589,6 +608,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                                 <Download className="w-4 h-4" />
                               </Button>
                               <Button
+                                type="button"
                                 variant="ghost"
                                 size="sm"
                                 onClick={(e) => {
@@ -613,7 +633,13 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
         {/* Диалог создания папки */}
         {showCreateFolder && (
           <Dialog open={showCreateFolder} onOpenChange={setShowCreateFolder}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent 
+              className="sm:max-w-md"
+              onSubmit={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+              }}
+            >
               <DialogHeader>
                 <DialogTitle>Создать новую папку</DialogTitle>
               </DialogHeader>
@@ -635,7 +661,8 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button 
-                    variant="outline" 
+                    variant="outline"
+                    type="button"
                     onClick={() => {
                       setShowCreateFolder(false)
                       setNewFolderName("")
@@ -644,6 +671,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                     Отмена
                   </Button>
                   <Button 
+                    type="button"
                     onClick={handleCreateFolder} 
                     disabled={!newFolderName.trim()}
                   >
@@ -660,7 +688,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
           <p className="text-sm text-gray-500">
             {filteredFiles.length} элемент(ов) • Папка: {breadcrumbs[breadcrumbs.length - 1]?.name}
           </p>
-          <Button variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose}>
             Закрыть
           </Button>
         </div>
