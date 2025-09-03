@@ -2,7 +2,7 @@
 
 import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
-import { getPublicFileUrl } from '@/lib/utils/file-utils'
+import { createVirtualFileUrl } from '@/lib/virtualPaths'
 
 const prisma = new PrismaClient()
 
@@ -94,7 +94,7 @@ export async function listFiles(
       mimeType: file.mimeType,
       size: file.size,
       createdAt: file.createdAt.toISOString(),
-      url: getPublicFileUrl(file.path)
+      url: file.virtualId ? createVirtualFileUrl(file.virtualId) : `/api/files/${file.id}` // Используем virtualId если есть или API route
     }))
 
     // Преобразуем папки в формат FileItem

@@ -6,8 +6,11 @@ import {
   createFolder, 
   listFiles, 
   deleteFile, 
+  deleteFolder,
+  renameFolder,
   getFolderTree,
-  type FileManagerItem
+  type FileManagerItem,
+  type FolderTreeNode
 } from '@/app/actions/filemanager'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -31,7 +34,8 @@ import {
   ChevronRight,
   Home,
   ChevronDown,
-  ArrowLeft
+  ArrowLeft,
+  Edit2
 } from "lucide-react"
 import { toast } from "sonner"
 import Image from "next/image"
@@ -75,6 +79,10 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
   const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set())
   const [showCreateFolder, setShowCreateFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState("")
+  const [showRenameFolder, setShowRenameFolder] = useState(false)
+  const [renamingFolderId, setRenamingFolderId] = useState<number | null>(null)
+  const [renameValue, setRenameValue] = useState("")
+  const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set())
 
   const fetchFiles = useCallback(async () => {
     setLoading(true)
@@ -89,55 +97,39 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
     }
   }, [currentFolderId])
 
-  interface FolderData {
-    id: number
-    name: string
-    parentId: number | null
-  }
-
-  const buildFolderTree = useCallback((flatFolders: FolderData[]): FolderTreeItem[] => {
-    const folderMap = new Map<number, FolderTreeItem>()
-    const rootFolders: FolderTreeItem[] = []
-
-    // Создаем мапу всех папок
-    flatFolders.forEach(folder => {
-      folderMap.set(folder.id, {
-        id: folder.id,
-        name: folder.name,
-        parentId: folder.parentId,
-        children: [],
-        isExpanded: false
-      })
-    })
-
-    // Строим дерево
-    flatFolders.forEach(folder => {
-      const folderItem = folderMap.get(folder.id)!
-      if (folder.parentId === null) {
-        rootFolders.push(folderItem)
-      } else {
-        const parent = folderMap.get(folder.parentId)
-        if (parent) {
-          parent.children.push(folderItem)
-        }
-      }
-    })
-
-    return rootFolders
-  }, [])
-
   const fetchFolders = useCallback(async () => {
     try {
       const folderTree = await getFolderTree()
-      setFolders(buildFolderTree(folderTree.map(f => ({
-        id: f.id,
-        name: f.name,
-        parentId: f.parentId
-      }))))
+      
+      // Преобразуем FolderTreeNode в FolderTreeItem и строим дерево
+      const convertToTreeItem = (node: FolderTreeNode): FolderTreeItem => ({
+        id: node.id,
+        name: node.name,
+        parentId: node.parentId,
+        children: node.children?.map(convertToTreeItem) || [],
+        isExpanded: false // Устанавливается позже в updateTreeExpansion
+      })
+      
+      const treeItems = folderTree.map(convertToTreeItem)
+      setFolders(treeItems)
     } catch (error) {
       console.error('Failed to fetch folders:', error)
     }
-  }, [buildFolderTree])
+  }, [])
+
+  // Отдельная функция для обновления состояния раскрытых папок в дереве
+  const updateTreeExpansion = useCallback((folders: FolderTreeItem[]): FolderTreeItem[] => {
+    return folders.map(folder => ({
+      ...folder,
+      isExpanded: expandedFolders.has(folder.id),
+      children: updateTreeExpansion(folder.children)
+    }))
+  }, [expandedFolders])
+
+  // Обновляем дерево папок при изменении expandedFolders
+  useEffect(() => {
+    setFolders(prevFolders => updateTreeExpansion(prevFolders))
+  }, [expandedFolders, updateTreeExpansion])
 
   useEffect(() => {
     if (isOpen) {
@@ -270,7 +262,71 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
     }
   }
 
-  const navigateToFolder = (folderId: number | null, folderName: string = 'Root') => {
+  const handleDeleteFolder = async (folderId: number, folderName: string) => {
+    if (!confirm(`Вы уверены, что хотите удалить папку "${folderName}" и всё её содержимое?`)) return
+
+    try {
+      const result = await deleteFolder(folderId, true) // force delete
+      if (result.success) {
+        // Обновляем дерево папок
+        fetchFolders()
+        // Если удаляемая папка была текущей, переходим в корень
+        if (currentFolderId === folderId) {
+          setCurrentFolderId(null)
+          setBreadcrumbs([{ id: null, name: 'Root' }])
+        }
+        // Обновляем список файлов
+        fetchFiles()
+        toast.success('Папка удалена')
+      } else {
+        toast.error(result.error || 'Ошибка удаления папки')
+      }
+    } catch (error) {
+      console.error('Delete folder failed:', error)
+      toast.error('Ошибка удаления папки')
+    }
+  }
+
+  const handleRenameFolder = async () => {
+    if (!renamingFolderId || !renameValue.trim()) return
+
+    try {
+      const result = await renameFolder(renamingFolderId, renameValue.trim())
+      if (result.success) {
+        // Обновляем дерево папок
+        fetchFolders()
+        // Обновляем список файлов
+        fetchFiles()
+        
+        // Обновляем breadcrumbs если переименованная папка есть в них
+        setBreadcrumbs(prev => 
+          prev.map(crumb => 
+            crumb.id === renamingFolderId 
+              ? { ...crumb, name: renameValue.trim() }
+              : crumb
+          )
+        )
+        
+        toast.success('Папка переименована')
+        setShowRenameFolder(false)
+        setRenamingFolderId(null)
+        setRenameValue("")
+      } else {
+        toast.error(result.error || 'Ошибка переименования папки')
+      }
+    } catch (error) {
+      console.error('Rename folder failed:', error)
+      toast.error('Ошибка переименования папки')
+    }
+  }
+
+  const startRenameFolder = (folderId: number, currentName: string) => {
+    setRenamingFolderId(folderId)
+    setRenameValue(currentName)
+    setShowRenameFolder(true)
+  }
+
+  const navigateToFolder = async (folderId: number | null, folderName: string = 'Root') => {
     setCurrentFolderId(folderId)
     
     // Обновляем breadcrumbs
@@ -289,24 +345,60 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
         setBreadcrumbs(newBreadcrumbs)
       }
     }
+    
+    // Раскрываем путь к папке в дереве используя Server Action
+    if (folderId !== null) {
+      try {
+        const folderTree = await getFolderTree()
+        
+        // Функция для поиска пути к папке
+        const findPathToFolder = (folders: FolderTreeNode[], targetId: number, path: number[] = []): number[] | null => {
+          for (const folder of folders) {
+            const currentPath = [...path, folder.id]
+            
+            if (folder.id === targetId) {
+              return path // Возвращаем путь до папки (не включая саму папку)
+            }
+            
+            if (folder.children.length > 0) {
+              const result = findPathToFolder(folder.children, targetId, currentPath)
+              if (result) return result
+            }
+          }
+          return null
+        }
+
+        const pathToFolder = findPathToFolder(folderTree, folderId)
+        
+        if (pathToFolder) {
+          setExpandedFolders(prev => {
+            const newSet = new Set(prev)
+            pathToFolder.forEach(folderId => newSet.add(folderId))
+            return newSet
+          })
+        }
+      } catch (error) {
+        console.error('Failed to expand path to folder:', error)
+      }
+    }
   }
 
-  const handleFolderClick = (folder: FileItem) => {
+  const handleFolderClick = async (folder: FileItem) => {
     if (folder.isFolder) {
-      navigateToFolder(folder.id, folder.originalName)
+      await navigateToFolder(folder.id, folder.originalName)
     }
   }
 
   const toggleFolderExpansion = (folderId: number) => {
-    const updateFolders = (folders: FolderTreeItem[]): FolderTreeItem[] => {
-      return folders.map(folder => {
-        if (folder.id === folderId) {
-          return { ...folder, isExpanded: !folder.isExpanded }
-        }
-        return { ...folder, children: updateFolders(folder.children) }
-      })
-    }
-    setFolders(updateFolders(folders))
+    setExpandedFolders(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(folderId)) {
+        newSet.delete(folderId)
+      } else {
+        newSet.add(folderId)
+      }
+      return newSet
+    })
   }
 
   const filteredFiles = files.filter(file =>
@@ -329,7 +421,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
   const FolderTreeNode = ({ folder, level = 0 }: { folder: FolderTreeItem; level?: number }) => (
     <div className="select-none">
       <div 
-        className={`flex items-center py-1 px-2 hover:bg-gray-100 cursor-pointer rounded ${
+        className={`flex items-center py-1 px-2 hover:bg-gray-100 cursor-pointer rounded group ${
           currentFolderId === folder.id ? 'bg-blue-100 text-blue-700' : ''
         }`}
         style={{ paddingLeft: `${level * 16 + 8}px` }}
@@ -352,10 +444,36 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
           </button>
         )}
         <Folder className="w-4 h-4 mr-2 text-blue-500" />
-        <span className="text-sm truncate">{folder.name}</span>
+        <span className="text-sm truncate flex-1">{folder.name}</span>
+        
+        {/* Кнопки действий появляются при наведении */}
+        <div className="hidden group-hover:flex items-center gap-1 ml-2">
+          <button
+            type="button"
+            className="p-1 hover:bg-gray-200 rounded"
+            onClick={(e) => {
+              e.stopPropagation()
+              startRenameFolder(folder.id, folder.name)
+            }}
+            title="Переименовать папку"
+          >
+            <Edit2 className="w-3 h-3 text-gray-600" />
+          </button>
+          <button
+            type="button"
+            className="p-1 hover:bg-red-100 rounded"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleDeleteFolder(folder.id, folder.name)
+            }}
+            title="Удалить папку"
+          >
+            <Trash2 className="w-3 h-3 text-red-600" />
+          </button>
+        </div>
       </div>
-      {folder.isExpanded && folder.children.map(child => (
-        <FolderTreeNode key={child.id} folder={child} level={level + 1} />
+      {folder.isExpanded && folder.children.map((child, index) => (
+        <FolderTreeNode key={`${child.id}-${level}-${index}`} folder={child} level={level + 1} />
       ))}
     </div>
   )
@@ -400,8 +518,8 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                   <Home className="w-4 h-4 mr-2 text-gray-600" />
                   <span className="text-sm font-medium">Корневая папка</span>
                 </div>
-                {folders.map(folder => (
-                  <FolderTreeNode key={folder.id} folder={folder} />
+                {folders.map((folder, index) => (
+                  <FolderTreeNode key={`root-${folder.id}-${index}`} folder={folder} />
                 ))}
               </div>
             </div>
@@ -676,6 +794,60 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                     disabled={!newFolderName.trim()}
                   >
                     Создать
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Диалог переименования папки */}
+        {showRenameFolder && (
+          <Dialog open={showRenameFolder} onOpenChange={setShowRenameFolder}>
+            <DialogContent 
+              className="sm:max-w-md"
+              onSubmit={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+              }}
+            >
+              <DialogHeader>
+                <DialogTitle>Переименовать папку</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="rename-folder-name">Новое название папки</Label>
+                  <Input
+                    id="rename-folder-name"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    placeholder="Введите новое название папки"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleRenameFolder()
+                      }
+                    }}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button 
+                    variant="outline"
+                    type="button"
+                    onClick={() => {
+                      setShowRenameFolder(false)
+                      setRenamingFolderId(null)
+                      setRenameValue("")
+                    }}
+                  >
+                    Отмена
+                  </Button>
+                  <Button 
+                    type="button"
+                    onClick={handleRenameFolder} 
+                    disabled={!renameValue.trim()}
+                  >
+                    Переименовать
                   </Button>
                 </div>
               </div>

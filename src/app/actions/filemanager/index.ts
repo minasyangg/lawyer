@@ -14,6 +14,9 @@ export type { DeleteFileResult } from './deleteFile'
 export { deleteFolder } from './deleteFolder'
 export type { DeleteFolderResult } from './deleteFolder'
 
+export { renameFolder } from './renameFolder'
+export type { RenameFolderResult } from './renameFolder'
+
 export { getFile } from './getFile'
 export type { GetFileResult } from './getFile'
 

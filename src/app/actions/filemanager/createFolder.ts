@@ -48,10 +48,11 @@ export async function createFolder(name: string, parentId: number | null = null)
     }
 
     // Определяем путь к папке
-    let fullPath = name
+    let fullPath: string
     let parentFolder = null
     
     if (parentId) {
+      // Если есть родительская папка, создаем подпапку
       parentFolder = await prisma.folder.findUnique({
         where: { 
           id: parentId,
@@ -65,6 +66,9 @@ export async function createFolder(name: string, parentId: number | null = null)
       }
       
       fullPath = `${parentFolder.path}/${name}`
+    } else {
+      // Корневая папка создается в пользовательской директории
+      fullPath = `user_${user.id}/${name}`
     }
 
     // Создаем папку в базе данных

@@ -2,7 +2,8 @@
 
 import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
-import { generateFileName, saveFile, getPublicFileUrl } from '@/lib/utils/file-utils'
+import { generateFileName, saveFile, getFolderPhysicalPath } from '@/lib/utils/file-utils'
+import { generateVirtualPath, createVirtualFileUrl } from '@/lib/virtualPaths'
 
 const prisma = new PrismaClient()
 
@@ -67,10 +68,20 @@ export async function uploadFile(formData: FormData): Promise<UploadResult> {
       // Генерируем уникальное имя файла
       const filename = generateFileName(file.name)
       
-      // Сохраняем файл на диск
+      // Получаем физический путь к папке для сохранения
+      const folderPhysicalPath = await getFolderPhysicalPath(folderId)
+      
+      // Сохраняем файл на диск с учетом структуры папок
       const arrayBuffer = await file.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
-      const relativePath = await saveFile(buffer, filename, user.id)
+      const relativePath = await saveFile(buffer, filename, user.id, folderPhysicalPath || undefined)
+      
+      // Генерируем виртуальный путь для файла
+      const virtualPath = folderId ? await generateVirtualPath(folderId) : `/user_${user.id}`
+      
+      // Генерируем уникальный virtualId
+      const { randomBytes } = await import('crypto')
+      const virtualId = randomBytes(12).toString('base64url')
       
       // Создаем запись в базе данных
       const dbFile = await prisma.file.create({
@@ -78,6 +89,8 @@ export async function uploadFile(formData: FormData): Promise<UploadResult> {
           originalName: file.name,
           filename: filename,
           path: relativePath,
+          virtualPath: virtualPath,
+          virtualId: virtualId,
           mimeType: file.type,
           size: file.size,
           uploadedBy: user.id,
@@ -89,7 +102,7 @@ export async function uploadFile(formData: FormData): Promise<UploadResult> {
         id: dbFile.id,
         originalName: dbFile.originalName,
         filename: dbFile.filename,
-        url: getPublicFileUrl(dbFile.path),
+        url: dbFile.virtualId ? createVirtualFileUrl(dbFile.virtualId) : `/api/files/${dbFile.id}`, // Используем виртуальный URL или API route
         size: dbFile.size,
         mimeType: dbFile.mimeType,
         createdAt: dbFile.createdAt.toISOString(),

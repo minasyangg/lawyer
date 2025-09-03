@@ -2,7 +2,7 @@
 
 import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
-import { rmdir } from 'fs/promises'
+import { rmdir, unlink } from 'fs/promises'
 import { join } from 'path'
 
 const prisma = new PrismaClient()
@@ -13,10 +13,11 @@ export interface DeleteFolderResult {
 }
 
 /**
- * Удалить папку (должна быть пустой)
+ * Удалить папку и все её содержимое рекурсивно
  * @param folderId ID папки для удаления
+ * @param force если true, удаляет папку со всем содержимым
  */
-export async function deleteFolder(folderId: number): Promise<DeleteFolderResult> {
+export async function deleteFolder(folderId: number, force: boolean = false): Promise<DeleteFolderResult> {
   try {
     const cookieStore = await cookies()
     const sessionCookie = cookieStore.get('admin-session')
@@ -31,12 +32,17 @@ export async function deleteFolder(folderId: number): Promise<DeleteFolderResult
       return { success: false, error: 'User not found' }
     }
 
-    // Находим папку в базе данных
+    // Находим папку в базе данных с её содержимым
     const folder = await prisma.folder.findUnique({
       where: { id: folderId },
       include: {
         files: true,
-        children: true
+        children: {
+          include: {
+            files: true,
+            children: true
+          }
+        }
       }
     })
 
@@ -49,24 +55,61 @@ export async function deleteFolder(folderId: number): Promise<DeleteFolderResult
       return { success: false, error: 'Access denied' }
     }
 
-    // Проверяем, что папка пустая
-    if (folder.files.length > 0 || folder.children.length > 0) {
-      return { success: false, error: 'Folder is not empty' }
+    // Если force не установлен, проверяем, что папка пустая
+    if (!force && (folder.files.length > 0 || folder.children.length > 0)) {
+      return { success: false, error: 'Folder is not empty. Use force=true to delete with contents.' }
     }
+
+    // Рекурсивная функция для удаления всех файлов и папок
+    const deleteRecursively = async (currentFolderId: number) => {
+      // Получаем все файлы в текущей папке
+      const files = await prisma.file.findMany({
+        where: { folderId: currentFolderId }
+      })
+
+      // Удаляем все файлы
+      for (const file of files) {
+        try {
+          const absolutePath = file.path.startsWith('uploads/') 
+            ? join(process.cwd(), 'public', file.path)
+            : file.path
+          await unlink(absolutePath)
+        } catch (fsError) {
+          console.error('Failed to delete file from filesystem:', fsError)
+        }
+        
+        await prisma.file.delete({
+          where: { id: file.id }
+        })
+      }
+
+      // Получаем все дочерние папки
+      const children = await prisma.folder.findMany({
+        where: { parentId: currentFolderId }
+      })
+
+      // Рекурсивно удаляем дочерние папки
+      for (const child of children) {
+        await deleteRecursively(child.id)
+      }
+
+      // Удаляем саму папку из базы данных
+      await prisma.folder.delete({
+        where: { id: currentFolderId }
+      })
+    }
+
+    // Удаляем рекурсивно
+    await deleteRecursively(folderId)
 
     // Удаляем физическую папку
     try {
       const absolutePath = join(process.cwd(), 'public', 'uploads', folder.path)
-      await rmdir(absolutePath)
+      await rmdir(absolutePath, { recursive: true })
     } catch (fsError) {
       console.error('Failed to delete folder from filesystem:', fsError)
-      // Продолжаем удаление из БД даже если физическая папка не удалена
+      // Не возвращаем ошибку, так как данные уже удалены из БД
     }
-
-    // Удаляем запись из базы данных
-    await prisma.folder.delete({
-      where: { id: folderId }
-    })
 
     return { success: true }
 

@@ -22,20 +22,66 @@ export function isImageFile(mimeType: string): boolean {
   return ALLOWED_IMAGE_TYPES.includes(mimeType)
 }
 
-export async function saveFile(buffer: Buffer, filename: string, userId: number): Promise<string> {
-  const userDir = join(UPLOAD_DIR, `user_${userId}`)
-  await mkdir(userDir, { recursive: true })
+export async function saveFile(buffer: Buffer, filename: string, userId: number, folderPath?: string): Promise<string> {
+  // Строим путь к папке пользователя
+  let targetDir = join(UPLOAD_DIR, `user_${userId}`)
+  let relativeDir = `uploads/user_${userId}`
   
-  const filePath = join(userDir, filename)
+  // Если указан путь к подпапке, добавляем его
+  if (folderPath) {
+    targetDir = join(targetDir, folderPath)
+    relativeDir = join(relativeDir, folderPath).replace(/\\/g, '/')
+  }
+  
+  console.log('saveFile: targetDir =', targetDir)
+  console.log('saveFile: relativeDir =', relativeDir)
+  
+  // Создаем все необходимые папки
+  await mkdir(targetDir, { recursive: true })
+  
+  const filePath = join(targetDir, filename)
+  console.log('saveFile: saving to =', filePath)
   await writeFile(filePath, buffer)
   
   // Возвращаем относительный путь от public для статических файлов
-  const relativePath = `uploads/user_${userId}/${filename}`
+  const relativePath = `${relativeDir}/${filename}`.replace(/\\/g, '/')
+  console.log('saveFile: returning relativePath =', relativePath)
   return relativePath
 }
 
 export function getUserUploadPath(userId: number): string {
   return join(UPLOAD_DIR, `user_${userId}`)
+}
+
+/**
+ * Получает физический путь к папке по её ID
+ */
+export async function getFolderPhysicalPath(folderId: number | null): Promise<string | null> {
+  if (!folderId) return null
+  
+  const { PrismaClient } = await import('@prisma/client')
+  const prisma = new PrismaClient()
+  
+  try {
+    const pathParts: string[] = []
+    let currentFolderId: number | null = folderId
+    
+    while (currentFolderId) {
+      const folder: { name: string; parentId: number | null } | null = await prisma.folder.findUnique({
+        where: { id: currentFolderId },
+        select: { name: true, parentId: true }
+      })
+      
+      if (!folder) break
+      
+      pathParts.unshift(folder.name)
+      currentFolderId = folder.parentId
+    }
+    
+    return pathParts.length > 0 ? pathParts.join('/') : null
+  } finally {
+    await prisma.$disconnect()
+  }
 }
 
 export function getPublicFileUrl(filePath: string): string {
