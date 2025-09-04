@@ -256,7 +256,7 @@ export function RichTextEditor({
         plugins: [
           'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
           'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-          'insertdatetime', 'media', 'table', 'help', 'wordcount', 'dragdrop'
+          'insertdatetime', 'media', 'table', 'help', 'wordcount'
         ],
         toolbar: 'undo redo | blocks | ' +
           'bold italic forecolor | alignleft aligncenter ' +
@@ -313,12 +313,6 @@ export function RichTextEditor({
           .table-highlight { 
             background-color: #fff3cd; 
           }
-          /* Очистка после float элементов */
-          .clearfix::after {
-            content: "";
-            display: table;
-            clear: both;
-          }
         `,
         images_upload_handler: handleImageUploadForTinyMCE,
         automatic_uploads: true,
@@ -327,13 +321,7 @@ export function RichTextEditor({
         image_draggable: true,
         object_resizing: true,
         resize_img_proportional: false,
-        image_class_list: [
-          {title: 'Обычное изображение', value: ''},
-          {title: 'Изображение слева', value: 'img-left'},
-          {title: 'Изображение справа', value: 'img-right'},
-          {title: 'Изображение по центру', value: 'img-center'},
-          {title: 'Адаптивное изображение', value: 'img-responsive'}
-        ],
+        // image_class_list убран, так как используются инлайн стили через диалог
         // style_formats убраны, так как используются инлайн стили через диалог
         table_default_attributes: {
           border: '1'
