@@ -1,7 +1,23 @@
 "use client"
 
-import { Editor } from '@tinymce/tinymce-react'
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
+
+// Динамический импорт TinyMCE только на клиенте
+const Editor = dynamic(
+  () => import('@tinymce/tinymce-react').then((mod) => ({ default: mod.Editor })),
+  { 
+    ssr: false,
+    loading: () => (
+      <div 
+        className="border border-gray-300 rounded bg-gray-50 animate-pulse flex items-center justify-center"
+        style={{ height: '500px' }}
+      >
+        <div className="text-gray-400">Загрузка редактора...</div>
+      </div>
+    )
+  }
+)
 
 interface RichTextEditorProps {
   value: string
@@ -30,51 +46,125 @@ interface TinyMCEEditor {
   insertContent: (content: string) => void
 }
 
+interface FileItem {
+  id: number
+  url: string
+  originalName: string
+  mimeType: string
+}
+
+// Типы документов для вставки как ссылки
+const DOCUMENT_MIME_TYPES: string[] = [
+  'application/pdf',
+  'application/msword', 
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
+  'application/zip',
+  'application/x-rar-compressed',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+]
+
 // Функция для показа диалога выбора размера изображения
-const showImageSizeDialog = () => {
-  const width = prompt('Введите ширину изображения (в пикселях или процентах):', '100%')
-  const height = prompt('Введите высоту изображения (в пикселях или оставьте пустым для авто):', '')
-  return { width: width || '100%', height }
+const showImageSizeDialog = (): { width: string; height: string | null } => {
+  const width: string = prompt('Введите ширину изображения (в пикселях или процентах):', '100%') || '100%'
+  const height: string | null = prompt('Введите высоту изображения (в пикселях или оставьте пустым для авто):', '') || null
+  return { width, height }
 }
 
 // Функция для создания стиля изображения
-const createImageStyle = (width: string, height: string | null) => {
+const createImageStyle = (width: string, height: string | null): string => {
   return `max-width: 100%; width: ${width}; ${height ? `height: ${height};` : 'height: auto;'}`
+}
+
+// Функция для определения типа контента и создания соответствующего HTML
+const createContentByMimeType = (file: FileItem, withSizeDialog: boolean = false): string => {
+  const { url, originalName, mimeType } = file
+  
+  if (mimeType.startsWith('image/')) {
+    if (withSizeDialog) {
+      const { width, height } = showImageSizeDialog()
+      const style = createImageStyle(width, height)
+      return `<img src="${url}" alt="${originalName}" style="${style}" />`
+    } else {
+      return `<img src="${url}" alt="${originalName}" style="max-width: 100%; height: auto;" />`
+    }
+  } else if (mimeType.startsWith('video/')) {
+    return `<video controls src="${url}" style="max-width: 100%; height: auto;"></video>`
+  } else if (DOCUMENT_MIME_TYPES.includes(mimeType) || mimeType.startsWith('application/')) {
+    return `<a href="${url}" target="_blank">${originalName}</a>`
+  } else {
+    // По умолчанию вставляем как ссылку
+    return `<a href="${url}" target="_blank">${originalName}</a>`
+  }
+}
+
+// Функция загрузки файла через общую систему файлового менеджера
+const handleFileUpload = async (file: File): Promise<string> => {
+  try {
+    const formData = new FormData()
+    formData.append('files', file)
+    // Сохраняем в корневую папку пользователя (без указания folderId)
+    
+    const response = await fetch('/api/editor/upload', {
+      method: 'POST',
+      body: formData,
+    })
+    
+    const result = await response.json()
+    
+    if (result.success) {
+      return result.file.url
+    } else {
+      throw new Error(result.error || 'Upload failed')
+    }
+  } catch (error) {
+    console.error('File upload error:', error)
+    throw error
+  }
 }
 
 export function RichTextEditor({ 
   value, 
   onChange, 
   onInit,
-  height = 500,
-  placeholder
+  height = 500
 }: RichTextEditorProps) {
-  const editorRef = useRef<Editor | null>(null)
+  const editorRef = useRef<TinyMCEEditor | null>(null)
+  const [isClient, setIsClient] = useState(false)
 
-  const handleEditorChange = (content: string) => {
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  const handleEditorChange = (content: string): void => {
     onChange(content)
   }
 
-  const handleImageUpload = (blobInfo: BlobInfo): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const formData = new FormData()
-      formData.append('file', blobInfo.blob(), blobInfo.filename())
+  // Не рендерим редактор до клиентской гидратации
+  if (!isClient) {
+    return (
+      <div 
+        style={{ height: `${height}px` }}
+        className="border border-gray-300 rounded bg-gray-50 animate-pulse flex items-center justify-center"
+      >
+        <div className="text-gray-400">Загрузка редактора...</div>
+      </div>
+    )
+  }
 
-      fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
+  // Обработчик загрузки изображений через drag&drop и paste
+  const handleImageUploadForTinyMCE = (blobInfo: BlobInfo): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const file = new File([blobInfo.blob()], blobInfo.filename(), { 
+        type: blobInfo.blob().type 
       })
-      .then(response => response.json())
-      .then(result => {
-        if (result.success) {
-          resolve(result.file.url)
-        } else {
-          reject(result.error || 'Upload failed')
-        }
-      })
-      .catch(error => {
-        reject(error.message || 'Upload failed')
-      })
+
+      handleFileUpload(file)
+        .then(url => resolve(url))
+        .catch(error => reject(error.message || 'Upload failed'))
     })
   }
 
@@ -100,45 +190,38 @@ export function RichTextEditor({
           'alignright alignjustify | bullist numlist outdent indent | ' +
           'removeformat | image media link filemanager | code fullscreen | help',
         content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif; font-size: 14px; line-height: 1.4; }',
-        images_upload_handler: handleImageUpload,
+        images_upload_handler: handleImageUploadForTinyMCE,
         automatic_uploads: true,
         file_picker_types: 'image',
-        file_picker_callback: (callback: (url: string, meta?: { alt?: string, style?: string }) => void, value: string, meta: { filetype: string }) => {
+        file_picker_callback: (
+          callback: (url: string, meta?: { alt?: string; style?: string }) => void, 
+          value: string, 
+          meta: { filetype: string }
+        ) => {
           if (meta.filetype === 'image') {
             const input = document.createElement('input')
             input.setAttribute('type', 'file')
             input.setAttribute('accept', 'image/*')
             
-            input.addEventListener('change', (e: Event) => {
+            input.addEventListener('change', async (e: Event) => {
               const target = e.target as HTMLInputElement
               const file = target.files?.[0]
               if (file) {
-                const formData = new FormData()
-                formData.append('file', file)
-                
-                fetch('/api/upload', {
-                  method: 'POST',
-                  body: formData,
-                })
-                .then(response => response.json())
-                .then(result => {
-                  if (result.success) {
-                    // Показываем диалог выбора размера
-                    const { width, height } = showImageSizeDialog()
-                    const style = createImageStyle(width, height)
-                    
-                    // Вставляем изображение с выбранными размерами
-                    callback(result.file.url, { 
-                      alt: file.name,
-                      style 
-                    })
-                  } else {
-                    console.error('Upload failed:', result.error)
-                  }
-                })
-                .catch(error => {
-                  console.error('Upload error:', error)
-                })
+                try {
+                  const url = await handleFileUpload(file)
+                  
+                  // Показываем диалог выбора размера
+                  const { width, height } = showImageSizeDialog()
+                  const style = createImageStyle(width, height)
+                  
+                  // Вставляем изображение с выбранными размерами
+                  callback(url, { 
+                    alt: file.name,
+                    style 
+                  })
+                } catch (error) {
+                  console.error('Upload failed:', error)
+                }
               }
             })
             
@@ -156,21 +239,9 @@ export function RichTextEditor({
               const event = new CustomEvent('openFileManager', {
                 detail: {
                   selectMode: true,
-                  onSelect: (file: { id: number; url: string; originalName: string; mimeType: string }) => {
-                    if (file.mimeType.startsWith('image/')) {
-                      // Показываем диалог выбора размера
-                      const { width, height } = showImageSizeDialog()
-                      const style = createImageStyle(width, height)
-                      
-                      // Вставляем изображение с выбранными размерами
-                      editor.insertContent(
-                        `<img src="${file.url}" alt="${file.originalName}" style="${style}" />`
-                      )
-                    } else {
-                      editor.insertContent(
-                        `<a href="${file.url}" target="_blank">${file.originalName}</a>`
-                      )
-                    }
+                  onSelect: (file: FileItem) => {
+                    const content = createContentByMimeType(file, file.mimeType.startsWith('image/'))
+                    editor.insertContent(content)
                   }
                 }
               })

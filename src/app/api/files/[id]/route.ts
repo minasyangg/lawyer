@@ -31,24 +31,14 @@ export async function GET(
     }
 
     if (!file) {
-      console.log('File not found in database for ID:', id)
       return NextResponse.json(
         { error: 'File not found' },
         { status: 404 }
       )
     }
 
-    console.log('Found file in database:', {
-      id: file.id,
-      originalName: file.originalName,
-      path: file.path,
-      virtualId: file.virtualId,
-      virtualPath: file.virtualPath
-    })
-
     // Получаем физический путь к файлу
     const filePath = path.join(process.cwd(), 'public', file.path)
-    console.log('Trying to access file at:', filePath)
     
     try {
       // Проверяем существование файла
@@ -71,10 +61,8 @@ export async function GET(
       
     } catch (fileError) {
       console.error('File access error:', fileError)
-      console.error('Attempted path:', filePath)
-      console.error('File data from DB:', file)
       return NextResponse.json(
-        { error: 'File not accessible', path: filePath, dbPath: file.path },
+        { error: 'File not accessible' },
         { status: 404 }
       )
     }

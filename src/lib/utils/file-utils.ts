@@ -33,19 +33,14 @@ export async function saveFile(buffer: Buffer, filename: string, userId: number,
     relativeDir = join(relativeDir, folderPath).replace(/\\/g, '/')
   }
   
-  console.log('saveFile: targetDir =', targetDir)
-  console.log('saveFile: relativeDir =', relativeDir)
-  
   // Создаем все необходимые папки
   await mkdir(targetDir, { recursive: true })
   
   const filePath = join(targetDir, filename)
-  console.log('saveFile: saving to =', filePath)
   await writeFile(filePath, buffer)
   
   // Возвращаем относительный путь от public для статических файлов
   const relativePath = `${relativeDir}/${filename}`.replace(/\\/g, '/')
-  console.log('saveFile: returning relativePath =', relativePath)
   return relativePath
 }
 
