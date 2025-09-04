@@ -44,6 +44,14 @@ interface TinyMCEEditor {
     }
   }
   insertContent: (content: string) => void
+  getBody: () => HTMLElement
+  selection: {
+    getNode: () => HTMLElement
+  }
+  dom: {
+    getPos: (element: HTMLElement) => { x: number; y: number }
+  }
+  on: (eventName: string, callback: (e: Event) => void) => void
 }
 
 interface FileItem {
@@ -67,29 +75,91 @@ const DOCUMENT_MIME_TYPES: string[] = [
   'application/vnd.openxmlformats-officedocument.presentationml.presentation'
 ]
 
-// Функция для показа диалога выбора размера изображения
-const showImageSizeDialog = (): { width: string; height: string | null } => {
-  const width: string = prompt('Введите ширину изображения (в пикселях или процентах):', '100%') || '100%'
+// Функция для показа диалога выбора размера и стиля изображения
+const showImageStyleDialog = (): { width: string; height: string | null; style: string; styleProps: string } => {
+  // Сначала выбираем стиль обтекания
+  const styles = [
+    { name: 'Обычное изображение', float: 'none', margin: '10px 0', maxWidth: '100%' },
+    { name: 'Изображение слева с обтеканием', float: 'left', margin: '0 15px 10px 0', maxWidth: '50%' },
+    { name: 'Изображение справа с обтеканием', float: 'right', margin: '0 0 10px 15px', maxWidth: '50%' },
+    { name: 'По центру', float: 'none', margin: '10px auto', maxWidth: '100%' },
+    { name: 'Маленькое изображение слева', float: 'left', margin: '5px 15px 5px 0', maxWidth: '200px' }
+  ]
+  
+  const styleOptions = styles.map((style, index) => `${index + 1}. ${style.name}`).join('\n')
+  const choice = prompt(`Выберите стиль изображения (введите номер):\n${styleOptions}`, '1')
+  
+  const selectedIndex = parseInt(choice || '1') - 1
+  const selectedStyle = styles[selectedIndex] || styles[0]
+  
+  // Затем выбираем размер
+  const width: string = prompt('Введите ширину изображения (в пикселях или процентах):', selectedStyle.maxWidth === '200px' ? '200px' : '300px') || '300px'
   const height: string | null = prompt('Введите высоту изображения (в пикселях или оставьте пустым для авто):', '') || null
-  return { width, height }
+  
+  // Формируем инлайн стили
+  const styleProps = `float: ${selectedStyle.float}; margin: ${selectedStyle.margin}; max-width: ${selectedStyle.maxWidth}; width: ${width}; height: ${height || 'auto'}; display: ${selectedStyle.float === 'none' && selectedStyle.margin.includes('auto') ? 'block' : 'inline'};`
+  
+  return { 
+    width, 
+    height, 
+    style: selectedStyle.name, 
+    styleProps 
+  }
 }
 
-// Функция для создания стиля изображения
-const createImageStyle = (width: string, height: string | null): string => {
-  return `max-width: 100%; width: ${width}; ${height ? `height: ${height};` : 'height: auto;'}`
+// Функция для создания инлайн стилей изображения с обтеканием
+const createImageStyleWithFloat = (floatDirection: 'left' | 'right' | 'center' | 'none', width: string, height: string | null): string => {
+  const baseStyle = `width: ${width}; ${height ? `height: ${height};` : 'height: auto;'} max-width: 100%;`
+  
+  switch (floatDirection) {
+    case 'left':
+      return `${baseStyle} float: left; margin: 0 15px 10px 0; display: inline;`
+    case 'right':
+      return `${baseStyle} float: right; margin: 0 0 10px 15px; display: inline;`
+    case 'center':
+      return `${baseStyle} display: block; margin: 10px auto; float: none;`
+    case 'none':
+    default:
+      return `${baseStyle} display: inline; margin: 0;`
+  }
 }
+
+// Функция для определения позиции изображения в тексте
+const determineImageFloat = (editor: TinyMCEEditor, x: number): 'left' | 'right' | 'center' => {
+  try {
+    const editorBody = editor.getBody()
+    const bodyRect = editorBody.getBoundingClientRect()
+    const bodyWidth = bodyRect.width
+    
+    // Вычисляем относительную позицию
+    const relativeX = x - bodyRect.left
+    const percentage = relativeX / bodyWidth
+    
+    if (percentage < 0.25) {
+      return 'left'
+    } else if (percentage > 0.75) {
+      return 'right'
+    } else {
+      return 'center'
+    }
+  } catch (error) {
+    console.error('Error determining float direction:', error)
+    return 'left'
+  }
+}
+
 
 // Функция для определения типа контента и создания соответствующего HTML
-const createContentByMimeType = (file: FileItem, withSizeDialog: boolean = false): string => {
+const createContentByMimeType = (file: FileItem, withStyleDialog: boolean = false): string => {
   const { url, originalName, mimeType } = file
   
   if (mimeType.startsWith('image/')) {
-    if (withSizeDialog) {
-      const { width, height } = showImageSizeDialog()
-      const style = createImageStyle(width, height)
-      return `<img src="${url}" alt="${originalName}" style="${style}" />`
+    if (withStyleDialog) {
+      const { styleProps } = showImageStyleDialog()
+      return `<img src="${url}" alt="${originalName}" style="${styleProps}" />`
     } else {
-      return `<img src="${url}" alt="${originalName}" style="max-width: 100%; height: auto;" />`
+      // Без диалога используем адаптивный стиль
+      return `<img src="${url}" alt="${originalName}" style="max-width: 100%; height: auto; display: block; margin: 10px 0;" />`
     }
   } else if (mimeType.startsWith('video/')) {
     return `<video controls src="${url}" style="max-width: 100%; height: auto;"></video>`
@@ -163,7 +233,10 @@ export function RichTextEditor({
       })
 
       handleFileUpload(file)
-        .then(url => resolve(url))
+        .then(url => {
+          // Для drag&drop не показываем диалог, используем стиль по умолчанию
+          resolve(url)
+        })
         .catch(error => reject(error.message || 'Upload failed'))
     })
   }
@@ -183,19 +256,25 @@ export function RichTextEditor({
         plugins: [
           'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
           'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-          'insertdatetime', 'media', 'table', 'help', 'wordcount'
+          'insertdatetime', 'media', 'table', 'help', 'wordcount', 'dragdrop'
         ],
         toolbar: 'undo redo | blocks | ' +
           'bold italic forecolor | alignleft aligncenter ' +
           'alignright alignjustify | bullist numlist outdent indent | ' +
-          'removeformat | image media link filemanager | styleselect | ' +
-          'table | code fullscreen | help',
+          'removeformat | image media link filemanager | ' +
+          'table | clearfloat | code fullscreen | help',
         content_style: `
           body { 
             font-family: -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif; 
             font-size: 14px; 
             line-height: 1.4; 
           }
+          /* Базовые стили для изображений - инлайн стили имеют приоритет */
+          img {
+            max-width: 100%;
+            height: auto;
+          }
+          /* Стили для таблиц */
           table { 
             border-collapse: collapse; 
             width: 100%; 
@@ -234,56 +313,28 @@ export function RichTextEditor({
           .table-highlight { 
             background-color: #fff3cd; 
           }
+          /* Очистка после float элементов */
+          .clearfix::after {
+            content: "";
+            display: table;
+            clear: both;
+          }
         `,
         images_upload_handler: handleImageUploadForTinyMCE,
         automatic_uploads: true,
         file_picker_types: 'image',
         image_advtab: true,
-        style_formats: [
-          {
-            title: 'Изображения',
-            items: [
-              {
-                title: 'Изображение слева',
-                selector: 'img',
-                styles: {
-                  'float': 'left',
-                  'margin': '0 15px 10px 0',
-                  'max-width': '100%'
-                }
-              },
-              {
-                title: 'Изображение справа',
-                selector: 'img',
-                styles: {
-                  'float': 'right',
-                  'margin': '0 0 10px 15px',
-                  'max-width': '100%'
-                }
-              },
-              {
-                title: 'По центру',
-                selector: 'img',
-                styles: {
-                  'display': 'block',
-                  'margin': '10px auto',
-                  'float': 'none',
-                  'max-width': '100%'
-                }
-              },
-              {
-                title: 'Сброс обтекания',
-                selector: 'img',
-                styles: {
-                  'float': 'none',
-                  'margin': '0',
-                  'display': 'inline',
-                  'max-width': '100%'
-                }
-              }
-            ]
-          }
+        image_draggable: true,
+        object_resizing: true,
+        resize_img_proportional: false,
+        image_class_list: [
+          {title: 'Обычное изображение', value: ''},
+          {title: 'Изображение слева', value: 'img-left'},
+          {title: 'Изображение справа', value: 'img-right'},
+          {title: 'Изображение по центру', value: 'img-center'},
+          {title: 'Адаптивное изображение', value: 'img-responsive'}
         ],
+        // style_formats убраны, так как используются инлайн стили через диалог
         table_default_attributes: {
           border: '1'
         },
@@ -327,14 +378,13 @@ export function RichTextEditor({
                 try {
                   const url = await handleFileUpload(file)
                   
-                  // Показываем диалог выбора размера
-                  const { width, height } = showImageSizeDialog()
-                  const style = createImageStyle(width, height)
+                  // Показываем диалог выбора стиля и размера
+                  const { styleProps } = showImageStyleDialog()
                   
-                  // Вставляем изображение с выбранными размерами
+                  // Вставляем изображение с выбранными стилями
                   callback(url, { 
                     alt: file.name,
-                    style 
+                    style: styleProps
                   })
                 } catch (error) {
                   console.error('Upload failed:', error)
@@ -357,12 +407,72 @@ export function RichTextEditor({
                 detail: {
                   selectMode: true,
                   onSelect: (file: FileItem) => {
-                    const content = createContentByMimeType(file, file.mimeType.startsWith('image/'))
-                    editor.insertContent(content)
+                    if (file.mimeType.startsWith('image/')) {
+                      // Для изображений используем диалог выбора стиля
+                      const { styleProps } = showImageStyleDialog()
+                      const imgTag = `<img src="${file.url}" alt="${file.originalName}" style="${styleProps}" />`
+                      editor.insertContent(imgTag)
+                    } else {
+                      // Для других файлов используем стандартную функцию
+                      const content = createContentByMimeType(file, false)
+                      editor.insertContent(content)
+                    }
                   }
                 }
               })
               window.dispatchEvent(event)
+            }
+          })
+
+          // Добавляем кнопку для очистки float элементов
+          editor.ui.registry.addButton('clearfloat', {
+            text: 'Clear',
+            tooltip: 'Clear floating elements',
+            icon: 'new-document',
+            onAction: () => {
+              editor.insertContent('<div style="clear: both; height: 0; margin: 0; padding: 0;"></div>')
+            }
+          })
+
+          // Обработчик перетаскивания изображений
+          editor.on('drop', (e: Event) => {
+            setTimeout(() => {
+              // Находим изображение, которое было перемещено
+              const selection = editor.selection.getNode()
+              if (selection && selection.tagName === 'IMG') {
+                // Получаем координаты drop
+                const mouseEvent = e as MouseEvent
+                const dropX = mouseEvent.clientX
+                
+                // Определяем направление float
+                const floatDirection = determineImageFloat(editor, dropX)
+                
+                // Получаем текущий размер изображения
+                const imgElement = selection as HTMLImageElement
+                const currentWidth = imgElement.style.width || imgElement.getAttribute('width') || '300px'
+                const currentHeight = imgElement.style.height || null
+                
+                // Создаем новые стили
+                const newStyle = createImageStyleWithFloat(floatDirection, currentWidth, currentHeight)
+                
+                // Применяем новые стили
+                imgElement.style.cssText = newStyle
+                
+                console.log(`Image moved with float: ${floatDirection}`)
+              }
+            }, 100) // Небольшая задержка для завершения операции drop
+          })
+
+          // Обработчик двойного клика по изображению для изменения стиля
+          editor.on('dblclick', (e: Event) => {
+            const mouseEvent = e as MouseEvent
+            const target = mouseEvent.target as HTMLElement
+            if (target && target.tagName === 'IMG') {
+              // Показываем диалог изменения стиля
+              const { styleProps } = showImageStyleDialog()
+              const imgElement = target as HTMLImageElement
+              imgElement.style.cssText = styleProps
+              console.log('Image style updated via double-click')
             }
           })
         }

@@ -6,14 +6,6 @@ import Footer from '@/components/ui/Footer'
 import { ArticleDocuments } from '@/components/ui/ArticleDocuments'
 import { getArticleBySlug, getPublishedArticles } from '@/lib/actions/article-actions'
 
-interface DocumentItem {
-  id: number
-  name: string
-  url: string
-  size: number
-  mimeType: string
-}
-
 interface ArticlePageProps {
   params: Promise<{
     slug: string
@@ -102,9 +94,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           </header>
 
           {/* Article Content */}
-          <div className="prose prose-lg max-w-none mb-12">
+          <div className="mb-12">
             <div 
-              className="text-gray-800 leading-relaxed rich-text-content"
+              className="text-gray-800 leading-relaxed rich-text-content prose-custom"
               dangerouslySetInnerHTML={{ __html: article.content }}
             />
           </div>

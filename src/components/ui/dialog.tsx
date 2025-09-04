@@ -56,20 +56,22 @@ const DialogContent = React.forwardRef<
   if (!context?.open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 100000 }}>
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black/50" 
         onClick={() => context.onOpenChange(false)}
+        style={{ zIndex: 100000 }}
       />
       
       {/* Content */}
       <div
         ref={ref}
         className={cn(
-          "relative z-50 bg-white rounded-lg shadow-lg w-full max-w-lg p-6 m-4",
+          "relative bg-white rounded-lg shadow-lg w-full max-w-lg p-6 m-4",
           className
         )}
+        style={{ zIndex: 100001 }}
         {...props}
       >
         <button

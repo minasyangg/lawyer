@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест функции showImageStyleDialog</title>
+</head>
+<body>
+    <h1>Тест функции создания стилей изображения</h1>
+    <button onclick="testImageStyleDialog()">Тестировать диалог стилей</button>
+    <div id="result"></div>
+
+    <script>
+        function showImageStyleDialog() {
+            // Сначала выбираем стиль обтекания
+            const styles = [
+                { name: 'Обычное изображение', float: 'none', margin: '10px 0', maxWidth: '100%' },
+                { name: 'Изображение слева с обтеканием', float: 'left', margin: '0 15px 10px 0', maxWidth: '50%' },
+                { name: 'Изображение справа с обтеканием', float: 'right', margin: '0 0 10px 15px', maxWidth: '50%' },
+                { name: 'По центру', float: 'none', margin: '10px auto', maxWidth: '100%' },
+                { name: 'Маленькое изображение слева', float: 'left', margin: '5px 15px 5px 0', maxWidth: '200px' }
+            ]
+            
+            const styleOptions = styles.map((style, index) => `${index + 1}. ${style.name}`).join('\n')
+            const choice = prompt(`Выберите стиль изображения (введите номер):\n${styleOptions}`, '1')
+            
+            const selectedIndex = parseInt(choice || '1') - 1
+            const selectedStyle = styles[selectedIndex] || styles[0]
+            
+            // Затем выбираем размер
+            const width = prompt('Введите ширину изображения (в пикселях или процентах):', selectedStyle.maxWidth === '200px' ? '200px' : '300px') || '300px'
+            const height = prompt('Введите высоту изображения (в пикселях или оставьте пустым для авто):', '') || null
+            
+            // Формируем инлайн стили
+            const styleProps = `float: ${selectedStyle.float}; margin: ${selectedStyle.margin}; max-width: ${selectedStyle.maxWidth}; width: ${width}; height: ${height || 'auto'}; display: ${selectedStyle.float === 'none' && selectedStyle.margin.includes('auto') ? 'block' : 'inline'};`
+            
+            return { 
+                width, 
+                height, 
+                style: selectedStyle.name, 
+                styleProps 
+            }
+        }
+
+        function testImageStyleDialog() {
+            const result = showImageStyleDialog()
+            document.getElementById('result').innerHTML = `
+                <h2>Результат:</h2>
+                <p><strong>Выбранный стиль:</strong> ${result.style}</p>
+                <p><strong>Ширина:</strong> ${result.width}</p>
+                <p><strong>Высота:</strong> ${result.height || 'auto'}</p>
+                <p><strong>CSS стили:</strong></p>
+                <pre style="background: #f0f0f0; padding: 10px; border-radius: 5px;">${result.styleProps}</pre>
+                <h3>Пример изображения:</h3>
+                <div style="border: 1px solid #ccc; padding: 20px; max-width: 600px;">
+                    <img src="https://via.placeholder.com/400x300" alt="Тестовое изображение" style="${result.styleProps}">
+                    <p>Это пример текста, который должен обтекать изображение в зависимости от выбранного стиля. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+                    <div style="clear: both;"></div>
+                </div>
+            `
+        }
+    </script>
+</body>
+</html>
