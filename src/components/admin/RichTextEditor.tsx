@@ -253,6 +253,10 @@ export function RichTextEditor({
       init={{
         height,
         menubar: false,
+        // Настройки URL для правильной обработки путей к файлам
+        relative_urls: false,
+        remove_script_host: false,
+        document_base_url: '/',
         plugins: [
           'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
           'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',

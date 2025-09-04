@@ -3,6 +3,7 @@
 import { PrismaClient } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { resolveVirtualUrlsInContent } from '@/lib/virtualPaths'
 
 interface DocumentItem {
   id: number
@@ -222,8 +223,12 @@ export async function getArticleById(id: number): Promise<Article | null> {
     
     if (!article) return null
     
+    // Преобразуем виртуальные URL в контенте
+    const resolvedContent = await resolveVirtualUrlsInContent(article.content)
+    
     return {
       ...article,
+      content: resolvedContent,
       tags: article.tags.map(at => at.tag),
       documents: Array.isArray(article.documents) ? (article.documents as unknown as DocumentItem[]) : undefined
     }
@@ -279,8 +284,12 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
     
     if (!article) return null
     
+    // Преобразуем виртуальные URL в контенте
+    const resolvedContent = await resolveVirtualUrlsInContent(article.content)
+    
     return {
       ...article,
+      content: resolvedContent,
       tags: article.tags.map(at => at.tag),
       documents: Array.isArray(article.documents) ? (article.documents as unknown as DocumentItem[]) : undefined
     }

@@ -126,3 +126,65 @@ export async function resolveArticleDocuments(documents: unknown): Promise<unkno
   
   return resolved
 }
+
+/**
+ * Преобразует виртуальные URL в HTML контенте статьи в реальные URL
+ * Заменяет /api/files/{id} на /api/files/{virtualId} где это возможно
+ * НЕ трогает уже правильные виртуальные URL
+ */
+export async function resolveVirtualUrlsInContent(content: string): Promise<string> {
+  if (!content) return content
+  
+  let processedContent = content
+  
+  // Регулярное выражение для поиска ТОЛЬКО числовых ID (не виртуальных)
+  const fileUrlRegex = /\/api\/files\/(\d+)(?=["'\s>])/g
+  const matches = Array.from(content.matchAll(fileUrlRegex))
+  
+  // Если нет числовых URL, возвращаем контент как есть
+  if (matches.length === 0) {
+    return content
+  }
+  
+  // Создаем Map для кэширования результатов
+  const urlCache = new Map<string, string>()
+  
+  for (const match of matches) {
+    const numericId = parseInt(match[1], 10)
+    const originalUrl = `/api/files/${numericId}`
+    
+    if (urlCache.has(originalUrl)) {
+      continue // Уже обработан
+    }
+    
+    try {
+      // Ищем файл в базе данных
+      const file = await prisma.file.findUnique({
+        where: { id: numericId },
+        select: { virtualId: true }
+      })
+      
+      if (file?.virtualId) {
+        const virtualUrl = createVirtualFileUrl(file.virtualId)
+        urlCache.set(originalUrl, virtualUrl)
+      } else {
+        urlCache.set(originalUrl, originalUrl) // Оставляем как есть
+      }
+    } catch (error) {
+      console.error(`Error resolving virtual URL for file ${numericId}:`, error)
+      urlCache.set(originalUrl, originalUrl) // Оставляем как есть при ошибке
+    }
+  }
+  
+  // Заменяем все URL в контенте
+  for (const [originalUrl, newUrl] of urlCache) {
+    if (originalUrl !== newUrl) {
+      processedContent = processedContent.replace(
+        new RegExp(originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+        newUrl
+      )
+    }
+  }
+  
+  return processedContent
+}
