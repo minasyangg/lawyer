@@ -104,7 +104,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           {/* Article Content */}
           <div className="prose prose-lg max-w-none mb-12">
             <div 
-              className="text-gray-800 leading-relaxed"
+              className="text-gray-800 leading-relaxed rich-text-content"
               dangerouslySetInnerHTML={{ __html: article.content }}
             />
           </div>

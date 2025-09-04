@@ -99,7 +99,7 @@ export default function RichTextEditorTest() {
       <div className="mt-6">
         <h2 className="text-lg font-semibold mb-2">Предварительный просмотр:</h2>
         <div 
-          className="border border-gray-300 p-4 rounded"
+          className="border border-gray-300 p-4 rounded rich-text-content"
           dangerouslySetInnerHTML={{ __html: content }}
         />
       </div>

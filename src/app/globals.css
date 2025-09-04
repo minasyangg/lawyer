@@ -1,7 +1,71 @@
 
 @import "tailwindcss";
 
+/* Стили для таблиц из RichTextEditor */
+.rich-text-content table { 
+  border-collapse: collapse; 
+  width: 100%; 
+  margin: 10px 0; 
+  border: 1px solid #dee2e6;
+}
 
+.rich-text-content th, 
+.rich-text-content td { 
+  border: 1px solid #dee2e6; 
+  padding: 8px;
+}
+
+.rich-text-content th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
+
+.rich-text-content .table-bordered { 
+  border: 1px solid #dee2e6; 
+}
+
+.rich-text-content .table-bordered th,
+.rich-text-content .table-bordered td { 
+  border: 1px solid #dee2e6; 
+  padding: 8px; 
+}
+
+.rich-text-content .table-striped tbody tr:nth-of-type(odd) { 
+  background-color: rgba(0, 0, 0, 0.05); 
+}
+
+.rich-text-content .table-header { 
+  background-color: #f8f9fa; 
+  font-weight: bold; 
+}
+
+.rich-text-content .table-header-row { 
+  background-color: #e9ecef; 
+}
+
+.rich-text-content .table-alt-row { 
+  background-color: #f8f9fa; 
+}
+
+.rich-text-content .table-highlight { 
+  background-color: #fff3cd; 
+}
+
+/* Общие стили для таблиц во всем приложении */
+table { 
+  border-collapse: collapse; 
+}
+
+table th, 
+table td { 
+  border: 1px solid #dee2e6; 
+  padding: 8px;
+}
+
+table th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
 
 
 

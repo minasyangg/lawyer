@@ -188,11 +188,128 @@ export function RichTextEditor({
         toolbar: 'undo redo | blocks | ' +
           'bold italic forecolor | alignleft aligncenter ' +
           'alignright alignjustify | bullist numlist outdent indent | ' +
-          'removeformat | image media link filemanager | code fullscreen | help',
-        content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif; font-size: 14px; line-height: 1.4; }',
+          'removeformat | image media link filemanager | styleselect | ' +
+          'table | code fullscreen | help',
+        content_style: `
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif; 
+            font-size: 14px; 
+            line-height: 1.4; 
+          }
+          table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            margin: 10px 0; 
+            border: 1px solid #dee2e6;
+          }
+          th, td { 
+            border: 1px solid #dee2e6; 
+            padding: 8px;
+          }
+          th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+          }
+          .table-bordered { 
+            border: 1px solid #dee2e6; 
+          }
+          .table-bordered th,
+          .table-bordered td { 
+            border: 1px solid #dee2e6; 
+            padding: 8px; 
+          }
+          .table-striped tbody tr:nth-of-type(odd) { 
+            background-color: rgba(0, 0, 0, 0.05); 
+          }
+          .table-header { 
+            background-color: #f8f9fa; 
+            font-weight: bold; 
+          }
+          .table-header-row { 
+            background-color: #e9ecef; 
+          }
+          .table-alt-row { 
+            background-color: #f8f9fa; 
+          }
+          .table-highlight { 
+            background-color: #fff3cd; 
+          }
+        `,
         images_upload_handler: handleImageUploadForTinyMCE,
         automatic_uploads: true,
         file_picker_types: 'image',
+        image_advtab: true,
+        style_formats: [
+          {
+            title: 'Изображения',
+            items: [
+              {
+                title: 'Изображение слева',
+                selector: 'img',
+                styles: {
+                  'float': 'left',
+                  'margin': '0 15px 10px 0',
+                  'max-width': '100%'
+                }
+              },
+              {
+                title: 'Изображение справа',
+                selector: 'img',
+                styles: {
+                  'float': 'right',
+                  'margin': '0 0 10px 15px',
+                  'max-width': '100%'
+                }
+              },
+              {
+                title: 'По центру',
+                selector: 'img',
+                styles: {
+                  'display': 'block',
+                  'margin': '10px auto',
+                  'float': 'none',
+                  'max-width': '100%'
+                }
+              },
+              {
+                title: 'Сброс обтекания',
+                selector: 'img',
+                styles: {
+                  'float': 'none',
+                  'margin': '0',
+                  'display': 'inline',
+                  'max-width': '100%'
+                }
+              }
+            ]
+          }
+        ],
+        table_default_attributes: {
+          border: '1'
+        },
+        table_default_styles: {
+          'border-collapse': 'collapse',
+          'width': '100%',
+          'border': '1px solid #dee2e6'
+        },
+        table_class_list: [
+          {title: 'Обычная таблица', value: 'table'},
+          {title: 'Таблица с границами', value: 'table table-bordered'},
+          {title: 'Полосатая таблица', value: 'table table-striped'}
+        ],
+        table_cell_class_list: [
+          {title: 'Обычная ячейка', value: ''},
+          {title: 'Заголовок', value: 'table-header'},
+          {title: 'Выделенная ячейка', value: 'table-highlight'}
+        ],
+        table_row_class_list: [
+          {title: 'Обычная строка', value: ''},
+          {title: 'Заголовочная строка', value: 'table-header-row'},
+          {title: 'Альтернативная строка', value: 'table-alt-row'}
+        ],
+        table_advtab: true,
+        table_cell_advtab: true,
+        table_row_advtab: true,
         file_picker_callback: (
           callback: (url: string, meta?: { alt?: string; style?: string }) => void, 
           value: string, 
