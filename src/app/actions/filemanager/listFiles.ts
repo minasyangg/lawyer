@@ -3,6 +3,7 @@
 import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
 import { createVirtualFileUrl } from '@/lib/virtualPaths'
+import { checkMultipleFilesUsage } from './checkFileUsage'
 
 const prisma = new PrismaClient()
 
@@ -16,6 +17,7 @@ export interface FileManagerItem {
   url: string
   isFolder?: boolean
   path?: string
+  isUsed?: boolean // Новое поле для отображения использования в статьях
 }
 
 export interface ListFilesResult {
@@ -94,8 +96,19 @@ export async function listFiles(
       mimeType: file.mimeType,
       size: file.size,
       createdAt: file.createdAt.toISOString(),
-      url: file.virtualId ? createVirtualFileUrl(file.virtualId) : `/api/files/${file.id}` // Используем virtualId если есть или API route
+      url: file.virtualId ? createVirtualFileUrl(file.virtualId) : `/api/files/${file.id}`, // Используем virtualId если есть или API route
+      isUsed: false // Будет обновлено ниже
     }))
+
+    // Проверяем использование файлов в статьях
+    const fileIds = files.map(f => f.id)
+    const usageResults = await checkMultipleFilesUsage(fileIds)
+
+    // Обновляем информацию об использовании
+    filesWithUrls.forEach(file => {
+      const usage = usageResults[file.id]
+      file.isUsed = usage?.isUsed || false
+    })
 
     // Преобразуем папки в формат FileItem
     const foldersAsFileItems = folders.map(folder => ({
@@ -107,7 +120,8 @@ export async function listFiles(
       createdAt: folder.createdAt.toISOString(),
       url: `/uploads/${folder.path}`,
       isFolder: true,
-      path: folder.path
+      path: folder.path,
+      isUsed: false // Папки не используются в статьях
     }))
 
     // Объединяем папки и файлы

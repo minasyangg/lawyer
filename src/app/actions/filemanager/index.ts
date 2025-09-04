@@ -22,3 +22,5 @@ export type { GetFileResult } from './getFile'
 
 export { getFolderTree } from './getFolderTree'
 export type { FolderTreeNode } from './getFolderTree'
+
+export { checkFileUsage, checkMultipleFilesUsage } from './checkFileUsage'

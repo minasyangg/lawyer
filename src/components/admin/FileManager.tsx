@@ -45,6 +45,7 @@ interface FileItem extends FileManagerItem {
   isFolder?: boolean
   path?: string
   parentId?: number | null
+  isUsed?: boolean // Добавляем поле для отслеживания использования в статьях
 }
 
 interface FolderTreeItem {
@@ -165,7 +166,8 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
           url: f.url || '',
           isFolder: false,
           path: '',
-          parentId: currentFolderId
+          parentId: currentFolderId,
+          isUsed: false // Новые файлы пока не используются
         }))
         setFiles(prev => [...mapped, ...prev])
         toast.success(`Загружено ${result.files.length} файл(ов)`)
@@ -181,26 +183,59 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
     }
   }
 
-  const handleDeleteFile = async (fileId: number) => {
-    if (!confirm('Вы уверены, что хотите удалить этот файл?')) return
-
-    try {
-      const result = await deleteFile(fileId)
-
-      if (result.success) {
-        setFiles(prev => prev.filter(file => file.id !== fileId))
-        setSelectedFiles(prev => {
-          const newSet = new Set(prev)
-          newSet.delete(fileId)
-          return newSet
-        })
-        toast.success('Файл удален')
-      } else {
-        toast.error(result.error || 'Ошибка удаления файла')
+  const handleDeleteFile = async (fileId: number, force: boolean = false) => {
+    // Если это не принудительное удаление, сначала проверяем использование
+    if (!force) {
+      try {
+        const result = await deleteFile(fileId, false)
+        
+        if (!result.success && result.isUsed) {
+          // Файл используется в статьях - показываем предупреждение
+          const articlesText = result.usedIn?.map(article => `• ${article.title}`).join('\n') || ''
+          const confirmMessage = `Этот файл используется в следующих статьях:\n\n${articlesText}\n\nВы действительно хотите удалить файл? Это может нарушить отображение статей.`
+          
+          if (confirm(confirmMessage)) {
+            // Пользователь подтвердил принудительное удаление
+            return handleDeleteFile(fileId, true)
+          }
+          return
+        }
+        
+        if (result.success) {
+          setFiles(prev => prev.filter(file => file.id !== fileId))
+          setSelectedFiles(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(fileId)
+            return newSet
+          })
+          toast.success('Файл удален')
+        } else {
+          toast.error(result.error || 'Ошибка удаления файла')
+        }
+      } catch (error) {
+        console.error('Delete failed:', error)
+        toast.error('Ошибка удаления файла')
       }
-    } catch (error) {
-      console.error('Delete failed:', error)
-      toast.error('Ошибка удаления файла')
+    } else {
+      // Принудительное удаление
+      try {
+        const result = await deleteFile(fileId, true)
+        
+        if (result.success) {
+          setFiles(prev => prev.filter(file => file.id !== fileId))
+          setSelectedFiles(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(fileId)
+            return newSet
+          })
+          toast.success('Файл удален')
+        } else {
+          toast.error(result.error || 'Ошибка удаления файла')
+        }
+      } catch (error) {
+        console.error('Force delete failed:', error)
+        toast.error('Ошибка удаления файла')
+      }
     }
   }
 
@@ -643,7 +678,9 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                       }`}
                       onClick={() => file.isFolder ? handleFolderClick(file) : handleFileSelect(file)}
                     >
-                      <div className="aspect-square bg-gray-100 rounded mb-2 flex items-center justify-center overflow-hidden">
+                      <div className={`aspect-square bg-gray-100 rounded mb-2 flex items-center justify-center overflow-hidden relative ${
+                        file.isUsed ? 'ring-2 ring-orange-400' : ''
+                      }`}>
                         {file.isFolder ? (
                           <Folder className="w-8 h-8 text-blue-500" />
                         ) : isImage(file.mimeType) ? (
@@ -657,6 +694,11 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                           />
                         ) : (
                           <File className="w-8 h-8 text-gray-400" />
+                        )}
+                        {file.isUsed && (
+                          <div className="absolute top-1 right-1 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
+                            Используется
+                          </div>
                         )}
                       </div>
                       <p className="text-sm font-medium truncate" title={file.originalName}>
@@ -704,9 +746,16 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {file.originalName}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium truncate">
+                              {file.originalName}
+                            </p>
+                            {file.isUsed && (
+                              <span className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap">
+                                Используется в статьях
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-gray-500">
                             {formatFileSize(file.size)} • {new Date(file.createdAt).toLocaleDateString()}
                           </p>
