@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "sync-file-paths": "node scripts/sync-file-paths.js"
+    "sync-file-paths": "node scripts/sync-file-paths.js",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
