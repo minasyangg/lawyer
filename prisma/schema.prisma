@@ -14,12 +14,12 @@ model FileEntity {
   children  FileEntity[] @relation("FolderParent")
   user      User        @relation(fields: [userId], references: [id])
 }
-// Prisma schema for Service table
-// SQLite database
+// Prisma schema для локальной разработки - SQLite
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url        = env("DATABASE_URL")   // для работы приложения (pooler:6543)
+  directUrl  = env("DIRECT_URL")     // для миграций (db:5432)
 }
 
 generator client {
