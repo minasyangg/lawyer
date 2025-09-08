@@ -4,10 +4,11 @@ import { cookies } from 'next/headers'
 import { 
   generateFileName, 
   isAllowedFileType, 
-  saveFile, 
+  saveFileUniversal, 
   MAX_FILE_SIZE,
   isImageFile,
-  getPublicFileUrl 
+  getPublicFileUrl,
+  getFolderPhysicalPath 
 } from '@/lib/utils/file-utils'
 import sharp from 'sharp'
 
@@ -60,7 +61,16 @@ export async function POST(request: NextRequest) {
     }
 
     const filename = generateFileName(file.name)
-    const filePath = await saveFile(buffer, filename, user.id)
+    
+    // Получаем путь к папке если указан folderId
+    let folderPath: string | undefined
+    if (folderId) {
+      const path = await getFolderPhysicalPath(parseInt(folderId))
+      folderPath = path || undefined
+    }
+    
+    // Универсальное сохранение файла (S3 для продакшна, локально для разработки)
+    const filePath = await saveFileUniversal(buffer, filename, user.id, file.type, folderPath)
 
     // Save file metadata to database
     const savedFile = await prisma.file.create({

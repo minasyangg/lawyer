@@ -1,6 +1,7 @@
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import crypto from 'crypto'
+import { uploadToS3, generateS3Key } from './s3-utils'
 
 export const UPLOAD_DIR = join(process.cwd(), 'public/uploads')
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
@@ -44,6 +45,28 @@ export async function saveFile(buffer: Buffer, filename: string, userId: number,
   return relativePath
 }
 
+/**
+ * Универсальная функция сохранения файла
+ * В продакшене загружает в S3, локально - в файловую систему
+ */
+export async function saveFileUniversal(
+  buffer: Buffer, 
+  filename: string, 
+  userId: number, 
+  mimeType: string,
+  folderPath?: string
+): Promise<string> {
+  if (process.env.NODE_ENV === 'production') {
+    // В продакшене загружаем в S3
+    const s3Key = generateS3Key(userId, filename, folderPath)
+    const s3Url = await uploadToS3(buffer, s3Key, mimeType)
+    return s3Url
+  } else {
+    // Локально используем существующую логику
+    return await saveFile(buffer, filename, userId, folderPath)
+  }
+}
+
 export function getUserUploadPath(userId: number): string {
   return join(UPLOAD_DIR, `user_${userId}`)
 }
@@ -80,6 +103,11 @@ export async function getFolderPhysicalPath(folderId: number | null): Promise<st
 }
 
 export function getPublicFileUrl(filePath: string): string {
+  // Если это уже полный URL (S3), возвращаем как есть
+  if (filePath.startsWith('https://') || filePath.startsWith('http://')) {
+    return filePath
+  }
+  
   // Если путь уже относительный (начинается с uploads/), просто добавляем слеш
   if (filePath.startsWith('uploads/')) {
     return '/' + filePath

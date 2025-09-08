@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
 import { rmdir, unlink } from 'fs/promises'
 import { join } from 'path'
+import { deleteFromS3, extractS3Key } from '@/lib/utils/s3-utils'
 
 const prisma = new PrismaClient()
 
@@ -70,12 +71,19 @@ export async function deleteFolder(folderId: number, force: boolean = false): Pr
       // Удаляем все файлы
       for (const file of files) {
         try {
-          const absolutePath = file.path.startsWith('uploads/') 
-            ? join(process.cwd(), 'public', file.path)
-            : file.path
-          await unlink(absolutePath)
+          if (process.env.NODE_ENV === 'production' && file.path.startsWith('https://')) {
+            // В продакшене удаляем из S3
+            const s3Key = extractS3Key(file.path)
+            await deleteFromS3(s3Key)
+          } else {
+            // Локально удаляем из файловой системы
+            const absolutePath = file.path.startsWith('uploads/') 
+              ? join(process.cwd(), 'public', file.path)
+              : file.path
+            await unlink(absolutePath)
+          }
         } catch (fsError) {
-          console.error('Failed to delete file from filesystem:', fsError)
+          console.error('Failed to delete file from storage:', fsError)
         }
         
         await prisma.file.delete({

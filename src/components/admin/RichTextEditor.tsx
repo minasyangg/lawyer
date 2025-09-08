@@ -186,7 +186,19 @@ const handleFileUpload = async (file: File): Promise<string> => {
     const result = await response.json()
     
     if (result.success) {
-      return result.file.url
+      let url = result.file.url
+      
+      // Для локальной разработки убеждаемся, что URL правильный
+      if (typeof window !== 'undefined' && !url.startsWith('http')) {
+        // Если URL начинается с /api/files/, добавляем origin
+        if (url.startsWith('/api/files/') || url.startsWith('/uploads/')) {
+          url = `${window.location.origin}${url}`
+        } else if (!url.startsWith('/')) {
+          url = `${window.location.origin}/${url}`
+        }
+      }
+      
+      return url
     } else {
       throw new Error(result.error || 'Upload failed')
     }
@@ -256,7 +268,13 @@ export function RichTextEditor({
         // Настройки URL для правильной обработки путей к файлам
         relative_urls: false,
         remove_script_host: false,
-        document_base_url: '/',
+        document_base_url: typeof window !== 'undefined' ? window.location.origin : '/',
+        // Отключаем автоматическую обработку URL TinyMCE
+        convert_urls: false,
+        urlconverter_callback: (url: string) => {
+          // Возвращаем URL как есть, без обработки TinyMCE
+          return url
+        },
         plugins: [
           'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
           'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',

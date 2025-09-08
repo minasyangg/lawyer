@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import fs from 'fs/promises'
 import path from 'path'
+import { getPublicFileUrl } from '@/lib/utils/file-utils'
 
 const prisma = new PrismaClient()
 
@@ -37,7 +38,12 @@ export async function GET(
       )
     }
 
-    // Получаем физический путь к файлу
+    // Если это продакшн и файл в S3 (URL начинается с https://), делаем редирект
+    if (process.env.NODE_ENV === 'production' && file.path.startsWith('https://')) {
+      return NextResponse.redirect(file.path)
+    }
+
+    // Локальная логика для разработки
     const filePath = path.join(process.cwd(), 'public', file.path)
     
     try {
