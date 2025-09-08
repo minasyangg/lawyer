@@ -46,6 +46,18 @@ export async function saveFile(buffer: Buffer, filename: string, userId: number,
 }
 
 /**
+ * Проверяет, доступно ли S3 хранилище
+ */
+function isS3Available(): boolean {
+  return !!(
+    process.env.S3_ENDPOINT &&
+    process.env.S3_BUCKET_NAME &&
+    process.env.S3_ACCESS_KEY_ID &&
+    process.env.S3_SECRET_ACCESS_KEY
+  )
+}
+
+/**
  * Универсальная функция сохранения файла
  * В продакшене загружает в S3, локально - в файловую систему
  */
@@ -56,13 +68,30 @@ export async function saveFileUniversal(
   mimeType: string,
   folderPath?: string
 ): Promise<string> {
-  if (process.env.NODE_ENV === 'production') {
-    // В продакшене загружаем в S3
-    const s3Key = generateS3Key(userId, filename, folderPath)
-    const s3Url = await uploadToS3(buffer, s3Key, mimeType)
-    return s3Url
+  console.log('Environment check:', {
+    NODE_ENV: process.env.NODE_ENV,
+    S3_ENDPOINT: !!process.env.S3_ENDPOINT,
+    S3_BUCKET_NAME: !!process.env.S3_BUCKET_NAME,
+    S3_ACCESS_KEY_ID: !!process.env.S3_ACCESS_KEY_ID,
+    S3_SECRET_ACCESS_KEY: !!process.env.S3_SECRET_ACCESS_KEY,
+    isS3Available: isS3Available()
+  })
+
+  // Используем S3 если это продакшн И S3 настроен
+  if (process.env.NODE_ENV === 'production' && isS3Available()) {
+    console.log('Using S3 storage for file upload')
+    try {
+      const s3Key = generateS3Key(userId, filename, folderPath)
+      const s3Url = await uploadToS3(buffer, s3Key, mimeType)
+      console.log('S3 upload successful:', s3Url)
+      return s3Url
+    } catch (error) {
+      console.error('S3 upload failed:', error)
+      throw error
+    }
   } else {
     // Локально используем существующую логику
+    console.log('Using local filesystem for file upload')
     return await saveFile(buffer, filename, userId, folderPath)
   }
 }

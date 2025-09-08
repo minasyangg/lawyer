@@ -9,6 +9,17 @@ interface S3Config {
   secretAccessKey: string
 }
 
+// Проверяем доступность S3 конфигурации
+export function isS3Available(): boolean {
+  const endpoint = process.env.S3_ENDPOINT
+  const region = process.env.S3_REGION
+  const bucketName = process.env.S3_BUCKET_NAME
+  const accessKeyId = process.env.S3_ACCESS_KEY_ID
+  const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY
+
+  return !!(endpoint && region && bucketName && accessKeyId && secretAccessKey)
+}
+
 // Получаем конфигурацию S3 из переменных окружения
 function getS3Config(): S3Config {
   const endpoint = process.env.S3_ENDPOINT
@@ -57,12 +68,21 @@ export async function uploadToS3(
   key: string, 
   mimeType: string
 ): Promise<string> {
-  if (process.env.NODE_ENV !== 'production') {
-    throw new Error('S3 upload is only available in production environment')
+  console.log('Starting S3 upload with key:', key, 'mimeType:', mimeType)
+  
+  if (!isS3Available()) {
+    throw new Error('S3 configuration is not available')
   }
 
   const s3Client = createS3Client()
   const config = getS3Config()
+
+  console.log('S3 Config:', {
+    endpoint: config.endpoint,
+    bucketName: config.bucketName,
+    region: config.region,
+    keyExists: !!config.accessKeyId
+  })
 
   try {
     const command = new PutObjectCommand({
@@ -73,10 +93,12 @@ export async function uploadToS3(
       ACL: 'public-read', // Делаем файл публично доступным
     })
 
+    console.log('Sending S3 command...')
     await s3Client.send(command)
 
     // Формируем URL файла
     const fileUrl = `${config.endpoint}/${config.bucketName}/${key}`
+    console.log('S3 upload successful, URL:', fileUrl)
     return fileUrl
 
   } catch (error) {
