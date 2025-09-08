@@ -29,6 +29,8 @@ export interface CreateFolderResult {
  * @param parentId id родительской папки (null — корень)
  */
 export async function createFolder(name: string, parentId: number | null = null): Promise<CreateFolderResult> {
+  console.log('createFolder called with:', { name, parentId, NODE_ENV: process.env.NODE_ENV })
+  
   try {
     const cookieStore = await cookies()
     const sessionCookie = cookieStore.get('admin-session')
@@ -81,11 +83,17 @@ export async function createFolder(name: string, parentId: number | null = null)
       }
     })
 
-    // Создаем физическую папку
-    const uploadsDir = join(process.cwd(), 'public', 'uploads')
-    const physicalPath = join(uploadsDir, fullPath)
-    
-    await mkdir(physicalPath, { recursive: true })
+    // В продакшене не создаем физические папки (используем S3)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Creating physical folder in development mode')
+      // Создаем физическую папку только в development
+      const uploadsDir = join(process.cwd(), 'public', 'uploads')
+      const physicalPath = join(uploadsDir, fullPath)
+      
+      await mkdir(physicalPath, { recursive: true })
+    } else {
+      console.log('Skipping physical folder creation in production (using S3)')
+    }
 
     // Возвращаем папку в формате FileItem
     const folderResult = {
