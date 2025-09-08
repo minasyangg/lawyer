@@ -1,7 +1,7 @@
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import crypto from 'crypto'
-import { uploadToS3, generateS3Key } from './s3-utils'
+import { uploadToS3, generateS3Key, isS3Available } from './s3-utils'
 
 export const UPLOAD_DIR = join(process.cwd(), 'public/uploads')
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
@@ -46,18 +46,6 @@ export async function saveFile(buffer: Buffer, filename: string, userId: number,
 }
 
 /**
- * Проверяет, доступно ли S3 хранилище
- */
-function isS3Available(): boolean {
-  return !!(
-    process.env.S3_ENDPOINT &&
-    process.env.S3_BUCKET_NAME &&
-    process.env.S3_ACCESS_KEY_ID &&
-    process.env.S3_SECRET_ACCESS_KEY
-  )
-}
-
-/**
  * Универсальная функция сохранения файла
  * В продакшене загружает в S3, локально - в файловую систему
  */
@@ -68,17 +56,17 @@ export async function saveFileUniversal(
   mimeType: string,
   folderPath?: string
 ): Promise<string> {
-  console.log('Environment check:', {
-    NODE_ENV: process.env.NODE_ENV,
-    S3_ENDPOINT: !!process.env.S3_ENDPOINT,
-    S3_BUCKET_NAME: !!process.env.S3_BUCKET_NAME,
-    S3_ACCESS_KEY_ID: !!process.env.S3_ACCESS_KEY_ID,
-    S3_SECRET_ACCESS_KEY: !!process.env.S3_SECRET_ACCESS_KEY,
-    isS3Available: isS3Available()
-  })
-
-  // Используем S3 если это продакшн И S3 настроен
-  if (process.env.NODE_ENV === 'production' && isS3Available()) {
+  console.log('saveFileUniversal called with NODE_ENV:', process.env.NODE_ENV)
+  
+  // В продакшене ОБЯЗАТЕЛЬНО используем S3
+  if (process.env.NODE_ENV === 'production') {
+    console.log('Production environment detected, checking S3 availability...')
+    
+    if (!isS3Available()) {
+      console.error('S3 is not available in production environment!')
+      throw new Error('S3 storage is not configured for production environment')
+    }
+    
     console.log('Using S3 storage for file upload')
     try {
       const s3Key = generateS3Key(userId, filename, folderPath)
@@ -91,7 +79,7 @@ export async function saveFileUniversal(
     }
   } else {
     // Локально используем существующую логику
-    console.log('Using local filesystem for file upload')
+    console.log('Development environment detected, using local filesystem')
     return await saveFile(buffer, filename, userId, folderPath)
   }
 }

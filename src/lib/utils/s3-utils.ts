@@ -17,7 +17,19 @@ export function isS3Available(): boolean {
   const accessKeyId = process.env.S3_ACCESS_KEY_ID
   const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY
 
-  return !!(endpoint && region && bucketName && accessKeyId && secretAccessKey)
+  console.log('S3 Environment Variables Check:', {
+    S3_ENDPOINT: endpoint ? 'SET' : 'MISSING',
+    S3_REGION: region ? 'SET' : 'MISSING', 
+    S3_BUCKET_NAME: bucketName ? 'SET' : 'MISSING',
+    S3_ACCESS_KEY_ID: accessKeyId ? 'SET' : 'MISSING',
+    S3_SECRET_ACCESS_KEY: secretAccessKey ? 'SET' : 'MISSING',
+    NODE_ENV: process.env.NODE_ENV
+  })
+
+  const isAvailable = !!(endpoint && region && bucketName && accessKeyId && secretAccessKey)
+  console.log('S3 Available:', isAvailable)
+  
+  return isAvailable
 }
 
 // Получаем конфигурацию S3 из переменных окружения
