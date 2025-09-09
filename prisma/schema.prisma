@@ -19,7 +19,7 @@ model FileEntity {
 datasource db {
   provider = "postgresql"
   url        = env("DATABASE_URL")   // для работы приложения (pooler:6543)
-  directUrl  = env("DIRECT_URL")     // для миграций (db:5432)
+  // directUrl  = env("DIRECT_URL")     // для миграций (db:5432) - только для продакшна
 }
 
 generator client {
@@ -99,7 +99,7 @@ model File {
   id          Int      @id @default(autoincrement())
   originalName String
   filename     String   @unique
-  path         String
+  path         String   // Логический путь в storage (без домена)
   virtualPath  String   @default("") // Виртуальный путь для отображения
   virtualId    String?  @unique // Уникальный виртуальный идентификатор (необязательный)
   mimeType     String

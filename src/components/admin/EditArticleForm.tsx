@@ -49,11 +49,11 @@ interface EditArticleFormProps {
 }
 
 export function EditArticleForm({ article, services: initialServices }: EditArticleFormProps) {
-  const [title, setTitle] = useState("")
-  const [content, setContent] = useState("")
-  const [excerpt, setExcerpt] = useState("")
-  const [slug, setSlug] = useState("")
-  const [published, setPublished] = useState(false)
+  const [title, setTitle] = useState(article.title || "")
+  const [content, setContent] = useState(article.content || "")
+  const [excerpt, setExcerpt] = useState(article.excerpt || "")
+  const [slug, setSlug] = useState(article.slug || "")
+  const [published, setPublished] = useState(article.published || false)
   const [categoryId, setCategoryId] = useState<number | null>(article.categoryId)
   const [selectedTags, setSelectedTags] = useState<Tag[]>(
     article.tags.map(tag => ({

@@ -1,7 +1,7 @@
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import crypto from 'crypto'
-import { uploadToS3, generateS3Key, isS3Available } from './s3-utils'
+import { uploadFile, createUserFilePath, generateUniqueFileName, getStorageInfo } from './universal-file-utils'
 
 export const UPLOAD_DIR = join(process.cwd(), 'public/uploads')
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
@@ -23,6 +23,7 @@ export function isImageFile(mimeType: string): boolean {
   return ALLOWED_IMAGE_TYPES.includes(mimeType)
 }
 
+// Сохранение файла (устаревшая локальная версия, сохранена для совместимости)
 export async function saveFile(buffer: Buffer, filename: string, userId: number, folderPath?: string): Promise<string> {
   // Строим путь к папке пользователя
   let targetDir = join(UPLOAD_DIR, `user_${userId}`)
@@ -47,7 +48,68 @@ export async function saveFile(buffer: Buffer, filename: string, userId: number,
 
 /**
  * Универсальная функция сохранения файла
- * В продакшене загружает в S3, локально - в файловую систему
+ * Автоматически выбирает провайдер хранения в зависимости от конфигурации
+ * Возвращает объект с логическим path и полным url
+ */
+export async function saveFileUniversalWithDetails(
+  buffer: Buffer, 
+  filename: string, 
+  userId: number, 
+  mimeType: string,
+  folderPath?: string
+): Promise<{ path: string; url: string }> {
+  const storageInfo = getStorageInfo();
+  console.log('saveFileUniversalWithDetails called with storage provider:', storageInfo.provider);
+  
+  try {
+    // Создаем File объект из buffer через Uint8Array
+    const uint8Array = new Uint8Array(buffer);
+    const file = new File([uint8Array], filename, { type: mimeType });
+    
+    // Формируем логический путь для файла (БЕЗ домена)
+    let logicalPath = createUserFilePath(userId, filename);
+    
+    // Если есть дополнительная папка, добавляем её
+    if (folderPath) {
+      logicalPath = `user_${userId}/${folderPath}/${generateUniqueFileName(filename)}`;
+    }
+    
+    console.log('Uploading file to logical path:', logicalPath);
+    
+    // Загружаем файл через универсальную систему
+    const result = await uploadFile(file, logicalPath);
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Upload failed');
+    }
+    
+    console.log('File uploaded successfully, full URL:', result.url);
+    
+    return {
+      path: logicalPath, // Логический путь без домена (для БД)
+      url: result.url || result.path || '' // Полный URL для доступа
+    };
+    
+  } catch (error) {
+    console.error('saveFileUniversalWithDetails error:', error);
+    
+    // Fallback: если новая система не работает, используем старую логику
+    if (storageInfo.isLocal) {
+      console.log('Falling back to legacy saveFile method');
+      const relativePath = await saveFile(buffer, filename, userId, folderPath);
+      return {
+        path: relativePath.replace(/^\/uploads\//, ''), // Убираем префикс для логического пути
+        url: `/${relativePath}`
+      };
+    }
+    
+    throw error;
+  }
+}
+
+/**
+ * Универсальная функция сохранения файла (старая версия для обратной совместимости)
+ * Автоматически выбирает провайдер хранения в зависимости от конфигурации
  */
 export async function saveFileUniversal(
   buffer: Buffer, 
@@ -56,32 +118,8 @@ export async function saveFileUniversal(
   mimeType: string,
   folderPath?: string
 ): Promise<string> {
-  console.log('saveFileUniversal called with NODE_ENV:', process.env.NODE_ENV)
-  
-  // В продакшене ОБЯЗАТЕЛЬНО используем S3
-  if (process.env.NODE_ENV === 'production') {
-    console.log('Production environment detected, checking S3 availability...')
-    
-    if (!isS3Available()) {
-      console.error('S3 is not available in production environment!')
-      throw new Error('S3 storage is not configured for production environment')
-    }
-    
-    console.log('Using S3 storage for file upload')
-    try {
-      const s3Key = generateS3Key(userId, filename, folderPath)
-      const s3Url = await uploadToS3(buffer, s3Key, mimeType)
-      console.log('S3 upload successful:', s3Url)
-      return s3Url
-    } catch (error) {
-      console.error('S3 upload failed:', error)
-      throw error
-    }
-  } else {
-    // Локально используем существующую логику
-    console.log('Development environment detected, using local filesystem')
-    return await saveFile(buffer, filename, userId, folderPath)
-  }
+  const result = await saveFileUniversalWithDetails(buffer, filename, userId, mimeType, folderPath);
+  return result.url;
 }
 
 export function getUserUploadPath(userId: number): string {

@@ -672,7 +672,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                 <div className="grid grid-cols-4 gap-4 p-4">
                   {filteredFiles.map((file) => (
                     <div
-                      key={file.id}
+                      key={file.isFolder ? `folder-${file.id}` : `file-${file.id}`}
                       className={`border rounded-lg p-3 cursor-pointer hover:border-blue-300 transition-colors ${
                         selectedFiles.has(file.id) ? 'border-blue-500 bg-blue-50' : ''
                       }`}
@@ -730,7 +730,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                   <div className="space-y-2">
                     {filteredFiles.map((file) => (
                       <div
-                        key={file.id}
+                        key={file.isFolder ? `folder-${file.id}` : `file-${file.id}`}
                         className={`flex items-center gap-3 p-3 border rounded cursor-pointer hover:border-blue-300 transition-colors ${
                           selectedFiles.has(file.id) ? 'border-blue-500 bg-blue-50' : ''
                         }`}

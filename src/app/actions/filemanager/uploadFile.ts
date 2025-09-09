@@ -2,7 +2,7 @@
 
 import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
-import { generateFileName, saveFileUniversal, getFolderPhysicalPath } from '@/lib/utils/file-utils'
+import { saveFileUniversalWithDetails, generateFileName, getFolderPhysicalPath } from '@/lib/utils/file-utils'
 import { generateVirtualPath, createVirtualFileUrl } from '@/lib/virtualPaths'
 
 const prisma = new PrismaClient()
@@ -74,7 +74,7 @@ export async function uploadFile(formData: FormData): Promise<UploadResult> {
       // Сохраняем файл на диск с учетом структуры папок
       const arrayBuffer = await file.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
-      const relativePath = await saveFileUniversal(buffer, filename, user.id, file.type, folderPhysicalPath || undefined)
+      const fileDetails = await saveFileUniversalWithDetails(buffer, filename, user.id, file.type, folderPhysicalPath || undefined)
       
       // Генерируем виртуальный путь для файла
       const virtualPath = folderId ? await generateVirtualPath(folderId) : `/user_${user.id}`
@@ -88,7 +88,7 @@ export async function uploadFile(formData: FormData): Promise<UploadResult> {
         data: {
           originalName: file.name,
           filename: filename,
-          path: relativePath,
+          path: fileDetails.path,    // Логический путь в storage (без домена)
           virtualPath: virtualPath,
           virtualId: virtualId,
           mimeType: file.type,

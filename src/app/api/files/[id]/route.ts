@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
-import fs from 'fs/promises'
-import path from 'path'
-import { getPublicFileUrl } from '@/lib/utils/file-utils'
+import { getFileUrl, getStorageInfo } from '@/lib/utils/universal-file-utils'
 
 const prisma = new PrismaClient()
 
@@ -38,41 +36,30 @@ export async function GET(
       )
     }
 
-    // Если это продакшн и файл в S3 (URL начинается с https://), делаем редирект
-    if (process.env.NODE_ENV === 'production' && file.path.startsWith('https://')) {
-      return NextResponse.redirect(file.path)
-    }
-
-    // Локальная логика для разработки
-    const filePath = path.join(process.cwd(), 'public', file.path)
+    // Получаем информацию о провайдере хранения
+    const storageInfo = getStorageInfo();
     
     try {
-      // Проверяем существование файла
-      await fs.access(filePath)
+      // Генерируем правильный URL через универсальную систему
+      const fileUrl = await getFileUrl(file.path);
       
-      // Читаем файл
-      const fileBuffer = await fs.readFile(filePath)
+      console.log(`[Virtual API] Redirecting ${storageInfo.provider} file:`, {
+        virtualId: file.virtualId,
+        path: file.path,
+        url: fileUrl
+      });
       
-      // Создаем ответ с файлом
-      const response = new NextResponse(new Uint8Array(fileBuffer))
+      // Редирект на правильный URL
+      return NextResponse.redirect(fileUrl);
       
-      // Устанавливаем заголовки
-      response.headers.set('Content-Type', file.mimeType)
-      // Кодируем имя файла для поддержки кириллицы
-      const encodedFileName = encodeURIComponent(file.originalName)
-      response.headers.set('Content-Disposition', `inline; filename*=UTF-8''${encodedFileName}`)
-      response.headers.set('Cache-Control', 'public, max-age=31536000, immutable')
+    } catch (error) {
+      console.error('[Virtual API] Error generating file URL:', error);
       
-      return response
-      
-    } catch (fileError) {
-      console.error('File access error:', fileError)
       return NextResponse.json(
-        { error: 'File not accessible' },
-        { status: 404 }
-      )
+        { error: 'Failed to generate file URL' },
+        { status: 500 }
+      );
     }
-    
   } catch (error) {
     console.error('Error serving file:', error)
     return NextResponse.json(

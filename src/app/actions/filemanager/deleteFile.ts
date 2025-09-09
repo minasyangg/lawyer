@@ -2,10 +2,8 @@
 
 import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
-import { unlink } from 'fs/promises'
-import { join } from 'path'
 import { checkFileUsage } from './checkFileUsage'
-import { deleteFromS3, extractS3Key } from '@/lib/utils/s3-utils'
+import { deleteFile as deleteFileFromStorage } from '@/lib/utils/universal-file-utils'
 
 const prisma = new PrismaClient()
 
@@ -63,21 +61,34 @@ export async function deleteFile(fileId: number, force: boolean = false): Promis
       }
     }
 
-    // Удаляем физический файл
+    // Удаляем физический файл через универсальную систему
     try {
-      if (process.env.NODE_ENV === 'production' && file.path.startsWith('https://')) {
-        // В продакшене удаляем из S3
-        const s3Key = extractS3Key(file.path)
-        await deleteFromS3(s3Key)
-      } else {
-        // Локально удаляем из файловой системы
-        const absolutePath = file.path.startsWith('uploads/') 
-          ? join(process.cwd(), 'public', file.path)
-          : file.path
-        await unlink(absolutePath)
+      // Извлекаем путь файла для удаления
+      let filePath = file.path;
+      
+      // Если это URL, извлекаем относительный путь
+      if (filePath.startsWith('/uploads/')) {
+        filePath = filePath.substring(9); // убираем '/uploads/'
+      } else if (filePath.startsWith('uploads/')) {
+        filePath = filePath.substring(8); // убираем 'uploads/'
+      } else if (filePath.startsWith('https://')) {
+        // Для S3/Supabase URL извлекаем путь
+        const urlParts = filePath.split('/');
+        const userIndex = urlParts.findIndex(part => part.startsWith('user_'));
+        if (userIndex !== -1) {
+          filePath = urlParts.slice(userIndex).join('/');
+        }
       }
-    } catch (fsError) {
-      console.error('Failed to delete file from storage:', fsError)
+      
+      console.log('Deleting file from storage:', filePath);
+      const deleteResult = await deleteFileFromStorage(filePath);
+      
+      if (!deleteResult.success) {
+        console.warn('Failed to delete file from storage:', deleteResult.error);
+        // Продолжаем удаление из БД даже если физический файл не удален
+      }
+    } catch (storageError) {
+      console.error('Failed to delete file from storage:', storageError);
       // Продолжаем удаление из БД даже если физический файл не удален
     }
 
