@@ -38,6 +38,7 @@ import {
   Edit2
 } from "lucide-react"
 import { toast } from "sonner"
+import { validateFile, formatFileSize, MAX_FILE_SIZE } from "@/lib/utils/client-file-utils"
 import Image from "next/image"
 
 // Используем FileManagerItem из actions и добавляем недостающие поля
@@ -143,10 +144,45 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
     const uploadedFiles = event.target.files
     if (!uploadedFiles || uploadedFiles.length === 0) return
 
+    // Клиентская валидация файлов
+    const filesArray = Array.from(uploadedFiles)
+    const validationErrors: string[] = []
+    
+    for (const file of filesArray) {
+      const validation = validateFile(file)
+      if (!validation.valid) {
+        validationErrors.push(...validation.errors)
+      }
+    }
+
+    // Если есть ошибки валидации, показываем их и прерываем загрузку
+    if (validationErrors.length > 0) {
+      toast.error(
+        <div>
+          <div className="font-semibold mb-2">Ошибки валидации файлов:</div>
+          <div className="text-sm space-y-1">
+            {validationErrors.slice(0, 3).map((error, index) => (
+              <div key={index}>• {error}</div>
+            ))}
+            {validationErrors.length > 3 && (
+              <div>... и еще {validationErrors.length - 3} ошибок</div>
+            )}
+          </div>
+          <div className="mt-2 text-xs text-gray-600">
+            Максимальный размер файла: {formatFileSize(MAX_FILE_SIZE)}
+          </div>
+        </div>,
+        { duration: 8000 }
+      )
+      // Очищаем input
+      event.target.value = ''
+      return
+    }
+
     setUploading(true)
     try {
       const formData = new FormData()
-      Array.from(uploadedFiles).forEach(file => {
+      filesArray.forEach(file => {
         formData.append('files', file)
       })
       
@@ -439,14 +475,6 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
   const filteredFiles = files.filter(file =>
     file.originalName.toLowerCase().includes(searchTerm.toLowerCase())
   )
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
 
   const isImage = (mimeType: string) => {
     return mimeType.startsWith('image/')
