@@ -2,9 +2,10 @@
 
 import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
-import { rmdir, unlink } from 'fs/promises'
+import { rmdir } from 'fs/promises'
 import { join } from 'path'
-import { deleteFromS3, extractS3Key } from '@/lib/utils/s3-utils'
+import { deleteFile } from '@/lib/utils/universal-file-utils'
+import { getStorageInfo } from '@/lib/utils/universal-file-utils'
 
 const prisma = new PrismaClient()
 
@@ -68,24 +69,17 @@ export async function deleteFolder(folderId: number, force: boolean = false): Pr
         where: { folderId: currentFolderId }
       })
 
-      // Удаляем все файлы
+      // Удаляем все файлы через универсальную систему
       for (const file of files) {
         try {
-          if (process.env.NODE_ENV === 'production' && file.path.startsWith('https://')) {
-            // В продакшене удаляем из S3
-            const s3Key = extractS3Key(file.path)
-            await deleteFromS3(s3Key)
-          } else {
-            // Локально удаляем из файловой системы
-            const absolutePath = file.path.startsWith('uploads/') 
-              ? join(process.cwd(), 'public', file.path)
-              : file.path
-            await unlink(absolutePath)
-          }
-        } catch (fsError) {
-          console.error('Failed to delete file from storage:', fsError)
+          // Используем универсальную систему удаления файлов
+          await deleteFile(file.path);
+        } catch (storageError) {
+          console.error('Failed to delete file from storage:', storageError)
+          // Продолжаем удаление даже если файл не удален из хранилища
         }
         
+        // Удаляем запись из БД
         await prisma.file.delete({
           where: { id: file.id }
         })
@@ -110,13 +104,21 @@ export async function deleteFolder(folderId: number, force: boolean = false): Pr
     // Удаляем рекурсивно
     await deleteRecursively(folderId)
 
-    // Удаляем физическую папку
-    try {
-      const absolutePath = join(process.cwd(), 'public', 'uploads', folder.path)
-      await rmdir(absolutePath, { recursive: true })
-    } catch (fsError) {
-      console.error('Failed to delete folder from filesystem:', fsError)
-      // Не возвращаем ошибку, так как данные уже удалены из БД
+    // Удаляем физическую папку только для локального провайдера
+    // В Supabase Storage папки удаляются автоматически при удалении всех файлов
+    const storageInfo = getStorageInfo();
+    
+    if (storageInfo.isLocal) {
+      try {
+        const absolutePath = join(process.cwd(), 'public', 'uploads', folder.path)
+        await rmdir(absolutePath, { recursive: true })
+        console.log('Physical folder deleted from local storage')
+      } catch (fsError) {
+        console.error('Failed to delete folder from local filesystem:', fsError)
+        // Не возвращаем ошибку, так как данные уже удалены из БД
+      }
+    } else {
+      console.log('Skipping physical folder deletion (cloud storage)')
     }
 
     return { success: true }

@@ -1,2 +1,0 @@
-Test file created at: 2025-09-09T19:39:59.348Z
-Storage provider: local

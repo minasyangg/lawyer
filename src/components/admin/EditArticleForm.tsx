@@ -197,8 +197,8 @@ interface DocumentItem {
 
       if (response.ok) {
         toast.success('Статья обновлена успешно')
-        // НЕ делаем редирект, остаемся на странице редактирования
-        // router.push('/admin/articles')
+        // Редирект обратно в список статей
+        router.push('/admin/articles')
       } else {
         const error = await response.json()
         toast.error(error.error || 'Ошибка при обновлении статьи')

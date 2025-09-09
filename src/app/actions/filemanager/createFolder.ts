@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
 import { mkdir } from 'fs/promises'
 import { join } from 'path'
+import { getStorageInfo } from '@/lib/utils/universal-file-utils'
 
 const prisma = new PrismaClient()
 
@@ -29,7 +30,7 @@ export interface CreateFolderResult {
  * @param parentId id родительской папки (null — корень)
  */
 export async function createFolder(name: string, parentId: number | null = null): Promise<CreateFolderResult> {
-  console.log('createFolder called with:', { name, parentId, NODE_ENV: process.env.NODE_ENV })
+  console.log('createFolder called with:', { name, parentId, storageProvider: process.env.STORAGE_PROVIDER })
   
   try {
     const cookieStore = await cookies()
@@ -83,16 +84,20 @@ export async function createFolder(name: string, parentId: number | null = null)
       }
     })
 
-    // В продакшене не создаем физические папки (используем S3)
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('Creating physical folder in development mode')
-      // Создаем физическую папку только в development
+    // Создаем физические папки только для локального провайдера
+    // В Supabase Storage папки создаются автоматически при загрузке файлов
+    const storageInfo = getStorageInfo();
+    console.log('Storage provider info:', storageInfo);
+    
+    if (storageInfo.isLocal) {
+      console.log('Creating physical folder for local storage provider')
+      // Создаем физическую папку только для локального хранилища
       const uploadsDir = join(process.cwd(), 'public', 'uploads')
       const physicalPath = join(uploadsDir, fullPath)
       
       await mkdir(physicalPath, { recursive: true })
     } else {
-      console.log('Skipping physical folder creation in production (using S3)')
+      console.log('Skipping physical folder creation (using cloud storage - folders created automatically)')
     }
 
     // Возвращаем папку в формате FileItem
