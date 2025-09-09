@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { mkdir } from 'fs/promises'
 import { join } from 'path'
 import { getStorageInfo } from '@/lib/utils/universal-file-utils'
+import { validateAndProcessFolderName } from '@/lib/utils/folder-validation'
 
 const prisma = new PrismaClient()
 
@@ -50,6 +51,27 @@ export async function createFolder(name: string, parentId: number | null = null)
       return { success: false, error: 'Folder name required' }
     }
 
+    // Получаем информацию о провайдере хранения
+    const storageType = getStorageInfo()
+    console.log('Creating folder with storage provider:', storageType.provider)
+    
+    // Валидируем и обрабатываем название папки
+    const validation = validateAndProcessFolderName(name.trim(), storageType.provider as 'local' | 'supabase')
+    
+    if (!validation.success) {
+      return { 
+        success: false, 
+        error: validation.error + (validation.suggestions ? ` Suggestions: ${validation.suggestions.join(', ')}` : '')
+      }
+    }
+    
+    const { originalName, safeName, wasTransliterated } = validation.data
+    
+    // Предупреждаем пользователя если название было изменено
+    if (wasTransliterated) {
+      console.log(`Folder name transliterated: "${originalName}" -> "${safeName}"`)
+    }
+
     // Определяем путь к папке
     let fullPath: string
     let parentFolder = null
@@ -77,7 +99,7 @@ export async function createFolder(name: string, parentId: number | null = null)
     // Создаем папку в базе данных
     const folder = await prisma.folder.create({
       data: {
-        name,
+        name: safeName, // Используем безопасное название
         path: fullPath,
         ownerId: user.id,
         parentId: parentId || null
@@ -86,10 +108,10 @@ export async function createFolder(name: string, parentId: number | null = null)
 
     // Создаем физические папки только для локального провайдера
     // В Supabase Storage папки создаются автоматически при загрузке файлов
-    const storageInfo = getStorageInfo();
-    console.log('Storage provider info:', storageInfo);
-    
-    if (storageInfo.isLocal) {
+    const storageData = getStorageInfo();
+    console.log('Storage provider info:', storageData);
+
+    if (storageData.isLocal) {
       console.log('Creating physical folder for local storage provider')
       // Создаем физическую папку только для локального хранилища
       const uploadsDir = join(process.cwd(), 'public', 'uploads')
