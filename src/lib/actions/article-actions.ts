@@ -372,6 +372,11 @@ export async function updateArticle(id: number, data: FormData): Promise<ActionS
   try {
     const { categoryId, authorId, ...articleData } = validatedFields.data
     
+    // Получаем данные тегов и документов
+    const tagIds = data.getAll('tagIds').map(id => parseInt(id as string)).filter(id => !isNaN(id))
+    const documentsData = data.get('documents')
+    const documents = documentsData ? JSON.parse(documentsData as string) : null
+    
     await prisma.article.update({
       where: { id },
       data: {
@@ -379,6 +384,13 @@ export async function updateArticle(id: number, data: FormData): Promise<ActionS
         categoryId: categoryId ? parseInt(categoryId) : null,
         authorId: parseInt(authorId),
         published: validatedFields.data.published || false,
+        documents: documents,
+        tags: {
+          deleteMany: {}, // Удаляем все старые связи
+          create: tagIds.map(tagId => ({
+            tag: { connect: { id: tagId } }
+          }))
+        }
       }
     })
     

@@ -20,6 +20,7 @@ import { DocumentManager } from "./DocumentManager"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { Article } from "@/lib/actions/article-actions"
+import { updateArticle } from "@/lib/actions/article-actions"
 import { generateSlug, isValidSlug } from "@/lib/utils/slug-utils"
 import { useCallback, useRef } from "react"
 
@@ -178,30 +179,42 @@ interface DocumentItem {
     setLoading(true)
 
     try {
-      const response = await fetch(`/api/articles/${article.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title,
-          content,
-          excerpt: excerpt || null,
-          slug,
-          published,
-          categoryId,
-          tagIds: selectedTags.map(tag => tag.id),
-          documents: documents.length > 0 ? documents : null
-        }),
+      // Создаем FormData для Server Action
+      const formData = new FormData()
+      formData.append('title', title)
+      formData.append('content', content)
+      formData.append('excerpt', excerpt || '')
+      formData.append('slug', slug)
+      formData.append('published', published ? 'on' : 'off')
+      formData.append('authorId', article.authorId.toString())
+      if (categoryId) {
+        formData.append('categoryId', categoryId.toString())
+      }
+      
+      // Добавляем теги
+      selectedTags.forEach(tag => {
+        formData.append('tagIds', tag.id.toString())
       })
+      
+      // Добавляем документы
+      if (documents.length > 0) {
+        formData.append('documents', JSON.stringify(documents))
+      }
 
-      if (response.ok) {
+      // Используем Server Action вместо fetch
+      const result = await updateArticle(article.id, formData)
+
+      if ('success' in result && result.success) {
         toast.success('Статья обновлена успешно')
         // Редирект обратно в список статей
         router.push('/admin/articles')
-      } else {
-        const error = await response.json()
-        toast.error(error.error || 'Ошибка при обновлении статьи')
+      } else if ('errors' in result) {
+        if (result.errors.general) {
+          toast.error(result.errors.general[0])
+        } else {
+          const errorMessages = Object.values(result.errors).flat()
+          toast.error(errorMessages.join(', '))
+        }
       }
     } catch (error) {
       console.error('Error updating article:', error)
