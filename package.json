@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "prisma generate && node --max-old-space-size=4096 node_modules/next/dist/bin/next build",
+    "build": "node --max-old-space-size=4096 node_modules/next/dist/bin/next build",
+    "build:prod": "node scripts/prisma-runner.js generate --prod && node --max-old-space-size=4096 node_modules/next/dist/bin/next build",
     "start": "next start",
     "lint": "eslint",
     "sync-file-paths": "node scripts/sync-file-paths.js",

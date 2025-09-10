@@ -2,7 +2,7 @@
 
 import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
-import { saveFileUniversalWithDetails, generateFileName, getFolderPhysicalPath, validateFile } from '@/lib/utils/file-utils'
+import { saveFileUniversalWithDetails, generateFileName, getFolderPhysicalPath, MAX_FILE_SIZE, ALLOWED_IMAGE_TYPES, ALLOWED_DOCUMENT_TYPES } from '@/lib/utils/file-utils'
 import { generateVirtualPath, createVirtualFileUrl } from '@/lib/virtualPaths'
 
 const prisma = new PrismaClient()
@@ -48,12 +48,19 @@ export async function uploadFile(formData: FormData): Promise<UploadResult> {
       return { success: false, files: [], error: 'No files provided' }
     }
 
-    // Валидация всех файлов перед загрузкой
+    // Простая серверная валидация файлов перед загрузкой
     const validationErrors: string[] = []
+    const allowedTypes = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_DOCUMENT_TYPES]
+    
     for (const file of files) {
-      const validation = validateFile(file)
-      if (!validation.valid) {
-        validationErrors.push(...validation.errors)
+      // Проверка размера
+      if (file.size > MAX_FILE_SIZE) {
+        validationErrors.push(`Файл "${file.name}" слишком большой. Максимальный размер: 10MB, размер файла: ${(file.size / 1024 / 1024).toFixed(2)}MB`)
+      }
+      
+      // Проверка типа
+      if (!allowedTypes.includes(file.type)) {
+        validationErrors.push(`Тип файла "${file.type}" не поддерживается для файла "${file.name}"`)
       }
     }
 

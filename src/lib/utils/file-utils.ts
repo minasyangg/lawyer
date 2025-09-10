@@ -8,27 +8,6 @@ export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'ima
 export const ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
-// Серверная валидация файла (для Form Data)
-export function validateFile(file: File): { valid: boolean; errors: string[] } {
-  const errors: string[] = []
-  
-  // Проверка размера
-  if (file.size > MAX_FILE_SIZE) {
-    errors.push(`Файл "${file.name}" слишком большой. Максимальный размер: 10MB, размер файла: ${(file.size / 1024 / 1024).toFixed(2)}MB`)
-  }
-  
-  // Проверка типа
-  const allowedTypes = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_DOCUMENT_TYPES]
-  if (!allowedTypes.includes(file.type)) {
-    errors.push(`Тип файла "${file.type}" не поддерживается. Разрешены: изображения и документы`)
-  }
-  
-  return {
-    valid: errors.length === 0,
-    errors
-  }
-}
-
 export function generateFileName(originalName: string): string {
   const ext = originalName.split('.').pop()
   const timestamp = Date.now()
