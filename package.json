@@ -4,24 +4,28 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && node --max-old-space-size=4096 node_modules/next/dist/bin/next build",
     "start": "next start",
     "lint": "eslint",
     "sync-file-paths": "node scripts/sync-file-paths.js",
     "postinstall": "prisma generate",
+    
     "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy",
+    "db:deploy": "prisma migrate deploy", 
     "db:reset": "prisma migrate reset",
-    "db:push": "prisma db push",
-    "db:studio": "prisma studio",
     "db:seed": "node prisma/seeds/runAllSeeds.js",
-    "db:seed:single": "node prisma/seeds/seed.js",
+    "db:studio": "prisma studio",
+    "db:status": "prisma migrate status",
     "db:fresh": "prisma migrate reset --force && node prisma/seeds/runAllSeeds.js",
-    "db:push:prod": "dotenv -e .env.production -- prisma db push",
-    "db:studio:prod": "dotenv -e .env.production -- prisma studio",
-    "db:migrate:prod": "dotenv -e .env.production -- prisma migrate deploy",
-    "db:seed:prod": "dotenv -e .env.production -- node prisma/seeds/runAllSeeds.js",
-    "db:deploy:prod": "dotenv -e .env.production -- prisma migrate deploy && dotenv -e .env.production -- node prisma/seeds/runAllSeeds.js"
+    
+    "db:migrate:prod": "node scripts/prisma-runner.js migrate deploy --prod",
+    "db:deploy:prod": "node scripts/prisma-runner.js migrate deploy --prod",
+    "db:seed:prod": "node scripts/prisma-runner.js db seed --prod && node prisma/seeds/runAllSeeds.js",
+    "db:studio:prod": "node scripts/prisma-runner.js studio --prod",
+    "db:status:prod": "node scripts/prisma-runner.js migrate status --prod",
+    "db:fresh:prod": "node scripts/prisma-runner.js migrate reset --force --prod && node prisma/seeds/runAllSeeds.js",
+    
+    "db:seed:single": "node prisma/seeds/seed.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.884.0",

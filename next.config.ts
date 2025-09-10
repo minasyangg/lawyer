@@ -8,6 +8,33 @@ const nextConfig: NextConfig = {
     },
   },
   
+  // Оптимизация сборки для решения проблем с памятью
+  webpack: (config, { isServer }) => {
+    // Оптимизация для уменьшения использования памяти
+    config.optimization = {
+      ...config.optimization,
+      splitChunks: {
+        ...config.optimization.splitChunks,
+        cacheGroups: {
+          ...config.optimization.splitChunks?.cacheGroups,
+          default: {
+            minChunks: 2,
+            priority: -20,
+            reuseExistingChunk: true,
+          },
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            priority: -10,
+            chunks: 'all',
+          },
+        },
+      },
+    };
+    
+    return config;
+  },
+  
   // Дополнительные настройки безопасности для файлов
   images: {
     remotePatterns: [
