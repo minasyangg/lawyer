@@ -14,21 +14,45 @@ model FileEntity {
   children  FileEntity[] @relation("FolderParent")
   user      User        @relation(fields: [userId], references: [id])
 }
-// Prisma schema для локальной разработки - SQLite
-
-datasource db {
-  provider = "postgresql"
-  url        = env("DATABASE_URL")   // для работы приложения (pooler:6543)
-  // directUrl  = env("DIRECT_URL")     // для миграций (db:5432) - только для продакшна
-}
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
 }
 
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Enums для системы аутентификации
+enum UserRole {
+  ADMIN
+  EDITOR  
+  USER
+}
+
+enum UserStatus {
+  PENDING     // Ожидает модерации (для публичной регистрации)
+  APPROVED    // Одобрен админом
+  REJECTED    // Отклонен админом
+  ACTIVE      // Активный пользователь
+  SUSPENDED   // Заблокирован
+}
+
+enum LoginAttemptResult {
+  SUCCESS
+  FAILED
+  BLOCKED
+  TWO_FACTOR_REQUIRED
+  TWO_FACTOR_FAILED
+}
+
 model Service {
   id          Int              @id @default(autoincrement())
-  title       String
+  title       String           @unique
   description String
   extraInfo   String?
   details     ServiceDetails[]
@@ -44,17 +68,74 @@ model ServiceDetails {
 }
 
 model User {
-  id        Int       @id @default(autoincrement())
-  name      String
-  email     String    @unique
-  password  String?
-  role      String    @default("user")
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  articles  Article[]
-  files     File[]
-  folders   Folder[]
-  fileEntities FileEntity[]
+  id                    Int       @id @default(autoincrement())
+  name                  String
+  email                 String    @unique
+  password              String?
+  role                  UserRole  @default(USER)
+  status                UserStatus @default(ACTIVE)
+  
+  // 2FA настройки
+  twoFactorEnabled      Boolean   @default(false)
+  twoFactorSecret       String?   @unique
+  twoFactorBackupCodes  Json?     // Массив backup кодов
+  
+  // Управление аккаунтом
+  isActive              Boolean   @default(true)
+  emailVerified         Boolean   @default(false)
+  lastLogin             DateTime?
+  failedLoginAttempts   Int       @default(0)
+  lockedUntil           DateTime?
+  
+  // Восстановление пароля
+  passwordResetToken    String?   @unique
+  passwordResetExpires  DateTime?
+  
+  // Метаданные
+  registrationNote      String?   // Комментарий при регистрации
+  rejectionReason       String?   // Причина отклонения заявки
+  
+  // Timestamps
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  // Relations
+  articles              Article[]
+  files                 File[]
+  folders               Folder[]
+  fileEntities          FileEntity[]
+  loginLogs             LoginLog[]
+  
+  // Кто создал/модерировал пользователя
+  createdUsers          User[]    @relation("UserCreatedBy")
+  createdBy             User?     @relation("UserCreatedBy", fields: [createdById], references: [id])
+  createdById           Int?
+  
+  @@index([email])
+  @@index([status])
+  @@index([role])
+}
+
+// Логирование всех попыток входа
+model LoginLog {
+  id                Int                 @id @default(autoincrement())
+  userId            Int?                // null если пользователь не найден
+  email             String
+  ipAddress         String?
+  userAgent         String?
+  result            LoginAttemptResult
+  failureReason     String?             // "invalid_password", "account_locked", "2fa_required", etc.
+  twoFactorUsed     Boolean             @default(false)
+  sessionId         String?             // ID сессии для отслеживания
+  createdAt         DateTime            @default(now())
+  
+  user              User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([email])
+  @@index([ipAddress])
+  @@index([createdAt])
+  @@index([result])
 }
 
 model Article {

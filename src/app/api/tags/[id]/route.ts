@@ -58,7 +58,7 @@ export async function PUT(
 
     const user = JSON.parse(sessionCookie.value)
 
-    if (!user || user.role !== 'admin') {
+    if (!user || user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
@@ -124,7 +124,7 @@ export async function DELETE(
 
     const user = JSON.parse(sessionCookie.value)
 
-    if (!user || user.role !== 'admin') {
+    if (!user || user.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 

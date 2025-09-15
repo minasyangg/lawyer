@@ -30,9 +30,9 @@ function RoleSelect({ defaultValue }: { defaultValue: string }) {
           <SelectValue placeholder="Select a role" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="user">User</SelectItem>
-          <SelectItem value="moderator">Moderator</SelectItem>
-          <SelectItem value="admin">Admin</SelectItem>
+          <SelectItem value="USER">User</SelectItem>
+          <SelectItem value="EDITOR">Editor</SelectItem>
+          <SelectItem value="ADMIN">Admin</SelectItem>
         </SelectContent>
       </Select>
       <input type="hidden" name="role" value={value} />
@@ -115,10 +115,26 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
                 <p className="text-sm text-red-600">{errors.email[0]}</p>
               )}
             </div>
+
+            {!isEditing && (
+              <div className="grid gap-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="Enter password"
+                  required
+                />
+                {errors.password && (
+                  <p className="text-sm text-red-600">{errors.password[0]}</p>
+                )}
+              </div>
+            )}
             
             <div className="grid gap-2">
               <Label htmlFor="role">Role</Label>
-              <RoleSelect defaultValue={user?.role || 'user'} />
+              <RoleSelect defaultValue={user?.role || 'USER'} />
               {errors.role && (
                 <p className="text-sm text-red-600">{errors.role[0]}</p>
               )}

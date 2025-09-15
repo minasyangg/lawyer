@@ -21,7 +21,7 @@ export async function middleware(request: NextRequest) {
       if ((pathname.startsWith('/api/tags') && 
            (request.method === 'POST' || request.method === 'PUT' || request.method === 'DELETE')) ||
           pathname.startsWith('/api/upload')) {
-        if (user.role !== 'admin') {
+        if (user.role !== 'ADMIN' && user.role !== 'EDITOR') {
           return NextResponse.json({ error: 'Access denied' }, { status: 403 })
         }
       }
@@ -40,9 +40,33 @@ export async function middleware(request: NextRequest) {
 
     try {
       const user = JSON.parse(sessionCookie.value)
-      if (user.role !== 'admin') {
+      
+      // Только ADMIN может заходить в админ область
+      if (user.role !== 'ADMIN') {
         return NextResponse.redirect(new URL('/admin/login', request.url))
       }
+      
+    } catch {
+      return NextResponse.redirect(new URL('/admin/login', request.url))
+    }
+  }
+
+  // Проверка доступа к editor панели
+  if (pathname.startsWith('/editor')) {
+    const sessionCookie = request.cookies.get('admin-session')
+
+    if (!sessionCookie?.value) {
+      return NextResponse.redirect(new URL('/admin/login', request.url))
+    }
+
+    try {
+      const user = JSON.parse(sessionCookie.value)
+      
+      // Только EDITOR может заходить в editor область
+      if (user.role !== 'EDITOR') {
+        return NextResponse.redirect(new URL('/admin/login', request.url))
+      }
+      
     } catch {
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
@@ -64,6 +88,7 @@ export const config = {
     '/api/upload/:path*', 
     '/api/tags/:path*',
     '/admin/:path*',
+    '/editor/:path*',
     '/uploads/:path*'
   ]
 }

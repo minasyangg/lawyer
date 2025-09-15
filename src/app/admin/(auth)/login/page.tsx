@@ -36,7 +36,19 @@ export default function AdminLogin() {
 
       if (response.ok && result.success) {
         console.log('Login successful, redirecting...')
-        router.push('/admin')
+        
+        // Перенаправляем в зависимости от роли пользователя
+        const userRole = result.user.role
+        if (userRole === 'ADMIN') {
+          router.push('/admin')
+        } else if (userRole === 'EDITOR') {
+          router.push('/editor')
+        } else {
+          // Для роли USER показываем сообщение об ограниченном доступе
+          setError('Access denied. Only admins and editors can access this area.')
+          return
+        }
+        
         router.refresh()
       } else {
         console.log('Login failed:', result.error)

@@ -43,6 +43,8 @@ interface Tag {
 interface CreateArticleFormProps {
   services: Service[]
   users: User[]
+  isEditor?: boolean
+  redirectPath?: string
 }
 
 type CheckSlugResponse = {
@@ -51,7 +53,12 @@ type CheckSlugResponse = {
   message?: string
 }
 
-export function CreateArticleForm({ services: initialServices }: CreateArticleFormProps) {
+export function CreateArticleForm({ 
+  services: initialServices, 
+  users, 
+  isEditor = false, 
+  redirectPath = '/admin/articles' 
+}: CreateArticleFormProps) {
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
   const [excerpt, setExcerpt] = useState("")
@@ -171,7 +178,7 @@ interface DocumentItem {
 
       if (response.ok) {
         toast.success('Статья создана успешно')
-        router.push('/admin/articles')
+        router.push(redirectPath)
       } else {
         const error = await response.json()
         toast.error(error.error || 'Ошибка при создании статьи')

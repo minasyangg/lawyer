@@ -75,9 +75,9 @@ export async function POST(request: NextRequest) {
 
     const user = JSON.parse(sessionCookie.value)
 
-    if (!user || user.role !== 'admin') {
+    if (!user || (user.role !== 'ADMIN' && user.role !== 'EDITOR')) {
       return NextResponse.json(
-        { error: 'Admin access required' },
+        { error: 'Admin or Editor access required' },
         { status: 403 }
       )
     }

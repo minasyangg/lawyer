@@ -47,9 +47,17 @@ interface EditArticleFormProps {
   article: Article
   services: Service[]
   users: User[]
+  isEditor?: boolean
+  redirectPath?: string
 }
 
-export function EditArticleForm({ article, services: initialServices }: EditArticleFormProps) {
+export function EditArticleForm({ 
+  article, 
+  services: initialServices, 
+  users,
+  isEditor = false,
+  redirectPath = '/admin/articles'
+}: EditArticleFormProps) {
   const [title, setTitle] = useState(article.title || "")
   const [content, setContent] = useState(article.content || "")
   const [excerpt, setExcerpt] = useState(article.excerpt || "")
@@ -207,7 +215,7 @@ interface DocumentItem {
       if ('success' in result && result.success) {
         toast.success('Статья обновлена успешно')
         // Редирект обратно в список статей
-        router.push('/admin/articles')
+        router.push(redirectPath)
       } else if ('errors' in result) {
         if (result.errors.general) {
           toast.error(result.errors.general[0])
@@ -239,7 +247,7 @@ interface DocumentItem {
 
       if (response.ok) {
         toast.success('Статья удалена успешно')
-        router.push('/admin/articles')
+        router.push(redirectPath)
       } else {
         const error = await response.json()
         toast.error(error.error || 'Ошибка при удалении статьи')

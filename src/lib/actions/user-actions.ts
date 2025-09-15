@@ -1,22 +1,30 @@
 "use server"
 
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, UserRole } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
-const UserSchema = z.object({
+const UserCreateSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  role: z.string().min(1, 'Role is required'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  role: z.enum(['ADMIN', 'EDITOR', 'USER'], { message: 'Role is required' }),
+})
+
+const UserUpdateSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  role: z.enum(['ADMIN', 'EDITOR', 'USER'], { message: 'Role is required' }),
 })
 
 export type User = {
   id: number
   name: string
   email: string
-  role: string
+  role: UserRole
   createdAt: Date
   updatedAt: Date
 }
@@ -46,9 +54,10 @@ export async function getUserById(id: number): Promise<User | null> {
 }
 
 export async function createUser(data: FormData) {
-  const validatedFields = UserSchema.safeParse({
+  const validatedFields = UserCreateSchema.safeParse({
     name: data.get('name'),
     email: data.get('email'),
+    password: data.get('password'),
     role: data.get('role'),
   })
 
@@ -59,8 +68,16 @@ export async function createUser(data: FormData) {
   }
 
   try {
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(validatedFields.data.password, 12)
+    
     await prisma.user.create({
-      data: validatedFields.data
+      data: {
+        name: validatedFields.data.name,
+        email: validatedFields.data.email,
+        password: hashedPassword,
+        role: validatedFields.data.role as UserRole,
+      }
     })
     
     revalidatePath('/admin')
@@ -74,7 +91,7 @@ export async function createUser(data: FormData) {
 }
 
 export async function updateUser(id: number, data: FormData) {
-  const validatedFields = UserSchema.safeParse({
+  const validatedFields = UserUpdateSchema.safeParse({
     name: data.get('name'),
     email: data.get('email'),
     role: data.get('role'),
@@ -89,7 +106,11 @@ export async function updateUser(id: number, data: FormData) {
   try {
     await prisma.user.update({
       where: { id },
-      data: validatedFields.data
+      data: {
+        name: validatedFields.data.name,
+        email: validatedFields.data.email,
+        role: validatedFields.data.role as UserRole,
+      }
     })
     
     revalidatePath('/admin')

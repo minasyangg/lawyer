@@ -59,7 +59,7 @@ export async function createAdminUser(data: FormData) {
         name: 'Admin',
         email: validatedFields.data.email,
         password: hashedPassword,
-        role: 'admin',
+        role: 'ADMIN',
       }
     })
     

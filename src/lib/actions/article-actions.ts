@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { resolveVirtualUrlsInContent } from '@/lib/virtualPaths'
+import { cookies } from 'next/headers'
 
 interface DocumentItem {
   id: number
@@ -23,6 +24,22 @@ interface ActionSuccess {
 
 const prisma = new PrismaClient()
 
+// Вспомогательная функция для получения текущего пользователя из сессии
+async function getCurrentUser() {
+  const cookieStore = await cookies()
+  const sessionCookie = cookieStore.get('admin-session')
+  
+  if (!sessionCookie?.value) {
+    return null
+  }
+
+  try {
+    return JSON.parse(sessionCookie.value)
+  } catch {
+    return null
+  }
+}
+
 const ArticleSchema = z.object({
   title: z.string().min(2, 'Title must be at least 2 characters'),
   content: z.string().min(10, 'Content must be at least 10 characters'),
@@ -31,6 +48,16 @@ const ArticleSchema = z.object({
   published: z.boolean().optional(),
   categoryId: z.string().optional(),
   authorId: z.string().min(1, 'Author is required'),
+})
+
+// Схема для создания статьи без указания автора (будет получен из сессии)
+const ArticleCreateSchema = z.object({
+  title: z.string().min(2, 'Title must be at least 2 characters'),
+  content: z.string().min(10, 'Content must be at least 10 characters'),
+  excerpt: z.string().optional(),
+  slug: z.string().min(2, 'Slug must be at least 2 characters'),
+  published: z.boolean().optional(),
+  categoryId: z.string().optional(),
 })
 
 export type Article = {
@@ -311,6 +338,20 @@ function generateSlug(title: string): string {
 export async function createArticle(data: FormData): Promise<ActionSuccess | ActionError> {
   const title = data.get('title') as string
   
+  // Получаем текущего пользователя из сессии
+  const currentUser = await getCurrentUser()
+  
+  if (!currentUser) {
+    return {
+      errors: { general: ['Authentication required'] }
+    }
+  }
+
+  // Если это ADMIN, используем переданный authorId, если EDITOR - используем его ID
+  const authorId = currentUser.role === 'ADMIN' && data.get('authorId') 
+    ? data.get('authorId') as string
+    : currentUser.id.toString()
+  
   const validatedFields = ArticleSchema.safeParse({
     title,
     content: data.get('content'),
@@ -318,7 +359,7 @@ export async function createArticle(data: FormData): Promise<ActionSuccess | Act
     slug: data.get('slug') || generateSlug(title),
     published: data.get('published') === 'on',
     categoryId: data.get('categoryId') || undefined,
-    authorId: data.get('authorId'),
+    authorId: authorId,
   })
 
   if (!validatedFields.success) {
@@ -328,18 +369,23 @@ export async function createArticle(data: FormData): Promise<ActionSuccess | Act
   }
 
   try {
-    const { categoryId, authorId, ...articleData } = validatedFields.data
+    const { categoryId, authorId: validatedAuthorId, ...articleData } = validatedFields.data
     
     await prisma.article.create({
       data: {
         ...articleData,
         categoryId: categoryId ? parseInt(categoryId) : null,
-        authorId: parseInt(authorId),
+        authorId: parseInt(validatedAuthorId),
         published: validatedFields.data.published || false,
       }
     })
     
-    revalidatePath('/admin/articles')
+    // Revalidate соответствующие пути в зависимости от роли
+    if (currentUser.role === 'ADMIN') {
+      revalidatePath('/admin/articles')
+    } else if (currentUser.role === 'EDITOR') {
+      revalidatePath('/editor/articles')
+    }
     revalidatePath('/publications')
     return { success: true }
   } catch (error) {
@@ -353,6 +399,39 @@ export async function createArticle(data: FormData): Promise<ActionSuccess | Act
 export async function updateArticle(id: number, data: FormData): Promise<ActionSuccess | ActionError> {
   const title = data.get('title') as string
   
+  // Получаем текущего пользователя из сессии
+  const currentUser = await getCurrentUser()
+  
+  if (!currentUser) {
+    return {
+      errors: { general: ['Authentication required'] }
+    }
+  }
+
+  // Проверяем права на редактирование статьи
+  const existingArticle = await prisma.article.findUnique({
+    where: { id },
+    select: { authorId: true }
+  })
+
+  if (!existingArticle) {
+    return {
+      errors: { general: ['Article not found'] }
+    }
+  }
+
+  // EDITOR может редактировать только свои статьи, ADMIN может редактировать любые
+  if (currentUser.role === 'EDITOR' && existingArticle.authorId !== currentUser.id) {
+    return {
+      errors: { general: ['You can only edit your own articles'] }
+    }
+  }
+
+  // Если это ADMIN, используем переданный authorId, если EDITOR - используем его ID
+  const authorId = currentUser.role === 'ADMIN' && data.get('authorId') 
+    ? data.get('authorId') as string
+    : currentUser.id.toString()
+  
   const validatedFields = ArticleSchema.safeParse({
     title,
     content: data.get('content'),
@@ -360,7 +439,7 @@ export async function updateArticle(id: number, data: FormData): Promise<ActionS
     slug: data.get('slug') || generateSlug(title),
     published: data.get('published') === 'on',
     categoryId: data.get('categoryId') || undefined,
-    authorId: data.get('authorId'),
+    authorId: authorId,
   })
 
   if (!validatedFields.success) {
@@ -370,7 +449,7 @@ export async function updateArticle(id: number, data: FormData): Promise<ActionS
   }
 
   try {
-    const { categoryId, authorId, ...articleData } = validatedFields.data
+    const { categoryId, authorId: validatedAuthorId, ...articleData } = validatedFields.data
     
     // Получаем данные тегов и документов
     const tagIds = data.getAll('tagIds').map(id => parseInt(id as string)).filter(id => !isNaN(id))
@@ -382,7 +461,7 @@ export async function updateArticle(id: number, data: FormData): Promise<ActionS
       data: {
         ...articleData,
         categoryId: categoryId ? parseInt(categoryId) : null,
-        authorId: parseInt(authorId),
+        authorId: parseInt(validatedAuthorId),
         published: validatedFields.data.published || false,
         documents: documents,
         tags: {
@@ -394,7 +473,12 @@ export async function updateArticle(id: number, data: FormData): Promise<ActionS
       }
     })
     
-    revalidatePath('/admin/articles')
+    // Revalidate соответствующие пути в зависимости от роли
+    if (currentUser.role === 'ADMIN') {
+      revalidatePath('/admin/articles')
+    } else if (currentUser.role === 'EDITOR') {
+      revalidatePath('/editor/articles')
+    }
     revalidatePath('/publications')
     return { success: true }
   } catch (error) {
@@ -406,12 +490,45 @@ export async function updateArticle(id: number, data: FormData): Promise<ActionS
 }
 
 export async function deleteArticle(id: number): Promise<ActionSuccess | ActionError> {
+  // Получаем текущего пользователя из сессии
+  const currentUser = await getCurrentUser()
+  
+  if (!currentUser) {
+    return {
+      errors: { general: ['Authentication required'] }
+    }
+  }
+
+  // Проверяем права на удаление статьи
+  const existingArticle = await prisma.article.findUnique({
+    where: { id },
+    select: { authorId: true }
+  })
+
+  if (!existingArticle) {
+    return {
+      errors: { general: ['Article not found'] }
+    }
+  }
+
+  // EDITOR может удалять только свои статьи, ADMIN может удалять любые
+  if (currentUser.role === 'EDITOR' && existingArticle.authorId !== currentUser.id) {
+    return {
+      errors: { general: ['You can only delete your own articles'] }
+    }
+  }
+
   try {
     await prisma.article.delete({
       where: { id }
     })
     
-    revalidatePath('/admin/articles')
+    // Revalidate соответствующие пути в зависимости от роли
+    if (currentUser.role === 'ADMIN') {
+      revalidatePath('/admin/articles')
+    } else if (currentUser.role === 'EDITOR') {
+      revalidatePath('/editor/articles')
+    }
     revalidatePath('/publications')
     return { success: true }
   } catch (error) {
@@ -438,12 +555,63 @@ export async function toggleArticlePublished(id: number): Promise<ActionSuccess 
     })
     
     revalidatePath('/admin/articles')
+    revalidatePath('/editor/articles')
     revalidatePath('/publications')
     return { success: true }
   } catch (error) {
     console.error('Error toggling article published status:', error)
     return {
       errors: { general: ['Failed to update article'] }
+    }
+  }
+}
+
+export async function createArticleForEditor(data: FormData, authorId: number): Promise<ActionSuccess | ActionError> {
+  const title = data.get('title') as string
+  
+  const EditorArticleSchema = z.object({
+    title: z.string().min(2, 'Title must be at least 2 characters'),
+    content: z.string().min(10, 'Content must be at least 10 characters'),
+    excerpt: z.string().optional(),
+    slug: z.string().min(2, 'Slug must be at least 2 characters'),
+    published: z.boolean().optional(),
+    categoryId: z.string().optional(),
+  })
+  
+  const validatedFields = EditorArticleSchema.safeParse({
+    title,
+    content: data.get('content'),
+    excerpt: data.get('excerpt'),
+    slug: data.get('slug') || generateSlug(title),
+    published: data.get('published') === 'on',
+    categoryId: data.get('categoryId') || undefined,
+  })
+
+  if (!validatedFields.success) {
+    return {
+      errors: validatedFields.error.flatten().fieldErrors,
+    }
+  }
+
+  try {
+    const { categoryId, ...articleData } = validatedFields.data
+    
+    await prisma.article.create({
+      data: {
+        ...articleData,
+        categoryId: categoryId ? parseInt(categoryId) : null,
+        authorId: authorId, // Автоматически устанавливаем из сессии
+        published: validatedFields.data.published || false,
+      }
+    })
+    
+    revalidatePath('/editor/articles')
+    revalidatePath('/publications')
+    return { success: true }
+  } catch (error) {
+    console.error('Error creating article:', error)
+    return {
+      errors: { general: ['Failed to create article'] }
     }
   }
 }
