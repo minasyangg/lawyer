@@ -171,21 +171,17 @@ const createContentByMimeType = (file: FileItem, withStyleDialog: boolean = fals
   }
 }
 
-// Функция загрузки файла через общую систему файлового менеджера
+// Функция загрузки файла через Server Actions
 const handleFileUpload = async (file: File): Promise<string> => {
   try {
+    const { uploadFileForEditor } = await import('@/app/actions/filemanager/editor')
+    
     const formData = new FormData()
-    formData.append('files', file)
-    // Сохраняем в корневую папку пользователя (без указания folderId)
+    formData.append('file', file)
     
-    const response = await fetch('/api/editor/upload', {
-      method: 'POST',
-      body: formData,
-    })
+    const result = await uploadFileForEditor(formData)
     
-    const result = await response.json()
-    
-    if (result.success) {
+    if (result.success && result.file) {
       let url = result.file.url
       
       // Для локальной разработки убеждаемся, что URL правильный

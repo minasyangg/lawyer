@@ -74,7 +74,7 @@ export async function updateChildrenVirtualPaths(folderId: number, newVirtualPat
  * Создает виртуальный URL для файла используя virtualId
  */
 export function createVirtualFileUrl(virtualId: string): string {
-  return `/api/files/${virtualId}` // Правильный путь к API route
+  return `/api/files/virtual/${virtualId}` // Используем специальный route для виртуальных ID
 }
 
 /**
