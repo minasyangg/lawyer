@@ -72,7 +72,7 @@ model User {
   name                  String
   email                 String    @unique
   password              String?
-  role                  UserRole  @default(USER)
+  userRole              UserRole  @default(USER)
   status                UserStatus @default(ACTIVE)
   
   // 2FA настройки
@@ -113,7 +113,7 @@ model User {
   
   @@index([email])
   @@index([status])
-  @@index([role])
+  @@index([userRole])
 }
 
 // Логирование всех попыток входа
@@ -147,13 +147,13 @@ model Article {
   published   Boolean  @default(false)
   categoryId  Int?
   authorId    Int
-  documents   Json?    // Список документов к статье в формате JSON
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
   author      User     @relation(fields: [authorId], references: [id])
   category    Service? @relation(fields: [categoryId], references: [id])
   tags        ArticleTag[]
+  files       ArticleFile[] // Связь с файлами
 }
 
 model Tag {
@@ -176,6 +176,20 @@ model ArticleTag {
   @@id([articleId, tagId])
 }
 
+// Связующая таблица между Article и File
+model ArticleFile {
+  articleId   Int
+  fileId      Int
+  createdAt   DateTime @default(now())
+  
+  article     Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  file        File    @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  
+  @@id([articleId, fileId])
+  @@index([articleId])
+  @@index([fileId])
+}
+
 model File {
   id          Int      @id @default(autoincrement())
   originalName String
@@ -187,14 +201,22 @@ model File {
   size         Int
   uploadedBy   Int
   folderId     Int?
+  
+  // Флаги согласно спецификации
+  isPublic     Boolean  @default(false) // Доступен неавторизованным пользователям
+  isProtected  Boolean  @default(false) // Защищен от удаления (используется в статьях)
+  
   createdAt    DateTime @default(now())
   
   uploader     User     @relation(fields: [uploadedBy], references: [id])
   folder       Folder?  @relation(fields: [folderId], references: [id])
+  articles     ArticleFile[] // Связь с статьями
   
   @@index([uploadedBy])
   @@index([virtualPath])
   @@index([virtualId])
+  @@index([isPublic])
+  @@index([isProtected])
 }
 
 model Folder {
@@ -205,6 +227,11 @@ model Folder {
   virtualId   String?  @unique // Уникальный виртуальный идентификатор (необязательный)
   ownerId     Int
   parentId    Int?
+  
+  // Флаги согласно спецификации
+  isPublic     Boolean  @default(false) // Доступна неавторизованным пользователям
+  isProtected  Boolean  @default(false) // Защищена от удаления (содержит файлы статей)
+  
   createdAt   DateTime @default(now())
   
   owner       User     @relation(fields: [ownerId], references: [id])
@@ -215,4 +242,6 @@ model Folder {
   @@unique([ownerId, path])
   @@index([virtualPath])
   @@index([virtualId])
+  @@index([isPublic])
+  @@index([isProtected])
 }

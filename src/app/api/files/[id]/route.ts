@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { getFileUrl, getStorageInfo } from '@/lib/utils/universal-file-utils'
+import { cookies } from 'next/headers'
 
 const prisma = new PrismaClient()
 
@@ -30,10 +31,68 @@ export async function GET(
     }
 
     if (!file) {
+      console.log(`❌ [File API] File not found for id: ${id}`)
       return NextResponse.json(
         { error: 'File not found' },
         { status: 404 }
       )
+    }
+
+    console.log(`🔍 [File API] Found file:`, {
+      id: file.id,
+      virtualId: file.virtualId,
+      originalName: file.originalName,
+      isPublic: file.isPublic,
+      isProtected: file.isProtected,
+      uploadedBy: file.uploadedBy
+    });
+
+    // Проверяем публичный доступ - если файл публичный, разрешаем доступ всем
+    if (file.isPublic) {
+      // Для публичных файлов доступ открыт всем пользователям
+      console.log(`[Public File API] Serving public file:`, {
+        id: file.id,
+        virtualId: file.virtualId,
+        originalName: file.originalName,
+        isPublic: file.isPublic
+      });
+    } else {
+      // Для приватных файлов требуется авторизация
+      const cookieStore = await cookies()
+      const sessionCookie = cookieStore.get('admin-session')
+      
+      if (!sessionCookie?.value) {
+        return NextResponse.json(
+          { error: 'Unauthorized access to private file' },
+          { status: 401 }
+        )
+      }
+
+      const user = JSON.parse(sessionCookie.value)
+      
+      if (!user?.id) {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        )
+      }
+
+      // Проверяем права доступа к приватному файлу
+      // ADMIN может видеть все файлы, EDITOR может видеть свои файлы
+      if (user.userRole !== 'ADMIN' && file.uploadedBy !== user.id) {
+        return NextResponse.json(
+          { error: 'Access denied to private file' },
+          { status: 403 }
+        )
+      }
+
+      console.log(`[Private File API] Serving private file to authorized user:`, {
+        id: file.id,
+        virtualId: file.virtualId,
+        originalName: file.originalName,
+        userRole: user.userRole,
+        isPublic: file.isPublic
+      });
     }
 
     // Получаем информацию о провайдере хранения
@@ -43,10 +102,11 @@ export async function GET(
       // Генерируем правильный URL через универсальную систему
       const fileUrl = await getFileUrl(file.path);
       
-      console.log(`[Virtual API] Redirecting ${storageInfo.provider} file:`, {
+      console.log(`[File API] Redirecting ${storageInfo.provider} file:`, {
         virtualId: file.virtualId,
         path: file.path,
-        url: fileUrl
+        url: fileUrl,
+        isPublic: file.isPublic
       });
       
       // Редирект на правильный URL

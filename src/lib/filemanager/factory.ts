@@ -19,11 +19,11 @@ export async function createFileManagerProvider(): Promise<FileManagerProvider |
 
     const user = JSON.parse(sessionCookie.value)
     
-    if (!user?.id || !user?.role) {
+    if (!user?.id || !user?.userRole) {
       return null
     }
 
-    return new RoleBasedFileManagerProvider(user.role as UserRole, user.id)
+    return new RoleBasedFileManagerProvider(user.userRole as UserRole, user.id)
   } catch (error) {
     console.error('Error creating file manager provider:', error)
     return null

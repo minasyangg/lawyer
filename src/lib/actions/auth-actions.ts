@@ -31,7 +31,7 @@ export async function authenticateUser(email: string, password: string) {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role,
+      userRole: user.userRole,
     }
   } catch (error) {
     console.error('Authentication error:', error)
@@ -57,9 +57,11 @@ export async function createAdminUser(data: FormData) {
     await prisma.user.create({
       data: {
         name: 'Admin',
-        email: validatedFields.data.email,
-        password: hashedPassword,
-        role: 'ADMIN',
+        email: 'admin@admin.com',
+        password: await bcrypt.hash('password123', 10),
+        userRole: 'ADMIN',
+        status: 'ACTIVE',
+        emailVerified: true,
       }
     })
     

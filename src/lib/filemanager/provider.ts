@@ -72,7 +72,12 @@ export class RoleBasedFileManagerProvider implements FileManagerProvider {
         skip: filters.offset,
         include: {
           uploader: this.permissions.canViewFileDetails ? {
-            select: { id: true, name: true, email: true, role: true }
+            select: { 
+              id: true, 
+              name: true, 
+              email: true, 
+              userRole: true 
+            }
           } : false,
           folder: {
             select: { id: true, name: true, path: true }
@@ -80,9 +85,18 @@ export class RoleBasedFileManagerProvider implements FileManagerProvider {
         }
       })
 
+      // Преобразуем userRole в role для совместимости с типами
+      const transformedFiles = files.map(file => ({
+        ...file,
+        uploader: file.uploader ? {
+          ...file.uploader,
+          role: file.uploader.userRole
+        } : file.uploader
+      }))
+
       return {
         success: true,
-        data: files as FileManagerFile[]
+        data: transformedFiles as FileManagerFile[]
       }
     } catch (error) {
       console.error('Error listing files:', error)
@@ -110,7 +124,7 @@ export class RoleBasedFileManagerProvider implements FileManagerProvider {
         orderBy: { name: 'asc' },
         include: {
           owner: this.permissions.canViewFileDetails ? {
-            select: { id: true, name: true, email: true, role: true }
+            select: { id: true, name: true, email: true, userRole: true }
           } : false,
           parent: {
             select: { id: true, name: true }
@@ -244,7 +258,12 @@ export class RoleBasedFileManagerProvider implements FileManagerProvider {
           },
           include: {
             uploader: this.permissions.canViewFileDetails ? {
-              select: { id: true, name: true, email: true, role: true }
+              select: { 
+                id: true, 
+                name: true, 
+                email: true, 
+                userRole: true 
+              }
             } : false,
             folder: {
               select: { id: true, name: true, path: true }
@@ -252,7 +271,16 @@ export class RoleBasedFileManagerProvider implements FileManagerProvider {
           }
         })
 
-        uploadedFiles.push(dbFile as FileManagerFile)
+        // Преобразуем userRole в role для совместимости с типами
+        const transformedFile = {
+          ...dbFile,
+          uploader: dbFile.uploader ? {
+            ...dbFile.uploader,
+            role: dbFile.uploader.userRole
+          } : dbFile.uploader
+        }
+
+        uploadedFiles.push(transformedFile as FileManagerFile)
       }
 
       return {
@@ -385,7 +413,12 @@ export class RoleBasedFileManagerProvider implements FileManagerProvider {
         where: { id: fileId },
         include: {
           uploader: this.permissions.canViewFileDetails ? {
-            select: { id: true, name: true, email: true, role: true }
+            select: { 
+              id: true, 
+              name: true, 
+              email: true, 
+              userRole: true 
+            }
           } : false,
           folder: {
             select: { id: true, name: true, path: true }
@@ -400,9 +433,18 @@ export class RoleBasedFileManagerProvider implements FileManagerProvider {
         }
       }
 
+      // Преобразуем userRole в role для совместимости с типами
+      const transformedFile = {
+        ...file,
+        uploader: file.uploader ? {
+          ...file.uploader,
+          role: file.uploader.userRole
+        } : file.uploader
+      }
+
       return {
         success: true,
-        data: file as FileManagerFile
+        data: transformedFile as FileManagerFile
       }
     } catch (error) {
       console.error('Error getting file details:', error)
@@ -453,7 +495,12 @@ export class RoleBasedFileManagerProvider implements FileManagerProvider {
         },
         include: {
           owner: this.permissions.canViewFileDetails ? {
-            select: { id: true, name: true, email: true, role: true }
+            select: { 
+              id: true, 
+              name: true, 
+              email: true, 
+              userRole: true 
+            }
           } : false,
           parent: {
             select: { id: true, name: true }
@@ -461,9 +508,18 @@ export class RoleBasedFileManagerProvider implements FileManagerProvider {
         }
       })
 
+      // Преобразуем userRole в role для совместимости с типами
+      const transformedFolder = {
+        ...folder,
+        owner: folder.owner ? {
+          ...folder.owner,
+          role: folder.owner.userRole
+        } : folder.owner
+      }
+
       return {
         success: true,
-        data: folder as FileManagerFolder
+        data: transformedFolder as FileManagerFolder
       }
     } catch (error) {
       console.error('Error creating folder:', error)
@@ -523,7 +579,12 @@ export class RoleBasedFileManagerProvider implements FileManagerProvider {
         data: { name: newName },
         include: {
           owner: this.permissions.canViewFileDetails ? {
-            select: { id: true, name: true, email: true, role: true }
+            select: { 
+              id: true, 
+              name: true, 
+              email: true, 
+              userRole: true 
+            }
           } : false,
           parent: {
             select: { id: true, name: true }
@@ -531,9 +592,18 @@ export class RoleBasedFileManagerProvider implements FileManagerProvider {
         }
       })
 
+      // Преобразуем userRole в role для совместимости с типами
+      const transformedFolder = {
+        ...folder,
+        owner: folder.owner ? {
+          ...folder.owner,
+          role: folder.owner.userRole
+        } : folder.owner
+      }
+
       return {
         success: true,
-        data: folder as FileManagerFolder
+        data: transformedFolder as FileManagerFolder
       }
     } catch (error) {
       console.error('Error renaming folder:', error)

@@ -20,7 +20,7 @@ export default async function EditorLayout({
   try {
     user = JSON.parse(session.value)
     // Проверяем, что пользователь имеет роль EDITOR
-    if (user.role !== 'EDITOR') {
+    if (user.userRole !== 'EDITOR') {
       redirect('/admin/login')
     }
   } catch {

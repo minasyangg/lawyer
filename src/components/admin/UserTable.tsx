@@ -74,13 +74,13 @@ export function UserTable({ users }: UserTableProps) {
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      user.role === 'ADMIN' 
+                      user.userRole === 'ADMIN' 
                         ? 'bg-red-100 text-red-800' 
-                        : user.role === 'EDITOR'
+                        : user.userRole === 'EDITOR'
                         ? 'bg-yellow-100 text-yellow-800'
                         : 'bg-green-100 text-green-800'
                     }`}>
-                      {user.role}
+                      {user.userRole}
                     </span>
                   </TableCell>
                   <TableCell>{formatDate(user.createdAt)}</TableCell>

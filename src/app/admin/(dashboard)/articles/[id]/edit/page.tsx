@@ -82,7 +82,7 @@ async function EditArticleFormWrapper({ articleId }: { articleId: number }) {
     notFound()
   }
   
-  return <EditArticleForm article={article} services={services} users={users} />
+  return <EditArticleForm article={article} services={services} />
 }
 
 export default async function EditArticlePage({ params }: PageProps) {

@@ -1,30 +1,38 @@
 "use server"
 
-import { PrismaClient, UserRole } from '@prisma/client'
+import { PrismaClient, UserRole, UserStatus } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
-const UserCreateSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
+const UserSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['ADMIN', 'EDITOR', 'USER'], { message: 'Role is required' }),
+  userRole: z.enum(['USER', 'EDITOR', 'ADMIN'])
+})
+
+const UserCreateSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  userRole: z.enum(['USER', 'EDITOR', 'ADMIN'])
 })
 
 const UserUpdateSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  role: z.enum(['ADMIN', 'EDITOR', 'USER'], { message: 'Role is required' }),
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email'),
+  userRole: z.enum(['USER', 'EDITOR', 'ADMIN'])
 })
 
 export type User = {
   id: number
   name: string
   email: string
-  role: UserRole
+  userRole: UserRole
+  status: UserStatus
   createdAt: Date
   updatedAt: Date
 }
@@ -76,7 +84,8 @@ export async function createUser(data: FormData) {
         name: validatedFields.data.name,
         email: validatedFields.data.email,
         password: hashedPassword,
-        role: validatedFields.data.role as UserRole,
+        userRole: validatedFields.data.userRole as UserRole,
+        status: 'ACTIVE'
       }
     })
     
@@ -109,7 +118,7 @@ export async function updateUser(id: number, data: FormData) {
       data: {
         name: validatedFields.data.name,
         email: validatedFields.data.email,
-        role: validatedFields.data.role as UserRole,
+        userRole: validatedFields.data.userRole as UserRole,
       }
     })
     

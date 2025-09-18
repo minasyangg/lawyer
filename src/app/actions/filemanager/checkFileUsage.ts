@@ -24,7 +24,6 @@ export async function checkFileUsage(fileId: number) {
         id: true,
         title: true,
         content: true,
-        documents: true
       }
     })
 
@@ -56,20 +55,20 @@ export async function checkFileUsage(fileId: number) {
         }
       }
 
-      // Проверяем список документов статьи
-      if (article.documents) {
-        try {
-          const documentIds = JSON.parse(article.documents as string) as number[]
-          if (documentIds.includes(fileId)) {
-            usedIn.push({
-              id: article.id,
-              title: article.title,
-              type: 'document'
-            })
-          }
-        } catch {
-          // Игнорируем ошибки парсинга JSON
+      // Проверяем связи файла со статьями через ArticleFile
+      const articleFile = await prisma.articleFile.findFirst({
+        where: {
+          fileId: fileId,
+          articleId: article.id
         }
+      })
+      
+      if (articleFile) {
+        usedIn.push({
+          id: article.id,
+          title: article.title,
+          type: 'document'
+        })
       }
     }
 

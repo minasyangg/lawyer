@@ -83,21 +83,24 @@ export async function getArticleFiles(articleId: number): Promise<Array<{
 }>> {
   try {
     const article = await prisma.article.findUnique({
-      where: { id: articleId }
+      where: { id: articleId },
+      include: {
+        files: {
+          include: {
+            file: true
+          }
+        }
+      }
     })
 
-    if (!article || !article.documents) return []
+    if (!article || !article.files) return []
 
-    const documents = JSON.parse(article.documents as string) as number[]
     const files = []
 
-    for (const fileId of documents) {
-      const file = await prisma.file.findUnique({
-        where: { id: fileId }
-      })
-
+    for (const articleFile of article.files) {
+      const file = articleFile.file
       if (file) {
-        const url = await getFileUrl(fileId)
+        const url = await getFileUrl(file.id)
         if (url) {
           files.push({
             id: file.id,

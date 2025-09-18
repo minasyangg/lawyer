@@ -44,8 +44,32 @@ export async function deleteFile(fileId: number, force: boolean = false): Promis
     }
 
     // Проверяем права доступа
-    if (file.uploadedBy !== user.id) {
-      return { success: false, error: 'Access denied' }
+    if (user.userRole === 'EDITOR') {
+      // EDITOR может удалять только свои файлы и только если они не защищены
+      if (file.uploadedBy !== user.id) {
+        return { success: false, error: 'Access denied: You can only delete your own files' }
+      }
+      
+      if (file.isProtected && !force) {
+        return { 
+          success: false, 
+          error: 'Cannot delete protected file. This file is used in articles and can only be deleted by an administrator.' 
+        }
+      }
+    } else if (user.userRole === 'ADMIN') {
+      // ADMIN может удалять любые файлы
+      // но при удалении защищенных файлов лучше показать предупреждение
+      if (file.isProtected && !force) {
+        return {
+          success: false,
+          error: 'This file is protected. Use force=true to delete it anyway.',
+          isUsed: true,
+          usedIn: [] // ADMIN может проверить использование отдельно
+        }
+      }
+    } else {
+      // Пользователи USER не должны иметь доступ к удалению файлов
+      return { success: false, error: 'Access denied: Insufficient permissions' }
     }
 
     // Проверяем использование файла в статьях (если не принудительное удаление)

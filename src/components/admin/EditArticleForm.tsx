@@ -16,13 +16,13 @@ import {
 import DynamicRichTextEditor from "./DynamicRichTextEditor"
 import { TagSelector } from "./TagSelector"
 import { FileManager } from "./FileManager"
-import { DocumentManager } from "./DocumentManager"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { Article } from "@/lib/actions/article-actions"
 import { updateArticle } from "@/lib/actions/article-actions"
 import { generateSlug, isValidSlug } from "@/lib/utils/slug-utils"
 import { useCallback, useRef } from "react"
+import { UserRole } from "@prisma/client"
 
 interface Service {
   id: number
@@ -33,6 +33,7 @@ interface User {
   id: number
   name: string
   email: string
+  userRole: UserRole
 }
 
 interface Tag {
@@ -42,20 +43,23 @@ interface Tag {
   color?: string
 }
 
+interface SelectedFile {
+  id: number
+  filename?: string
+  name?: string
+  size: number
+  mimeType: string
+}
 
 interface EditArticleFormProps {
   article: Article
   services: Service[]
-  users: User[]
-  isEditor?: boolean
   redirectPath?: string
 }
 
 export function EditArticleForm({ 
   article, 
   services: initialServices, 
-  users,
-  isEditor = false,
   redirectPath = '/admin/articles'
 }: EditArticleFormProps) {
   const [title, setTitle] = useState(article.title || "")
@@ -70,17 +74,20 @@ export function EditArticleForm({
       color: tag.color || undefined
     }))
   )
-interface DocumentItem {
-  id: number
-  name: string
-  url: string
-  size: number
-  mimeType: string
-}
-
-  const [documents, setDocuments] = useState<DocumentItem[]>(
-    Array.isArray(article.documents) ? article.documents : []
+  const [selectedFiles, setSelectedFiles] = useState<Array<{
+    id: number
+    name: string
+    size: number
+    mimeType: string
+  }>>(
+    article.files?.map(file => ({
+      id: file.id,
+      name: file.name,
+      size: file.size,
+      mimeType: file.mimeType
+    })) || []
   )
+
   const [services] = useState<Service[]>(initialServices)
   const [loading, setLoading] = useState(false)
   const [fileManagerOpen, setFileManagerOpen] = useState(false)
@@ -132,9 +139,6 @@ interface DocumentItem {
         color: tag.color || undefined
       }))
     )
-    setDocuments(
-      Array.isArray(article.documents) ? article.documents : []
-    )
   }, [article])
 
   useEffect(() => {
@@ -173,6 +177,36 @@ interface DocumentItem {
     }
   }, [])
 
+  // Функция для открытия файлового менеджера для выбора файлов статьи
+  const openFileManagerForArticle = () => {
+    setFileManagerOpen(true)
+    window.fileManagerSelectCallback = (selectedFile: { id: number; url: string; originalName: string; mimeType: string }) => {
+      if (selectedFile && !selectedFiles.find(f => f.id === selectedFile.id)) {
+        setSelectedFiles(prev => [...prev, {
+          id: selectedFile.id,
+          name: selectedFile.originalName,
+          size: 0, // Размер файла не доступен в callback
+          mimeType: selectedFile.mimeType
+        }])
+      }
+      setFileManagerOpen(false)
+    }
+  }
+
+  // Функция для удаления файла из списка
+  const removeFile = (fileId: number) => {
+    setSelectedFiles(prev => prev.filter(f => f.id !== fileId))
+  }
+
+  // Функция для форматирования размера файла
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -203,11 +237,11 @@ interface DocumentItem {
       selectedTags.forEach(tag => {
         formData.append('tagIds', tag.id.toString())
       })
-      
-      // Добавляем документы
-      if (documents.length > 0) {
-        formData.append('documents', JSON.stringify(documents))
-      }
+
+      // Добавляем файлы
+      selectedFiles.forEach(file => {
+        formData.append('fileIds', file.id.toString())
+      })
 
       // Используем Server Action вместо fetch
       const result = await updateArticle(article.id, formData)
@@ -422,11 +456,61 @@ interface DocumentItem {
               </CardContent>
             </Card>
 
-            <DocumentManager
-              documents={documents}
-              onDocumentsChange={setDocuments}
-            />
+            <Card>
+              <CardHeader>
+                <CardTitle>Документы к статье</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={openFileManagerForArticle}
+                  className="w-full"
+                >
+                  Добавить документ
+                </Button>
+                
+                {selectedFiles.length > 0 && (
+                  <div className="space-y-2">
+                    {selectedFiles.map((file) => (
+                      <div
+                        key={file.id}
+                        className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
+                            <span className="text-blue-600 text-xs font-medium">
+                              {file.mimeType.split('/')[0].toUpperCase().substring(0, 3)}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                            <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(file.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          Удалить
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
+        </div>
+
+        {/* Submit Button */}
+        <div className="flex justify-end space-x-2">
+          <Button type="submit" disabled={loading} className="min-w-[120px]">
+            {loading ? 'Сохранение...' : 'Сохранить изменения'}
+          </Button>
         </div>
       </form>
       <FileManager

@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     const user = JSON.parse(sessionCookie.value)
 
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || user.userRole !== 'ADMIN') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 

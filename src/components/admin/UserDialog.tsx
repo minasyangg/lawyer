@@ -134,9 +134,9 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
             
             <div className="grid gap-2">
               <Label htmlFor="role">Role</Label>
-              <RoleSelect defaultValue={user?.role || 'USER'} />
-              {errors.role && (
-                <p className="text-sm text-red-600">{errors.role[0]}</p>
+              <RoleSelect defaultValue={user?.userRole || 'USER'} />
+              {errors.userRole && (
+                <p className="text-sm text-red-600">{errors.userRole[0]}</p>
               )}
             </div>
 

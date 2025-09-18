@@ -61,7 +61,7 @@ export function DeleteUserDialog({ open, onOpenChange, user }: DeleteUserDialogP
             <div className="text-sm">
               <p><strong>Name:</strong> {user.name}</p>
               <p><strong>Email:</strong> {user.email}</p>
-              <p><strong>Role:</strong> {user.role}</p>
+              <p><strong>Role:</strong> {user.userRole}</p>
             </div>
           </div>
 

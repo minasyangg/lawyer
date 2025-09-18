@@ -91,8 +91,6 @@ async function EditArticleFormWrapper({ id }: { id: number }) {
     <EditArticleForm 
       article={article}
       services={services} 
-      users={users}
-      isEditor={true}
       redirectPath="/editor/articles"
     />
   )

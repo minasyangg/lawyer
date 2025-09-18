@@ -9,6 +9,38 @@ import { getStorageInfo } from '@/lib/utils/universal-file-utils'
 
 const prisma = new PrismaClient()
 
+/**
+ * Рекурсивно проверяет, есть ли защищенные файлы в папке
+ */
+async function checkForProtectedFiles(folderId: number): Promise<boolean> {
+  // Проверяем файлы в текущей папке
+  const protectedFiles = await prisma.file.findFirst({
+    where: { 
+      folderId: folderId,
+      isProtected: true
+    }
+  })
+  
+  if (protectedFiles) {
+    return true
+  }
+  
+  // Проверяем дочерние папки
+  const childFolders = await prisma.folder.findMany({
+    where: { parentId: folderId },
+    select: { id: true }
+  })
+  
+  for (const child of childFolders) {
+    const hasProtected = await checkForProtectedFiles(child.id)
+    if (hasProtected) {
+      return true
+    }
+  }
+  
+  return false
+}
+
 export interface DeleteFolderResult {
   success: boolean
   error?: string
@@ -53,8 +85,32 @@ export async function deleteFolder(folderId: number, force: boolean = false): Pr
     }
 
     // Проверяем права доступа
-    if (folder.ownerId !== user.id) {
-      return { success: false, error: 'Access denied' }
+    if (user.userRole === 'EDITOR') {
+      // EDITOR может удалять только свои папки
+      if (folder.ownerId !== user.id) {
+        return { success: false, error: 'Access denied: You can only delete your own folders' }
+      }
+      
+      // Проверяем, есть ли защищенные файлы в папке (рекурсивно)
+      const hasProtectedFiles = await checkForProtectedFiles(folderId)
+      if (hasProtectedFiles && !force) {
+        return { 
+          success: false, 
+          error: 'Cannot delete folder containing protected files. Protected files can only be deleted by an administrator.' 
+        }
+      }
+    } else if (user.userRole === 'ADMIN') {
+      // ADMIN может удалять любые папки, но лучше показать предупреждение для защищенных файлов
+      const hasProtectedFiles = await checkForProtectedFiles(folderId)
+      if (hasProtectedFiles && !force) {
+        return {
+          success: false,
+          error: 'This folder contains protected files. Use force=true to delete it anyway.'
+        }
+      }
+    } else {
+      // Пользователи USER не должны иметь доступ к удалению папок
+      return { success: false, error: 'Access denied: Insufficient permissions' }
     }
 
     // Если force не установлен, проверяем, что папка пустая
@@ -71,6 +127,12 @@ export async function deleteFolder(folderId: number, force: boolean = false): Pr
 
       // Удаляем все файлы через универсальную систему
       for (const file of files) {
+        // Если пользователь EDITOR и файл защищен, пропускаем его (не должно произойти из-за проверки выше)
+        if (user.userRole === 'EDITOR' && file.isProtected && !force) {
+          console.warn(`Skipping protected file ${file.id} for EDITOR user`)
+          continue
+        }
+        
         try {
           // Используем универсальную систему удаления файлов
           await deleteFile(file.path);

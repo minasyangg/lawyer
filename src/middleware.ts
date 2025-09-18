@@ -3,9 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Защита API роутов для файлов
-  if (pathname.startsWith('/api/files') || 
-      pathname.startsWith('/api/upload') || 
+  // Защита API роутов
+  if (pathname.startsWith('/api/upload') || 
       pathname.startsWith('/api/tags')) {
     
     const sessionCookie = request.cookies.get('admin-session')
@@ -21,7 +20,7 @@ export async function middleware(request: NextRequest) {
       if ((pathname.startsWith('/api/tags') && 
            (request.method === 'POST' || request.method === 'PUT' || request.method === 'DELETE')) ||
           pathname.startsWith('/api/upload')) {
-        if (user.role !== 'ADMIN' && user.role !== 'EDITOR') {
+        if (user.userRole !== 'ADMIN' && user.userRole !== 'EDITOR') {
           return NextResponse.json({ error: 'Access denied' }, { status: 403 })
         }
       }
@@ -32,21 +31,27 @@ export async function middleware(request: NextRequest) {
 
   // Проверка доступа к админ панели
   if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
+    console.log('🔍 Middleware: Checking admin access for path:', pathname)
     const sessionCookie = request.cookies.get('admin-session')
 
     if (!sessionCookie?.value) {
+      console.log('❌ Middleware: No session cookie found')
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
 
     try {
       const user = JSON.parse(sessionCookie.value)
+      console.log('🔍 Middleware: Session data:', user)
       
       // Только ADMIN может заходить в админ область
-      if (user.role !== 'ADMIN') {
+      if (user.userRole !== 'ADMIN') {
+        console.log('❌ Middleware: Access denied - user role is:', user.userRole)
         return NextResponse.redirect(new URL('/admin/login', request.url))
       }
       
-    } catch {
+      console.log('✅ Middleware: Admin access granted')
+    } catch (error) {
+      console.log('❌ Middleware: Error parsing session cookie:', error)
       return NextResponse.redirect(new URL('/admin/login', request.url))
     }
   }
@@ -63,7 +68,7 @@ export async function middleware(request: NextRequest) {
       const user = JSON.parse(sessionCookie.value)
       
       // Только EDITOR может заходить в editor область
-      if (user.role !== 'EDITOR') {
+      if (user.userRole !== 'EDITOR') {
         return NextResponse.redirect(new URL('/admin/login', request.url))
       }
       

@@ -102,8 +102,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           </div>
 
           {/* Article Documents */}
-          {article.documents && (
-            <ArticleDocuments documents={article.documents} />
+          {article.files && article.files.length > 0 && (
+            <ArticleDocuments documents={article.files} />
           )}
 
           {/* Related Articles */}

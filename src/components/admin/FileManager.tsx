@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { DeleteFileDialog } from "./DeleteFileDialog"
 import { 
   Upload, 
   File, 
@@ -85,6 +86,21 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
   const [renamingFolderId, setRenamingFolderId] = useState<number | null>(null)
   const [renameValue, setRenameValue] = useState("")
   const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set())
+  
+  // Состояние для диалога удаления
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean
+    fileId: number | null
+    fileName: string
+    isProtected: boolean
+    usedIn: Array<{ id: number; title: string; type: 'content' | 'document' }>
+  }>({
+    isOpen: false,
+    fileId: null,
+    fileName: '',
+    isProtected: false,
+    usedIn: []
+  })
 
   const fetchFiles = useCallback(async () => {
     setLoading(true)
@@ -225,15 +241,23 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
       try {
         const result = await deleteFile(fileId, false)
         
-        if (!result.success && result.isUsed) {
-          // Файл используется в статьях - показываем предупреждение
-          const articlesText = result.usedIn?.map(article => `• ${article.title}`).join('\n') || ''
-          const confirmMessage = `Этот файл используется в следующих статьях:\n\n${articlesText}\n\nВы действительно хотите удалить файл? Это может нарушить отображение статей.`
+        if (!result.success) {
+          // Получаем информацию о файле для диалога
+          const fileToDelete = files.find(f => f.id === fileId)
           
-          if (confirm(confirmMessage)) {
-            // Пользователь подтвердил принудительное удаление
-            return handleDeleteFile(fileId, true)
+          if (result.error?.includes('protected') || result.isUsed) {
+            // Показываем красивый диалог вместо confirm
+            setDeleteDialog({
+              isOpen: true,
+              fileId: fileId,
+              fileName: fileToDelete?.originalName || 'Неизвестный файл',
+              isProtected: result.error?.includes('protected') || false,
+              usedIn: result.usedIn || []
+            })
+            return
           }
+          
+          toast.error(result.error || 'Ошибка удаления файла')
           return
         }
         
@@ -942,6 +966,21 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
           </Button>
         </div>
       </DialogContent>
+
+      {/* Диалог удаления файла */}
+      <DeleteFileDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={() => setDeleteDialog(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={() => {
+          if (deleteDialog.fileId) {
+            handleDeleteFile(deleteDialog.fileId, true)
+          }
+        }}
+        fileName={deleteDialog.fileName}
+        isProtected={deleteDialog.isProtected}
+        usedIn={deleteDialog.usedIn}
+        userRole="ADMIN" // TODO: получать роль пользователя из контекста
+      />
     </Dialog>
   )
 }

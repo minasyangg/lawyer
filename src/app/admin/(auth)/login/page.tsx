@@ -38,7 +38,7 @@ export default function AdminLogin() {
         console.log('Login successful, redirecting...')
         
         // Перенаправляем в зависимости от роли пользователя
-        const userRole = result.user.role
+        const userRole = result.user.userRole
         if (userRole === 'ADMIN') {
           router.push('/admin')
         } else if (userRole === 'EDITOR') {

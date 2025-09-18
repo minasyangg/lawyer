@@ -16,11 +16,12 @@ import {
 import DynamicRichTextEditor from "./DynamicRichTextEditor"
 import { TagSelector } from "./TagSelector"
 import { FileManager } from "./FileManager"
-import { DocumentManager } from "./DocumentManager"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { generateSlug, isValidSlug } from "@/lib/utils/slug-utils"
 import { useCallback, useRef } from "react"
+import { UserRole } from "@prisma/client"
+import { createArticle } from "@/lib/actions/article-actions"
 
 interface Service {
   id: number
@@ -31,6 +32,7 @@ interface User {
   id: number
   name: string
   email: string
+  userRole: UserRole
 }
 
 interface Tag {
@@ -66,15 +68,13 @@ export function CreateArticleForm({
   const [published, setPublished] = useState(false)
   const [categoryId, setCategoryId] = useState<number | null>(null)
   const [selectedTags, setSelectedTags] = useState<Tag[]>([])
-  const [documents, setDocuments] = useState<DocumentItem[]>([])
+  const [selectedFiles, setSelectedFiles] = useState<Array<{
+    id: number
+    name: string
+    size: number
+    mimeType: string
+  }>>([])
 
-interface DocumentItem {
-  id: number
-  name: string
-  url: string
-  size: number
-  mimeType: string
-}
   const [services] = useState<Service[]>(initialServices)
   const [loading, setLoading] = useState(false)
   const [fileManagerOpen, setFileManagerOpen] = useState(false)
@@ -128,6 +128,36 @@ interface DocumentItem {
     }
   }, [title, slug, checkSlugAvailability])
 
+  // Функция для открытия файлового менеджера для выбора файлов статьи
+  const openFileManagerForArticle = () => {
+    setFileManagerOpen(true)
+    window.fileManagerSelectCallback = (selectedFile: { id: number; url: string; originalName: string; mimeType: string }) => {
+      if (selectedFile && !selectedFiles.find(f => f.id === selectedFile.id)) {
+        setSelectedFiles(prev => [...prev, {
+          id: selectedFile.id,
+          name: selectedFile.originalName,
+          size: 0, // Размер файла не доступен в callback
+          mimeType: selectedFile.mimeType
+        }])
+      }
+      setFileManagerOpen(false)
+    }
+  }
+
+  // Функция для удаления файла из списка
+  const removeFile = (fileId: number) => {
+    setSelectedFiles(prev => prev.filter(f => f.id !== fileId))
+  }
+
+  // Функция для форматирования размера файла
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
   useEffect(() => {
     const handleOpenFileManager = (event: CustomEvent) => {
       const { selectMode, onSelect } = event.detail || {}
@@ -159,29 +189,35 @@ interface DocumentItem {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/articles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title,
-          content,
-          excerpt: excerpt || null,
-          slug,
-          published,
-          categoryId,
-          tagIds: selectedTags.map(tag => tag.id),
-          documents: documents.length > 0 ? documents : null
-        }),
+      const formData = new FormData()
+      formData.append('title', title)
+      formData.append('content', content)
+      if (excerpt) formData.append('excerpt', excerpt)
+      formData.append('slug', slug)
+      if (published) formData.append('published', 'on')
+      if (categoryId) formData.append('categoryId', categoryId.toString())
+      
+      // Добавляем теги
+      selectedTags.forEach(tag => {
+        formData.append('tagIds', tag.id.toString())
       })
 
-      if (response.ok) {
+      // Добавляем файлы
+      selectedFiles.forEach(file => {
+        formData.append('fileIds', file.id.toString())
+      })
+
+      const result = await createArticle(formData)
+
+      if ('success' in result && result.success) {
         toast.success('Статья создана успешно')
         router.push(redirectPath)
-      } else {
-        const error = await response.json()
-        toast.error(error.error || 'Ошибка при создании статьи')
+      } else if ('errors' in result) {
+        if (result.errors.general) {
+          toast.error(result.errors.general[0] || 'Ошибка при создании статьи')
+        } else {
+          toast.error('Ошибка при создании статьи')
+        }
       }
     } catch (error) {
       console.error('Error creating article:', error)
@@ -338,11 +374,61 @@ interface DocumentItem {
             </CardContent>
           </Card>
 
-          <DocumentManager
-            documents={documents}
-            onDocumentsChange={setDocuments}
-          />
+          <Card>
+            <CardHeader>
+              <CardTitle>Документы к статье</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={openFileManagerForArticle}
+                className="w-full"
+              >
+                Добавить документ
+              </Button>
+              
+              {selectedFiles.length > 0 && (
+                <div className="space-y-2">
+                  {selectedFiles.map((file) => (
+                    <div
+                      key={file.id}
+                      className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center">
+                          <span className="text-blue-600 text-xs font-medium">
+                            {file.mimeType.split('/')[0].toUpperCase().substring(0, 3)}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                          <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(file.id)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        Удалить
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
+      </div>
+
+      {/* Submit Button */}
+      <div className="flex justify-end space-x-2">
+        <Button type="submit" disabled={loading} className="min-w-[120px]">
+          {loading ? 'Создание...' : 'Создать статью'}
+        </Button>
       </div>
 
       <FileManager

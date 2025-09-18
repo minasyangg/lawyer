@@ -7,27 +7,27 @@ async function main() {
     {
       name: "Admin User",
       email: "admin@example.com",
-      role: "admin"
+      role: "ADMIN" as const
     },
     {
-      name: "John Moderator",
-      email: "john.moderator@example.com", 
-      role: "moderator"
+      name: "John Editor",
+      email: "john.editor@example.com", 
+      role: "EDITOR" as const
     },
     {
       name: "Jane User",
       email: "jane.user@example.com",
-      role: "user"
+      role: "USER" as const
     },
     {
       name: "Mike Client",
       email: "mike.client@example.com",
-      role: "user"
+      role: "USER" as const
     },
     {
-      name: "Sarah Manager", 
-      email: "sarah.manager@example.com",
-      role: "moderator"
+      name: "Sarah Editor", 
+      email: "sarah.editor@example.com",
+      role: "EDITOR" as const
     }
   ];
 

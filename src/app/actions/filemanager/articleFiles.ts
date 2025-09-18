@@ -1,7 +1,6 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { Prisma } from '@prisma/client'
 import { buildFilePath } from './getFilePath'
 
 /**
@@ -10,23 +9,26 @@ import { buildFilePath } from './getFilePath'
 export async function getArticleFilesWithPaths(articleId: number) {
   try {
     const article = await prisma.article.findUnique({
-      where: { id: articleId }
+      where: { id: articleId },
+      include: {
+        files: {
+          include: {
+            file: true
+          }
+        }
+      }
     })
 
-    if (!article || !article.documents) {
+    if (!article || !article.files) {
       return { success: true, files: [] }
     }
 
-    const documentIds = JSON.parse(article.documents as string) as number[]
     const filesWithPaths = []
 
-    for (const fileId of documentIds) {
-      const file = await prisma.file.findUnique({
-        where: { id: fileId }
-      })
-
+    for (const articleFile of article.files) {
+      const file = articleFile.file
       if (file) {
-        const actualPath = await buildFilePath(fileId)
+        const actualPath = await buildFilePath(file.id)
         filesWithPaths.push({
           id: file.id,
           originalName: file.originalName,
@@ -53,56 +55,51 @@ export async function getArticleFilesWithPaths(articleId: number) {
 }
 
 /**
- * Проверяет и исправляет битые ссылки в статьях
+ * Исправляет сломанные ссылки в статьях - удаляет несуществующие файлы из связей ArticleFile
  */
 export async function fixBrokenLinksInArticles() {
   try {
-    const articles = await prisma.article.findMany({
-      where: {
-        documents: {
-          not: Prisma.JsonNull
+    // Находим все связи ArticleFile, где файл больше не существует
+    const allArticleFiles = await prisma.articleFile.findMany({
+      include: {
+        file: true,
+        article: {
+          select: {
+            id: true,
+            title: true
+          }
         }
       }
     })
 
+    // Фильтруем только те, где файл null (не существует)
+    const brokenLinks = allArticleFiles.filter(af => !af.file)
+
     let fixedCount = 0
     const errors = []
 
-    for (const article of articles) {
+    for (const brokenLink of brokenLinks) {
       try {
-        const documentIds = JSON.parse(article.documents as string) as number[]
-        const validIds = []
-
-        for (const fileId of documentIds) {
-          const file = await prisma.file.findUnique({
-            where: { id: fileId }
-          })
-
-          if (file) {
-            const actualPath = await buildFilePath(fileId)
-            if (actualPath) {
-              validIds.push(fileId)
+        // Удаляем сломанную связь
+        await prisma.articleFile.delete({
+          where: {
+            articleId_fileId: {
+              articleId: brokenLink.articleId,
+              fileId: brokenLink.fileId
             }
           }
-        }
-
-        // Обновляем статью только с валидными файлами
-        if (validIds.length !== documentIds.length) {
-          await prisma.article.update({
-            where: { id: article.id },
-            data: {
-              documents: JSON.stringify(validIds)
-            }
-          })
-          fixedCount++
-        }
+        })
+        
+        fixedCount++
+        console.log(`Removed broken file link ${brokenLink.fileId} from article ${brokenLink.article.title}`)
       } catch (error) {
-        errors.push(`Article ${article.id}: ${error}`)
+        errors.push(`Failed to fix article ${brokenLink.article.title}: ${error}`)
       }
     }
 
     return {
       success: true,
+      message: `Fixed ${fixedCount} broken file links`,
       fixedCount,
       errors
     }
@@ -110,7 +107,8 @@ export async function fixBrokenLinksInArticles() {
     console.error('Error fixing broken links:', error)
     return {
       success: false,
-      error: 'Failed to fix broken links'
+      message: 'Failed to fix broken links',
+      error: error instanceof Error ? error.message : 'Unknown error'
     }
   }
 }

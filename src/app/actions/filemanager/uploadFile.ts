@@ -40,6 +40,34 @@ export async function uploadFile(formData: FormData): Promise<UploadResult> {
       return { success: false, files: [], error: 'User not found' }
     }
 
+    console.log('🔍 Upload: User from session:', { id: user.id, email: user.email })
+
+    // Проверяем, что пользователь существует в базе данных
+    // Ищем по email, так как ID мог измениться после пересоздания БД
+    const dbUser = await prisma.user.findUnique({
+      where: { email: user.email },
+      select: { id: true, email: true, userRole: true }
+    })
+
+    console.log('🔍 Upload: User from database:', dbUser)
+
+    if (!dbUser) {
+      return { success: false, files: [], error: 'User not found in database' }
+    }
+
+    // Если ID в сессии не совпадает с ID в БД, обновляем сессию
+    if (user.id !== dbUser.id) {
+      console.log('🔄 Upload: Updating session with correct user ID:', dbUser.id)
+      const updatedUser = { ...user, id: dbUser.id }
+      const cookieStore = await cookies()
+      cookieStore.set('admin-session', JSON.stringify(updatedUser), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+      })
+    }
+
     const folderIdRaw = formData.get('folderId')
     const folderId = folderIdRaw ? Number(folderIdRaw) : null
     const files = formData.getAll('files') as File[]
@@ -77,7 +105,7 @@ export async function uploadFile(formData: FormData): Promise<UploadResult> {
       const folder = await prisma.folder.findFirst({
         where: {
           id: folderId,
-          ownerId: user.id
+          ownerId: dbUser.id
         }
       })
 
@@ -98,16 +126,17 @@ export async function uploadFile(formData: FormData): Promise<UploadResult> {
       // Сохраняем файл на диск с учетом структуры папок
       const arrayBuffer = await file.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
-      const fileDetails = await saveFileUniversalWithDetails(buffer, filename, user.id, file.type, folderPhysicalPath || undefined)
+      const fileDetails = await saveFileUniversalWithDetails(buffer, filename, dbUser.id, file.type, folderPhysicalPath || undefined)
       
       // Генерируем виртуальный путь для файла
-      const virtualPath = folderId ? await generateVirtualPath(folderId) : `/user_${user.id}`
+      const virtualPath = folderId ? await generateVirtualPath(folderId) : `/user_${dbUser.id}`
       
       // Генерируем уникальный virtualId
       const { randomBytes } = await import('crypto')
       const virtualId = randomBytes(12).toString('base64url')
       
       // Создаем запись в базе данных
+      console.log('🔍 Upload: Creating file record with uploadedBy:', dbUser.id)
       const dbFile = await prisma.file.create({
         data: {
           originalName: file.name,
@@ -117,7 +146,7 @@ export async function uploadFile(formData: FormData): Promise<UploadResult> {
           virtualId: virtualId,
           mimeType: file.type,
           size: file.size,
-          uploadedBy: user.id,
+          uploadedBy: dbUser.id,
           folderId: folderId,
         },
       })

@@ -6,9 +6,13 @@ import { Button } from "@/components/ui/button"
 interface DocumentItem {
   id: number
   name: string
-  url: string
-  size: number
+  originalName: string
   mimeType: string
+  size: number
+  virtualId: string
+  isPublic: boolean
+  isProtected: boolean
+  createdAt: Date
 }
 
 interface ArticleDocumentsProps {
@@ -26,6 +30,15 @@ export function ArticleDocuments({ documents }: ArticleDocumentsProps) {
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
+  const getFileUrl = (document: DocumentItem) => {
+    // Для защищенных файлов используем виртуальный ID
+    if (document.isProtected && document.virtualId) {
+      return `/api/files/virtual/${document.virtualId}`
+    }
+    // Для публичных файлов используем прямой ID
+    return `/api/files/${document.id}`
   }
 
   return (
@@ -54,7 +67,7 @@ export function ArticleDocuments({ documents }: ArticleDocumentsProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.open(document.url, '_blank')}
+              onClick={() => window.open(getFileUrl(document), '_blank')}
               className="flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
