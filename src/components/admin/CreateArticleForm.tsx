@@ -20,19 +20,11 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { generateSlug, isValidSlug } from "@/lib/utils/slug-utils"
 import { useCallback, useRef } from "react"
-import { UserRole } from "@prisma/client"
 import { createArticle } from "@/lib/actions/article-actions"
 
 interface Service {
   id: number
   title: string
-}
-
-interface User {
-  id: number
-  name: string
-  email: string
-  userRole: UserRole
 }
 
 interface Tag {
@@ -44,8 +36,6 @@ interface Tag {
 
 interface CreateArticleFormProps {
   services: Service[]
-  users: User[]
-  isEditor?: boolean
   redirectPath?: string
 }
 
@@ -57,8 +47,6 @@ type CheckSlugResponse = {
 
 export function CreateArticleForm({ 
   services: initialServices, 
-  users, 
-  isEditor = false, 
   redirectPath = '/admin/articles' 
 }: CreateArticleFormProps) {
   const [title, setTitle] = useState("")

@@ -1,5 +1,4 @@
 import { Suspense } from "react"
-import { getUsers } from "@/lib/actions/user-actions"
 import { PrismaClient } from '@prisma/client'
 import { CreateArticleForm } from "@/components/admin/CreateArticleForm"
 
@@ -66,12 +65,9 @@ function CreateArticleFormSkeleton() {
 }
 
 async function CreateArticleFormWrapper() {
-  const [services, users] = await Promise.all([
-    getServices(),
-    getUsers()
-  ])
+  const services = await getServices()
   
-  return <CreateArticleForm services={services} users={users} />
+  return <CreateArticleForm services={services} />
 }
 
 export default function CreateArticlePage() {

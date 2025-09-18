@@ -24,3 +24,5 @@ export { getFolderTree } from './getFolderTree'
 export type { FolderTreeNode } from './getFolderTree'
 
 export { checkFileUsage, checkMultipleFilesUsage } from './checkFileUsage'
+
+export { debugSession } from './debugSession'

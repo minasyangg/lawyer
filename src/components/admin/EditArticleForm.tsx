@@ -22,18 +22,11 @@ import type { Article } from "@/lib/actions/article-actions"
 import { updateArticle } from "@/lib/actions/article-actions"
 import { generateSlug, isValidSlug } from "@/lib/utils/slug-utils"
 import { useCallback, useRef } from "react"
-import { UserRole } from "@prisma/client"
+import type { Service as PrismaService } from "@prisma/client"
 
 interface Service {
   id: number
   title: string
-}
-
-interface User {
-  id: number
-  name: string
-  email: string
-  userRole: UserRole
 }
 
 interface Tag {
@@ -43,17 +36,9 @@ interface Tag {
   color?: string
 }
 
-interface SelectedFile {
-  id: number
-  filename?: string
-  name?: string
-  size: number
-  mimeType: string
-}
-
 interface EditArticleFormProps {
   article: Article
-  services: Service[]
+  services: PrismaService[]
   redirectPath?: string
 }
 

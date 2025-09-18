@@ -135,16 +135,6 @@ const ArticleSchema = z.object({
   authorId: z.string().min(1, 'Author is required'),
 })
 
-// Схема для создания статьи без указания автора (будет получен из сессии)
-const ArticleCreateSchema = z.object({
-  title: z.string().min(2, 'Title must be at least 2 characters'),
-  content: z.string().min(10, 'Content must be at least 10 characters'),
-  excerpt: z.string().optional(),
-  slug: z.string().min(2, 'Slug must be at least 2 characters'),
-  published: z.boolean().optional(),
-  categoryId: z.string().optional(),
-})
-
 export type Article = {
   id: number
   title: string

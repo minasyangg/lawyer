@@ -1,18 +1,10 @@
 import { Suspense } from "react"
-import { getUsers } from "@/lib/actions/user-actions"
 import { getArticleById } from "@/lib/actions/article-actions"
 import { PrismaClient } from '@prisma/client'
 import { EditArticleForm } from "@/components/admin/EditArticleForm"
 import { notFound } from "next/navigation"
 
 const prisma = new PrismaClient()
-
-async function getServices() {
-  return await prisma.service.findMany({
-    select: { id: true, title: true },
-    orderBy: { title: 'asc' }
-  })
-}
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -77,10 +69,17 @@ function EditArticleFormSkeleton() {
 }
 
 async function EditArticleFormWrapper({ id }: { id: number }) {
-  const [article, services, users] = await Promise.all([
+  const [article, services] = await Promise.all([
     getArticleById(id),
-    getServices(),
-    getUsers()
+    prisma.service.findMany({
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        extraInfo: true
+      },
+      orderBy: { title: 'asc' }
+    })
   ])
 
   if (!article) {
