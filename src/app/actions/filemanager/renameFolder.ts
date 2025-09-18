@@ -3,6 +3,7 @@
 import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
+import { renameFolderSchema } from '@/lib/validations/folder'
 
 const prisma = new PrismaClient()
 
@@ -160,10 +161,24 @@ export async function renameFolder(folderId: number, newName: string): Promise<R
 
     console.log('👤 RenameFolder: User info', { id: user.id, email: user.email })
 
-    if (!newName.trim()) {
-      console.log('❌ RenameFolder: Empty folder name')
-      return { success: false, error: 'Folder name required' }
+    // Валидируем данные с помощью Zod
+    console.log('🔍 RenameFolder: Input data before validation', { folderId, newName })
+    const validationResult = renameFolderSchema.safeParse({
+      id: folderId,
+      name: newName.trim()
+    })
+
+    if (!validationResult.success) {
+      const errorMessage = validationResult.error.issues[0]?.message || 'Недопустимое название папки'
+      console.log('❌ RenameFolder: Validation failed', { error: errorMessage })
+      return { success: false, error: errorMessage }
     }
+
+    const validatedName = validationResult.data.name
+    console.log('✅ RenameFolder: Validation successful', { 
+      originalInput: newName.trim(), 
+      validatedName 
+    })
 
     // Находим папку в базе данных
     console.log('🔍 RenameFolder: Looking for folder in database', { folderId })
@@ -206,15 +221,15 @@ export async function renameFolder(folderId: number, newName: string): Promise<R
     const oldPath = folder.path
     let newPath: string
     
-    console.log('🛤️ RenameFolder: Calculating new path', { oldPath, newName: newName.trim() })
+    console.log('🛤️ RenameFolder: Calculating new path', { oldPath, newName: validatedName })
     
     if (folder.parent) {
       // Если есть родительская папка, создаем путь относительно неё
-      newPath = `${folder.parent.path}/${newName.trim()}`
+      newPath = `${folder.parent.path}/${validatedName}`
       console.log('📂 RenameFolder: Subfolder path', { parentPath: folder.parent.path, newPath })
     } else {
       // Если это корневая папка пользователя, добавляем префикс пользователя
-      newPath = `user_${user.id}/${newName.trim()}`
+      newPath = `user_${user.id}/${validatedName}`
       console.log('🏠 RenameFolder: Root folder path', { userId: user.id, newPath })
     }
 
@@ -256,7 +271,7 @@ export async function renameFolder(folderId: number, newName: string): Promise<R
     // Обновляем запись в базе данных
     console.log('💾 RenameFolder: Updating database record', { 
       folderId, 
-      newName: newName.trim(), 
+      newName: validatedName, 
       newPath,
       isCloudStorage: process.env.STORAGE_PROVIDER === 'supabase'
     })
@@ -265,7 +280,7 @@ export async function renameFolder(folderId: number, newName: string): Promise<R
     const updatedFolder = await prisma.folder.update({
       where: { id: folderId },
       data: {
-        name: newName.trim(),
+        name: validatedName,
         path: newPath
       }
     })

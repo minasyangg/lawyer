@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { DeleteFileDialog } from "./DeleteFileDialog"
+import { RenameFolderModal } from "./RenameFolderModal"
 import { 
   Upload, 
   File, 
@@ -29,7 +30,8 @@ import {
   Folder,
   ChevronRight,
   Home,
-  Edit2
+  Edit2,
+  Loader2
 } from "lucide-react"
 import { toast } from "sonner"
 import { validateFile, formatFileSize } from "@/lib/utils/client-file-utils"
@@ -58,6 +60,7 @@ export function FileManagerPage() {
   const [newFolderName, setNewFolderName] = useState("")
   const [deleteFileDialog, setDeleteFileDialog] = useState<FileItem | null>(null)
   const [editingFolder, setEditingFolder] = useState<{ id: number; name: string } | null>(null)
+  const [renameFolderModal, setRenameFolderModal] = useState<{ id: number; name: string } | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [pagination, setPagination] = useState({
     page: 1,
@@ -291,7 +294,7 @@ export function FileManagerPage() {
       return (
         <button
           onClick={() => navigateToFolder(null)}
-          className="flex items-center text-blue-600 hover:text-blue-800"
+          className="flex items-center text-blue-600 hover:text-blue-800 cursor-pointer"
         >
           <Home className="w-4 h-4 mr-1" />
           Корень
@@ -304,7 +307,7 @@ export function FileManagerPage() {
       <button
         key="root"
         onClick={() => navigateToFolder(null)}
-        className="flex items-center text-blue-600 hover:text-blue-800"
+        className="flex items-center text-blue-600 hover:text-blue-800 cursor-pointer"
       >
         <Home className="w-4 h-4 mr-1" />
         Корень
@@ -386,6 +389,7 @@ export function FileManagerPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                className="cursor-pointer"
               >
                 {viewMode === 'grid' ? <List className="w-4 h-4" /> : <Grid className="w-4 h-4" />}
               </Button>
@@ -395,6 +399,7 @@ export function FileManagerPage() {
                 size="sm"
                 onClick={() => setIsCreatingFolder(true)}
                 disabled={createFolderLoading}
+                className="cursor-pointer"
               >
                 <FolderPlus className="w-4 h-4 mr-2" />
                 Создать папку
@@ -408,8 +413,12 @@ export function FileManagerPage() {
                   onChange={handleFileUpload}
                   disabled={uploadLoading}
                 />
-                <Button size="sm" disabled={uploadLoading}>
-                  <Upload className="w-4 h-4 mr-2" />
+                <Button size="sm" disabled={uploadLoading} className="cursor-pointer">
+                  {uploadLoading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4 mr-2" />
+                  )}
                   {uploadLoading ? 'Загрузка...' : 'Загрузить файл'}
                 </Button>
               </div>
@@ -543,9 +552,9 @@ export function FileManagerPage() {
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                setEditingFolder({ id: file.id, name: file.originalName })
+                                setRenameFolderModal({ id: file.id, name: file.originalName })
                               }}
-                              className="h-6 w-6 p-0"
+                              className="h-6 w-6 p-0 cursor-pointer"
                             >
                               <Edit2 className="w-3 h-3" />
                             </Button>
@@ -558,7 +567,7 @@ export function FileManagerPage() {
                               e.stopPropagation()
                               setDeleteFileDialog(file)
                             }}
-                            className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                            className="h-6 w-6 p-0 text-red-600 hover:text-red-700 cursor-pointer"
                           >
                             <Trash2 className="w-3 h-3" />
                           </Button>
@@ -649,9 +658,10 @@ export function FileManagerPage() {
                           <Button
                             variant="outline"
                             size="sm"
+                            className="cursor-pointer"
                             onClick={(e) => {
                               e.stopPropagation()
-                              setEditingFolder({ id: file.id, name: file.originalName })
+                              setRenameFolderModal({ id: file.id, name: file.originalName })
                             }}
                           >
                             <Edit2 className="w-4 h-4" />
@@ -665,7 +675,7 @@ export function FileManagerPage() {
                             e.stopPropagation()
                             setDeleteFileDialog(file)
                           }}
-                          className="text-red-600 hover:text-red-700"
+                          className="text-red-600 hover:text-red-700 cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -759,6 +769,18 @@ export function FileManagerPage() {
         onClose={() => setDeleteFileDialog(null)}
         fileName={deleteFileDialog?.originalName}
         onConfirm={() => deleteFileDialog && handleDeleteFile(deleteFileDialog)}
+      />
+
+      {/* Модальное окно переименования папки */}
+      <RenameFolderModal
+        isOpen={!!renameFolderModal}
+        onClose={() => setRenameFolderModal(null)}
+        folderId={renameFolderModal?.id || 0}
+        currentName={renameFolderModal?.name || ""}
+        onSuccess={() => {
+          loadFiles(currentFolderId, currentPage)
+          loadFolderTree()
+        }}
       />
     </div>
   )

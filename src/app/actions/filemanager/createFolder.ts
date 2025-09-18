@@ -6,6 +6,7 @@ import { mkdir } from 'fs/promises'
 import { join } from 'path'
 import { getStorageInfo } from '@/lib/utils/universal-file-utils'
 import { validateAndProcessFolderName } from '@/lib/utils/folder-validation'
+import { createFolderSchema } from '@/lib/validations/folder'
 
 const prisma = new PrismaClient()
 
@@ -47,16 +48,25 @@ export async function createFolder(name: string, parentId: number | null = null)
       return { success: false, error: 'User not found' }
     }
 
-    if (!name.trim()) {
-      return { success: false, error: 'Folder name required' }
+    // Валидируем название папки с помощью Zod
+    const validationResult = createFolderSchema.safeParse({
+      name: name.trim(),
+      parentId: parentId
+    })
+
+    if (!validationResult.success) {
+      const errorMessage = validationResult.error.issues[0]?.message || 'Недопустимое название папки'
+      return { success: false, error: errorMessage }
     }
+
+    const validatedName = validationResult.data.name
 
     // Получаем информацию о провайдере хранения
     const storageType = getStorageInfo()
     console.log('Creating folder with storage provider:', storageType.provider)
     
-    // Валидируем и обрабатываем название папки
-    const validation = validateAndProcessFolderName(name.trim(), storageType.provider as 'local' | 'supabase')
+    // Валидируем и обрабатываем название папки для файловой системы
+    const validation = validateAndProcessFolderName(validatedName, storageType.provider as 'local' | 'supabase')
     
     if (!validation.success) {
       return { 

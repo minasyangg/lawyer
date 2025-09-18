@@ -23,7 +23,8 @@
     "db:studio:prod": "node scripts/prisma-runner.js studio --prod",
     "db:status:prod": "node scripts/prisma-runner.js migrate status --prod",
     "db:fresh:prod": "node scripts/prisma-runner.js migrate reset --force --prod && node prisma/seeds/runAllSeeds.js",
-    "db:seed:single": "node prisma/seeds/seed.js"
+    "db:seed:single": "node prisma/seeds/seed.js",
+    "fix-cyrillic": "tsx scripts/fix-cyrillic-folders.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.884.0",
@@ -68,6 +69,7 @@
     "eslint-config-next": "15.5.0",
     "sass": "^1.91.0",
     "tailwindcss": "^4",
+    "tsx": "^4.20.5",
     "typescript": "^5"
   }
 }
