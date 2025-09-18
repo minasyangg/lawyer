@@ -2,7 +2,7 @@
 
 import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
-import { updateChildrenVirtualPaths, generateVirtualPath } from '@/lib/virtualPaths'
+import { createClient } from '@supabase/supabase-js'
 
 const prisma = new PrismaClient()
 
@@ -28,6 +28,118 @@ export interface RenameFolderResult {
  * @param newName новое имя папки
  */
 export async function renameFolder(folderId: number, newName: string): Promise<RenameFolderResult> {
+  // Функция для физического переименования папки в Supabase Storage
+  const moveSupabaseFolder = async (oldPath: string, newPath: string, folderId: number): Promise<boolean> => {
+    try {
+      console.log('🔄 Moving Supabase folder physically:', { oldPath, newPath, folderId })
+      
+      // Получаем все файлы в переименовываемой папке рекурсивно
+      const getAllFilesInFolder = async (folderId: number) => {
+        const allFiles: {id: number, path: string, filename: string, originalName: string}[] = []
+        
+        // Получаем файлы напрямую в этой папке
+        const directFiles = await prisma.file.findMany({
+          where: { folderId: folderId }
+        })
+        allFiles.push(...directFiles)
+        
+        // Получаем все дочерние папки
+        const childFolders = await prisma.folder.findMany({
+          where: { parentId: folderId }
+        })
+        
+        // Рекурсивно получаем файлы из дочерних папок
+        for (const childFolder of childFolders) {
+          const childFiles = await getAllFilesInFolder(childFolder.id)
+          allFiles.push(...childFiles)
+        }
+        
+        return allFiles
+      }
+      
+      const allFiles = await getAllFilesInFolder(folderId)
+      
+      console.log(`📂 Found ${allFiles.length} files to move recursively`)
+      
+      if (allFiles.length === 0) {
+        console.log('✅ No files to move, folder rename successful')
+        return true
+      }
+      
+      // Создаем supabase client
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+      
+      // Перемещаем каждый файл в новое место
+      const movePromises = allFiles.map(async (file) => {
+        // Для Supabase Storage путь файла уже корректный (user_X/...)
+        // Не нужно убирать префикс uploads/, его нет в облачном хранилище
+        const storagePath = file.path
+        
+        // Формируем новый путь для файла в хранилище
+        const newStoragePath = storagePath.replace(oldPath, newPath)
+        
+        console.log(`🔄 Moving file:`, {
+          originalPath: file.path,
+          storagePath,
+          newStoragePath,
+          oldPath,
+          newPath
+        })
+        
+        // Перемещаем файл в Supabase Storage
+        const { data, error } = await supabase.storage
+          .from('AlexSiteStoragePublic')
+          .move(storagePath, newStoragePath)
+        
+        if (error) {
+          console.error(`❌ Failed to move file ${storagePath} to ${newStoragePath}:`, error)
+          throw error
+        }
+        
+        // Обновляем путь файла в базе данных
+        // Для Supabase Storage путь уже правильный, не добавляем uploads/
+        await prisma.file.update({
+          where: { id: file.id },
+          data: { path: newStoragePath }
+        })
+        
+        console.log(`✅ Successfully moved file: ${file.filename}`)
+        return data
+      })
+      
+      // Ждем завершения всех операций перемещения
+      await Promise.all(movePromises)
+      
+      console.log('✅ All files moved successfully in Supabase Storage')
+      return true
+      
+    } catch (error) {
+      console.error('❌ Error moving Supabase folder:', error)
+      return false
+    }
+  }
+
+  // Функция для рекурсивного обновления физических путей всех дочерних папок
+  const updateChildrenPaths = async (parentId: number, newParentPath: string) => {
+    const children = await prisma.folder.findMany({
+      where: { parentId: parentId }
+    })
+
+    for (const child of children) {
+      const newChildPath = `${newParentPath}/${child.name}`
+      await prisma.folder.update({
+        where: { id: child.id },
+        data: { path: newChildPath }
+      })
+      
+      // Рекурсивно обновляем пути дочерних папок
+      await updateChildrenPaths(child.id, newChildPath)
+    }
+  }
+
   try {
     console.log('🔍 RenameFolder: Starting rename process', { folderId, newName })
     
@@ -106,11 +218,10 @@ export async function renameFolder(folderId: number, newName: string): Promise<R
       console.log('🏠 RenameFolder: Root folder path', { userId: user.id, newPath })
     }
 
-    // Для облачного хранилища (Supabase) мы не переименовываем физическую папку
-    // Вместо этого обновляем только записи в базе данных
-    // Файлы в Supabase Storage хранятся по уникальным путям и не требуют физического переименования
+    // Для облачного хранилища (Supabase) обновляем только виртуальные пути
+    // Физические пути (path) остаются неизменными для предотвращения битых ссылок
     
-    console.log('📁 Folder rename: Updating database records only (cloud storage)')
+    console.log('📁 Folder rename: Updating virtual paths for cloud storage')
     
     // Проверяем, какой провайдер хранилища используется
     const storageProvider = process.env.STORAGE_PROVIDER || 'local'
@@ -125,29 +236,20 @@ export async function renameFolder(folderId: number, newName: string): Promise<R
         const newAbsolutePath = join(process.cwd(), 'public', 'uploads', newPath)
         await rename(oldAbsolutePath, newAbsolutePath)
         console.log('📁 Local folder renamed successfully')
+        
+        // Для локального хранилища обновляем и физические пути
+        await updateChildrenPaths(folderId, newPath)
       } catch (fsError) {
         console.error('Failed to rename folder in filesystem:', fsError)
         return { success: false, error: 'Failed to rename folder on filesystem' }
       }
     } else {
-      console.log('📁 Cloud storage: Skipping physical folder rename')
-    }
-
-    // Функция для рекурсивного обновления путей всех дочерних папок
-    const updateChildrenPaths = async (parentId: number, newParentPath: string) => {
-      const children = await prisma.folder.findMany({
-        where: { parentId: parentId }
-      })
-
-      for (const child of children) {
-        const newChildPath = `${newParentPath}/${child.name}`
-        await prisma.folder.update({
-          where: { id: child.id },
-          data: { path: newChildPath }
-        })
-        
-        // Рекурсивно обновляем пути дочерних папок
-        await updateChildrenPaths(child.id, newChildPath)
+      console.log('📁 Cloud storage: Performing physical folder move')
+      
+      // Для облачного хранилища выполняем физическое перемещение файлов
+      const moveSuccess = await moveSupabaseFolder(oldPath, newPath, folderId)
+      if (!moveSuccess) {
+        return { success: false, error: 'Failed to move files in cloud storage' }
       }
     }
 
@@ -155,9 +257,11 @@ export async function renameFolder(folderId: number, newName: string): Promise<R
     console.log('💾 RenameFolder: Updating database record', { 
       folderId, 
       newName: newName.trim(), 
-      newPath 
+      newPath,
+      isCloudStorage: process.env.STORAGE_PROVIDER === 'supabase'
     })
     
+    // Для всех типов хранилища обновляем и имя, и путь
     const updatedFolder = await prisma.folder.update({
       where: { id: folderId },
       data: {
@@ -172,38 +276,8 @@ export async function renameFolder(folderId: number, newName: string): Promise<R
       path: updatedFolder.path
     })
 
-    // Генерируем новый виртуальный путь для переименованной папки
-    const newVirtualPath = await generateVirtualPath(folderId)
-    
-    // Обновляем виртуальный путь переименованной папки
-    await prisma.folder.update({
-      where: { id: folderId },
-      data: {
-        virtualPath: newVirtualPath
-      }
-    })
-
     // Обновляем пути всех дочерних папок
     await updateChildrenPaths(folderId, newPath)
-
-    // Обновляем пути файлов в этой папке
-    const filesInFolder = await prisma.file.findMany({
-      where: { folderId: folderId }
-    })
-    
-    for (const file of filesInFolder) {
-      // Создаем новый путь для файла
-      const fileName = file.path.split('/').pop() || file.filename
-      const newFilePath = `uploads/${newPath}/${fileName}`
-      
-      await prisma.file.update({
-        where: { id: file.id },
-        data: { 
-          path: newFilePath,
-          virtualPath: newVirtualPath // Обновляем и виртуальный путь файла
-        }
-      })
-    }
 
     // Возвращаем папку в формате FileItem
     const folderResult = {
@@ -217,9 +291,6 @@ export async function renameFolder(folderId: number, newName: string): Promise<R
       isFolder: true,
       path: updatedFolder.path
     }
-
-    // Автоматически обновляем виртуальные пути всех дочерних папок и файлов
-    await updateChildrenVirtualPaths(folderId, newVirtualPath)
 
     return {
       success: true,
