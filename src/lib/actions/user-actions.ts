@@ -66,7 +66,7 @@ export async function createUser(data: FormData) {
     name: data.get('name'),
     email: data.get('email'),
     password: data.get('password'),
-    role: data.get('role'),
+    userRole: data.get('userRole'),
   })
 
   if (!validatedFields.success) {
@@ -103,7 +103,7 @@ export async function updateUser(id: number, data: FormData) {
   const validatedFields = UserUpdateSchema.safeParse({
     name: data.get('name'),
     email: data.get('email'),
-    role: data.get('role'),
+    userRole: data.get('userRole'),
   })
 
   if (!validatedFields.success) {

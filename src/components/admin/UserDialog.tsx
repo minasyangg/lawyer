@@ -35,7 +35,7 @@ function RoleSelect({ defaultValue }: { defaultValue: string }) {
           <SelectItem value="ADMIN">Admin</SelectItem>
         </SelectContent>
       </Select>
-      <input type="hidden" name="role" value={value} />
+      <input type="hidden" name="userRole" value={value} />
     </>
   )
 }
