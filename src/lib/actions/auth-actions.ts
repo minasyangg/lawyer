@@ -52,7 +52,6 @@ export async function createAdminUser(data: FormData) {
   }
 
   try {
-    const hashedPassword = await bcrypt.hash(validatedFields.data.password, 10)
     
     await prisma.user.create({
       data: {

@@ -7,12 +7,6 @@ import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
-const UserSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  userRole: z.enum(['USER', 'EDITOR', 'ADMIN'])
-})
 
 const UserCreateSchema = z.object({
   name: z.string().min(1, 'Name is required'),

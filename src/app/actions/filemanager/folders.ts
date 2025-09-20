@@ -243,7 +243,7 @@ export async function checkFolderAccess(folderId: number) {
 /**
  * Server Action для получения хлебных крошек папки
  */
-export async function getFolderBreadcrumbs(folderId: number) {
+export async function getFolderBreadcrumbs() {
   try {
     const provider = await createFileManagerProvider()
     
