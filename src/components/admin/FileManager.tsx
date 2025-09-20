@@ -20,8 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { DeleteFileDialog } from "./DeleteFileDialog"
-import { RenameFolderModal } from "./RenameFolderModal"
+import { DeleteFileDialog, RenameFolderModal } from "./FileManager/Modals"
 import { 
   Upload, 
   File, 
@@ -68,9 +67,10 @@ interface FileManagerProps {
   onClose: () => void
   onSelect?: (file: FileItem) => void
   selectMode?: boolean
+  userRole?: 'ADMIN' | 'EDITOR'
 }
 
-export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: FileManagerProps) {
+export function FileManager({ isOpen, onClose, onSelect, selectMode = false, userRole = 'ADMIN' }: FileManagerProps) {
   const [files, setFiles] = useState<FileItem[]>([])
   const [folders, setFolders] = useState<FolderTreeItem[]>([])
   const [currentFolderId, setCurrentFolderId] = useState<number | null>(null)
@@ -231,6 +231,20 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
       setUploading(false)
       event.target.value = ''
     }
+  }
+
+  // Показать диалог подтверждения удаления
+  const showDeleteConfirmation = (file: FileItem) => {
+    // Проверка прав для EDITOR
+    if (userRole === 'EDITOR') {
+      // EDITOR не может удалять файлы, используемые в статьях
+      if (file.isUsed) {
+        toast.error('Вы не можете удалить файл, используемый в статьях. Обратитесь к администратору.')
+        return
+      }
+    }
+    
+    handleDeleteFile(file.id)
   }
 
   const handleDeleteFile = async (fileId: number, force: boolean = false) => {
@@ -726,7 +740,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation()
-                              handleDeleteFile(file.id)
+                              showDeleteConfirmation(file)
                             }}
                           >
                             <Trash2 className="w-4 h-4 text-red-500" />
@@ -791,7 +805,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  handleDeleteFile(file.id)
+                                  showDeleteConfirmation(file)
                                 }}
                               >
                                 <Trash2 className="w-4 h-4 text-red-500" />
@@ -884,7 +898,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
         fileName={deleteDialog.fileName}
         isProtected={deleteDialog.isProtected}
         usedIn={deleteDialog.usedIn}
-        userRole="ADMIN" // TODO: получать роль пользователя из контекста
+        userRole={userRole}
       />
 
       {/* Диалог переименования папки */}

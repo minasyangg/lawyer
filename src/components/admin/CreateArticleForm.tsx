@@ -37,6 +37,7 @@ interface Tag {
 interface CreateArticleFormProps {
   services: Service[]
   redirectPath?: string
+  userRole?: 'ADMIN' | 'EDITOR'
 }
 
 type CheckSlugResponse = {
@@ -47,7 +48,8 @@ type CheckSlugResponse = {
 
 export function CreateArticleForm({ 
   services: initialServices, 
-  redirectPath = '/admin/articles' 
+  redirectPath = '/admin/articles',
+  userRole = 'ADMIN'
 }: CreateArticleFormProps) {
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
@@ -423,6 +425,7 @@ export function CreateArticleForm({
         isOpen={fileManagerOpen}
         onClose={() => setFileManagerOpen(false)}
         selectMode={false}
+        userRole={userRole}
       />
     </form>
   )

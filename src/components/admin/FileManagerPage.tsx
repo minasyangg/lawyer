@@ -23,8 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { DeleteFileDialog } from "./DeleteFileDialog"
-import { RenameFolderModal } from "./RenameFolderModal"
+import { DeleteFileDialog, RenameFolderModal } from "./FileManager/Modals"
 import { 
   Upload, 
   File, 
@@ -52,7 +51,11 @@ interface FileItem extends FileManagerItem {
   isUsed?: boolean // Добавляем поле для отслеживания использования в статьях
 }
 
-export function FileManagerPage() {
+interface FileManagerPageProps {
+  userRole?: 'ADMIN' | 'EDITOR'
+}
+
+export function FileManagerPage({ userRole = 'ADMIN' }: FileManagerPageProps) {
   const [files, setFiles] = useState<FileItem[]>([])
   const [folderTree, setFolderTree] = useState<FolderTreeNode[]>([])
   const [currentFolderId, setCurrentFolderId] = useState<number | null>(null)
@@ -269,6 +272,21 @@ export function FileManagerPage() {
 
   // Показать диалог подтверждения удаления
   const showDeleteConfirmation = (file: FileItem) => {
+    // Проверка прав для EDITOR
+    if (userRole === 'EDITOR') {
+      // EDITOR не может удалять файлы, используемые в статьях
+      if (file.isUsed) {
+        toast.error('Вы не можете удалить файл, используемый в статьях. Обратитесь к администратору.')
+        return
+      }
+      
+      // TODO: Добавить проверку владельца файла
+      // if (file.userId && currentUserId && file.userId !== currentUserId) {
+      //   toast.error('Вы можете удалять только свои файлы.')
+      //   return
+      // }
+    }
+    
     setConfirmDeleteDialog({
       isOpen: true,
       fileId: file.id,
@@ -941,7 +959,7 @@ export function FileManagerPage() {
         fileName={deleteDialog.fileName}
         isProtected={deleteDialog.isProtected}
         usedIn={deleteDialog.usedIn}
-        userRole="ADMIN" // TODO: получать роль пользователя из контекста
+        userRole={userRole}
         onConfirm={() => {
           if (deleteDialog.fileId) {
             // Сначала закрываем диалог

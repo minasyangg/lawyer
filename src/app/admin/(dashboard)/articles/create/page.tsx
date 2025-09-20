@@ -67,7 +67,7 @@ function CreateArticleFormSkeleton() {
 async function CreateArticleFormWrapper() {
   const services = await getServices()
   
-  return <CreateArticleForm services={services} />
+  return <CreateArticleForm services={services} userRole="ADMIN" />
 }
 
 export default function CreateArticlePage() {

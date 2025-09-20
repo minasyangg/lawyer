@@ -76,6 +76,7 @@ async function CreateArticleFormWrapper() {
     <CreateArticleForm 
       services={services} 
       redirectPath="/editor/articles"
+      userRole="EDITOR"
     />
   )
 }

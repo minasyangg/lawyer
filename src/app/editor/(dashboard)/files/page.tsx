@@ -1,6 +1,6 @@
 import { FileManagerPage } from "../../../../components/admin/FileManagerPage"
 
-export default function AdminFilesPage() {
+export default function EditorFilesPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -8,7 +8,7 @@ export default function AdminFilesPage() {
       </div>
       
       <div className="bg-white rounded-lg shadow p-6">
-        <FileManagerPage userRole="ADMIN" />
+        <FileManagerPage userRole="EDITOR" />
       </div>
     </div>
   )
