@@ -91,13 +91,28 @@ export async function renameFolder(folderId: number, newName: string): Promise<R
         })
         
         // Перемещаем файл в Supabase Storage
-        const { data, error } = await supabase.storage
+        // Используем copy + remove вместо move для большей надежности
+        console.log(`📋 Copying file from ${storagePath} to ${newStoragePath}`)
+        const { data: copyData, error: copyError } = await supabase.storage
           .from('AlexSiteStoragePublic')
-          .move(storagePath, newStoragePath)
+          .copy(storagePath, newStoragePath)
         
-        if (error) {
-          console.error(`❌ Failed to move file ${storagePath} to ${newStoragePath}:`, error)
-          throw error
+        if (copyError) {
+          console.error(`❌ Failed to copy file ${storagePath} to ${newStoragePath}:`, copyError)
+          throw copyError
+        }
+        
+        console.log(`✅ File copied successfully, now removing old file ${storagePath}`)
+        // Удаляем старый файл
+        const { error: removeError } = await supabase.storage
+          .from('AlexSiteStoragePublic')
+          .remove([storagePath])
+        
+        if (removeError) {
+          console.error(`❌ Failed to remove old file ${storagePath}:`, removeError)
+          // Не прерываем выполнение, так как файл уже скопирован
+        } else {
+          console.log(`✅ Old file removed successfully: ${storagePath}`)
         }
         
         // Обновляем путь файла в базе данных
@@ -108,7 +123,7 @@ export async function renameFolder(folderId: number, newName: string): Promise<R
         })
         
         console.log(`✅ Successfully moved file: ${file.filename}`)
-        return data
+        return copyData
       })
       
       // Ждем завершения всех операций перемещения
@@ -251,9 +266,6 @@ export async function renameFolder(folderId: number, newName: string): Promise<R
         const newAbsolutePath = join(process.cwd(), 'public', 'uploads', newPath)
         await rename(oldAbsolutePath, newAbsolutePath)
         console.log('📁 Local folder renamed successfully')
-        
-        // Для локального хранилища обновляем и физические пути
-        await updateChildrenPaths(folderId, newPath)
       } catch (fsError) {
         console.error('Failed to rename folder in filesystem:', fsError)
         return { success: false, error: 'Failed to rename folder on filesystem' }
@@ -291,7 +303,7 @@ export async function renameFolder(folderId: number, newName: string): Promise<R
       path: updatedFolder.path
     })
 
-    // Обновляем пути всех дочерних папок
+    // Обновляем пути всех дочерних папок для всех типов хранилища
     await updateChildrenPaths(folderId, newPath)
 
     // Возвращаем папку в формате FileItem

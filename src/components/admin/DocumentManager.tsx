@@ -3,8 +3,14 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { FileText, Download, Trash2, Plus } from "lucide-react"
-import { FileManager } from "./FileManager"
+import FileManager from "./FileManager/FileManager"
 
 interface DocumentItem {
   id: number
@@ -138,12 +144,16 @@ interface FileItem {
           </CardContent>
         </Card>
       )}
-      <FileManager
-        isOpen={fileManagerOpen}
-        onClose={() => setFileManagerOpen(false)}
-        onSelect={handleAddDocument}
-        selectMode={true}
-      />
+      {fileManagerOpen && (
+        <Dialog open={fileManagerOpen} onOpenChange={setFileManagerOpen}>
+          <DialogContent className="max-w-6xl h-[80vh]">
+            <DialogHeader>
+              <DialogTitle>Выберите файл</DialogTitle>
+            </DialogHeader>
+            <FileManager userRole="ADMIN" />
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   )
 }

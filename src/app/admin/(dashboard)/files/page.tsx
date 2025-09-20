@@ -1,4 +1,4 @@
-import { FileManagerPage } from "../../../../components/admin/FileManagerPage"
+import { FileManagerPage } from "../../../../components/admin/FileManager/FileManagerPage"
 
 export default function AdminFilesPage() {
   return (

@@ -6,6 +6,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { 
   Select,
   SelectContent,
@@ -15,7 +21,7 @@ import {
 } from "@/components/ui/select"
 import DynamicRichTextEditor from "./DynamicRichTextEditor"
 import { TagSelector } from "./TagSelector"
-import { FileManager } from "./FileManager"
+import FileManager from "./FileManager/FileManager"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { Article } from "@/lib/actions/article-actions"
@@ -165,17 +171,19 @@ export function EditArticleForm({
   // Функция для открытия файлового менеджера для выбора файлов статьи
   const openFileManagerForArticle = () => {
     setFileManagerOpen(true)
-    window.fileManagerSelectCallback = (selectedFile: { id: number; url: string; originalName: string; mimeType: string }) => {
-      if (selectedFile && !selectedFiles.find(f => f.id === selectedFile.id)) {
-        setSelectedFiles(prev => [...prev, {
-          id: selectedFile.id,
-          name: selectedFile.originalName,
-          size: 0, // Размер файла не доступен в callback
-          mimeType: selectedFile.mimeType
-        }])
-      }
-      setFileManagerOpen(false)
+  }
+  
+  // Функция для обработки выбора файла из FileManager
+  const handleFileSelect = (selectedFile: { id: number; url: string; originalName: string; mimeType: string; size: number }) => {
+    if (selectedFile && !selectedFiles.find(f => f.id === selectedFile.id)) {
+      setSelectedFiles(prev => [...prev, {
+        id: selectedFile.id,
+        name: selectedFile.originalName,
+        size: selectedFile.size || 0,
+        mimeType: selectedFile.mimeType
+      }])
     }
+    setFileManagerOpen(false)
   }
 
   // Функция для удаления файла из списка
@@ -498,11 +506,20 @@ export function EditArticleForm({
           </Button>
         </div>
       </form>
-      <FileManager
-        isOpen={fileManagerOpen}
-        onClose={() => setFileManagerOpen(false)}
-        selectMode={false}
-      />
+      {fileManagerOpen && (
+        <Dialog open={fileManagerOpen} onOpenChange={setFileManagerOpen}>
+          <DialogContent className="max-w-6xl h-[80vh]">
+            <DialogHeader>
+              <DialogTitle>Файловый менеджер - Выберите файл</DialogTitle>
+            </DialogHeader>
+            <FileManager 
+              userRole="ADMIN" 
+              mode="dialog" 
+              onFileSelect={handleFileSelect}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   )
 }

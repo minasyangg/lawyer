@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { DeleteFileDialog, RenameFolderModal } from "./FileManager/Modals"
+import { DeleteFileDialog, RenameFolderModal } from "./Modals"
 import { 
   Upload, 
   File, 
@@ -53,9 +53,11 @@ interface FileItem extends FileManagerItem {
 
 interface FileManagerPageProps {
   userRole?: 'ADMIN' | 'EDITOR'
+  mode?: 'full' | 'dialog'
+  onFileSelect?: (file: FileItem) => void
 }
 
-export function FileManagerPage({ userRole = 'ADMIN' }: FileManagerPageProps) {
+export function FileManagerPage({ userRole = 'ADMIN', mode = 'full', onFileSelect }: FileManagerPageProps) {
   const [files, setFiles] = useState<FileItem[]>([])
   const [folderTree, setFolderTree] = useState<FolderTreeNode[]>([])
   const [currentFolderId, setCurrentFolderId] = useState<number | null>(null)
@@ -490,9 +492,9 @@ export function FileManagerPage({ userRole = 'ADMIN' }: FileManagerPageProps) {
   }
 
   return (
-    <div className="flex h-[calc(100vh-200px)]">
+    <div className={`flex ${mode === 'dialog' ? 'h-[60vh]' : 'h-[calc(100vh-200px)]'}`}>
       {/* Левая панель с деревом папок */}
-      <div className="w-64 bg-gray-50 border-r border-gray-200 p-4">
+      <div className="w-64 bg-gray-50 border-r border-gray-200 p-4 overflow-y-auto">
         <h3 className="font-semibold mb-4">Папки</h3>
         <div className="space-y-1">
           <div 
@@ -616,8 +618,16 @@ export function FileManagerPage({ userRole = 'ADMIN' }: FileManagerPageProps) {
                     : "flex items-center justify-between p-3 bg-white rounded border border-gray-200 hover:bg-gray-50"
                   } ${isDeleting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   onClick={() => {
-                    if (!isDeleting && file.isFolder) {
+                    if (isDeleting) return;
+                    
+                    if (file.isFolder) {
                       navigateToFolder(file.id, file.path);
+                    } else if (mode === 'dialog' && onFileSelect) {
+                      // В диалоговом режиме вызываем колбэк для выбора файла
+                      onFileSelect(file);
+                    } else {
+                      // В обычном режиме открываем файл в новой вкладке
+                      window.open(file.url, '_blank');
                     }
                   }}
                 >
