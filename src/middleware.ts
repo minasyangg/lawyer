@@ -4,8 +4,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Защита API роутов
-  if (pathname.startsWith('/api/upload') || 
-      pathname.startsWith('/api/tags')) {
+  if (pathname.startsWith('/api/tags')) {
     
     const sessionCookie = request.cookies.get('admin-session')
 
@@ -17,9 +16,8 @@ export async function middleware(request: NextRequest) {
       const user = JSON.parse(sessionCookie.value)
       
       // Дополнительная проверка для административных операций с тегами
-      if ((pathname.startsWith('/api/tags') && 
-           (request.method === 'POST' || request.method === 'PUT' || request.method === 'DELETE')) ||
-          pathname.startsWith('/api/upload')) {
+      if (pathname.startsWith('/api/tags') && 
+          (request.method === 'POST' || request.method === 'PUT' || request.method === 'DELETE')) {
         if (user.userRole !== 'ADMIN' && user.userRole !== 'EDITOR') {
           return NextResponse.json({ error: 'Access denied' }, { status: 403 })
         }
@@ -90,7 +88,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/api/files/:path*',
-    '/api/upload/:path*', 
     '/api/tags/:path*',
     '/admin/:path*',
     '/editor/:path*',

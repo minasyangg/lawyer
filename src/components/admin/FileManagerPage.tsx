@@ -11,11 +11,18 @@ import {
   getFolderTree,
   debugSession,
   type FileManagerItem,
-  type FolderTreeNode
+  type FolderTreeNode,
+  type DeleteFileResult
 } from '@/app/actions/filemanager'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { DeleteFileDialog } from "./DeleteFileDialog"
 import { RenameFolderModal } from "./RenameFolderModal"
 import { 
@@ -34,7 +41,7 @@ import {
   Loader2
 } from "lucide-react"
 import { toast } from "sonner"
-import { validateFile, formatFileSize } from "@/lib/utils/client-file-utils"
+import { validateFile, formatFileSize, MAX_FILE_SIZE } from "@/lib/utils/client-file-utils"
 import Image from "next/image"
 
 // Используем FileManagerItem из actions и добавляем недостающие поля
@@ -58,7 +65,40 @@ export function FileManagerPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [isCreatingFolder, setIsCreatingFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState("")
-  const [deleteFileDialog, setDeleteFileDialog] = useState<FileItem | null>(null)
+  
+  // Состояние для подтверждения удаления
+  const [confirmDeleteDialog, setConfirmDeleteDialog] = useState<{
+    isOpen: boolean
+    fileId: number | null
+    fileName: string
+    isFolder?: boolean
+  }>({
+    isOpen: false,
+    fileId: null,
+    fileName: '',
+    isFolder: false
+  })
+  
+  // Состояние для диалога удаления (когда есть проблемы)
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean
+    fileId: number | null
+    fileName: string
+    isProtected: boolean
+    usedIn: Array<{ id: number; title: string; type: 'content' | 'document' }>
+    isFolder?: boolean
+  }>({
+    isOpen: false,
+    fileId: null,
+    fileName: '',
+    isProtected: false,
+    usedIn: [],
+    isFolder: false
+  })
+  
+  // Состояние загрузки удаления
+  const [deletingFiles, setDeletingFiles] = useState<Set<number>>(new Set())
+  
   const [editingFolder, setEditingFolder] = useState<{ id: number; name: string } | null>(null)
   const [renameFolderModal, setRenameFolderModal] = useState<{ id: number; name: string } | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -110,36 +150,64 @@ export function FileManagerPage() {
     setFilteredFiles(filtered)
   }, [files, searchTerm])
 
-  // Загрузка файла
+  // Загрузка файлов (поддерживает множественную загрузку)
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+    const uploadedFiles = event.target.files
+    if (!uploadedFiles || uploadedFiles.length === 0) return
 
     console.log('🔍 FileManagerPage: Starting file upload', { 
-      fileName: file.name, 
-      fileSize: file.size, 
-      fileType: file.type,
+      filesCount: uploadedFiles.length,
       currentFolderId 
     })
 
-    const validation = validateFile(file)
-    if (!validation.valid) {
-      console.log('🔍 FileManagerPage: Validation failed', validation.errors)
-      toast.error(validation.errors[0] || 'Ошибка валидации файла')
+    // Клиентская валидация файлов
+    const filesArray = Array.from(uploadedFiles)
+    const validationErrors: string[] = []
+    
+    for (const file of filesArray) {
+      const validation = validateFile(file)
+      if (!validation.valid) {
+        validationErrors.push(...validation.errors)
+      }
+    }
+
+    // Если есть ошибки валидации, показываем их и прерываем загрузку
+    if (validationErrors.length > 0) {
+      toast.error(
+        <div>
+          <div className="font-semibold mb-2">Ошибки валидации файлов:</div>
+          <div className="text-sm space-y-1">
+            {validationErrors.slice(0, 3).map((error, index) => (
+              <div key={index}>• {error}</div>
+            ))}
+            {validationErrors.length > 3 && (
+              <div>... и еще {validationErrors.length - 3} ошибок</div>
+            )}
+          </div>
+          <div className="mt-2 text-xs text-gray-600">
+            Максимальный размер файла: {formatFileSize(MAX_FILE_SIZE)}
+          </div>
+        </div>,
+        { duration: 8000 }
+      )
+      // Очищаем input
+      event.target.value = ''
       return
     }
 
     setUploadLoading(true)
     try {
       const formData = new FormData()
-      formData.append('files', file)
+      filesArray.forEach(file => {
+        formData.append('files', file)
+      })
+      
       if (currentFolderId) {
         formData.append('folderId', currentFolderId.toString())
       }
 
       console.log('🔍 FileManagerPage: FormData prepared', {
-        hasFiles: formData.has('files'),
-        hasFolderId: formData.has('folderId'),
+        filesCount: filesArray.length,
         folderId: currentFolderId
       })
 
@@ -148,14 +216,14 @@ export function FileManagerPage() {
       console.log('🔍 FileManagerPage: Upload result', result)
       
       if (result.success) {
-        toast.success('Файл успешно загружен')
+        toast.success(`Загружено ${result.files.length} файл(ов)`)
         await loadFiles(currentFolderId, currentPage)
       } else {
-        toast.error(result.error || 'Ошибка загрузки файла')
+        toast.error(result.error || 'Ошибка загрузки файлов')
       }
     } catch (error) {
       console.error('Upload error:', error)
-      toast.error('Ошибка загрузки файла')
+      toast.error('Ошибка загрузки файлов')
     } finally {
       setUploadLoading(false)
       // Сбрасываем значение input
@@ -199,30 +267,95 @@ export function FileManagerPage() {
     await loadFiles(folderId, 1)
   }
 
-  // Удаление файла
-  const handleDeleteFile = async (file: FileItem) => {
+  // Показать диалог подтверждения удаления
+  const showDeleteConfirmation = (file: FileItem) => {
+    setConfirmDeleteDialog({
+      isOpen: true,
+      fileId: file.id,
+      fileName: file.originalName,
+      isFolder: file.isFolder
+    })
+  }
+
+  // Удаление файла или папки
+  const handleDeleteFile = async (fileId: number, force: boolean = false, isFolder: boolean = false) => {
+    // Добавляем файл в список удаляемых
+    setDeletingFiles(prev => new Set(prev).add(fileId))
+    
     try {
-      let result
-      if (file.isFolder) {
-        result = await deleteFolder(file.id)
-      } else {
-        result = await deleteFile(file.id)
-      }
-      
-      if (result.success) {
-        toast.success(file.isFolder ? 'Папка удалена' : 'Файл удален')
-        await loadFiles(currentFolderId, currentPage)
-        if (file.isFolder) {
-          await loadFolderTree()
+      // Если это не принудительное удаление, сначала проверяем использование
+      if (!force) {
+        let result
+        if (isFolder) {
+          result = await deleteFolder(fileId, false)
+        } else {
+          result = await deleteFile(fileId, false)
+        }
+        
+        if (!result.success) {
+          // Получаем информацию о файле для диалога
+          const fileToDelete = files.find(f => f.id === fileId)
+          
+          // Для файлов проверяем isUsed, для папок показываем диалог если есть ошибка
+          const shouldShowDialog = isFolder || 
+            (result.error?.includes('protected')) || 
+            (!isFolder && 'isUsed' in result && result.isUsed)
+          
+          if (shouldShowDialog) {
+            // Показываем диалог подтверждения
+            setDeleteDialog({
+              isOpen: true,
+              fileId: fileId,
+              fileName: fileToDelete?.originalName || 'Неизвестный файл',
+              isProtected: result.error?.includes('protected') || false,
+              usedIn: (!isFolder && 'usedIn' in result) ? (result as DeleteFileResult).usedIn || [] : [],
+              isFolder: isFolder
+            })
+            return
+          }
+          
+          toast.error(result.error || `Ошибка удаления ${isFolder ? 'папки' : 'файла'}`)
+          return
+        }
+        
+        if (result.success) {
+          await loadFiles(currentFolderId, currentPage)
+          if (isFolder) {
+            await loadFolderTree()
+          }
+          toast.success(isFolder ? 'Папка удалена' : 'Файл удален')
+        } else {
+          toast.error(result.error || `Ошибка удаления ${isFolder ? 'папки' : 'файла'}`)
         }
       } else {
-        toast.error(result.error || 'Ошибка удаления')
+        // Принудительное удаление
+        let result
+        if (isFolder) {
+          result = await deleteFolder(fileId, true)
+        } else {
+          result = await deleteFile(fileId, true)
+        }
+        
+        if (result.success) {
+          await loadFiles(currentFolderId, currentPage)
+          if (isFolder) {
+            await loadFolderTree()
+          }
+          toast.success(isFolder ? 'Папка удалена' : 'Файл удален')
+        } else {
+          toast.error(result.error || `Ошибка удаления ${isFolder ? 'папки' : 'файла'}`)
+        }
       }
     } catch (error) {
-      console.error('Delete error:', error)
-      toast.error('Ошибка удаления')
+      console.error('Delete failed:', error)
+      toast.error(`Ошибка удаления ${isFolder ? 'папки' : 'файла'}`)
     } finally {
-      setDeleteFileDialog(null)
+      // Убираем файл из списка удаляемых
+      setDeletingFiles(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(fileId)
+        return newSet
+      })
     }
   }
 
@@ -412,6 +545,7 @@ export function FileManagerPage() {
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   onChange={handleFileUpload}
                   disabled={uploadLoading}
+                  multiple
                 />
                 <Button size="sm" disabled={uploadLoading} className="cursor-pointer">
                   {uploadLoading ? (
@@ -419,7 +553,7 @@ export function FileManagerPage() {
                   ) : (
                     <Upload className="w-4 h-4 mr-2" />
                   )}
-                  {uploadLoading ? 'Загрузка...' : 'Загрузить файл'}
+                  {uploadLoading ? 'Загрузка...' : 'Загрузить файлы'}
                 </Button>
               </div>
             </div>
@@ -454,15 +588,31 @@ export function FileManagerPage() {
               ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" 
               : "space-y-2"
             }>
-              {filteredFiles.map(file => (
+              {filteredFiles.map(file => {
+                const isDeleting = deletingFiles.has(file.id);
+                return (
                 <div
                   key={`${file.isFolder ? 'folder' : 'file'}-${file.id}`}
-                  className={viewMode === 'grid' 
-                    ? "group relative bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
+                  className={`${viewMode === 'grid' 
+                    ? "group relative bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
                     : "flex items-center justify-between p-3 bg-white rounded border border-gray-200 hover:bg-gray-50"
-                  }
-                  onClick={() => file.isFolder && navigateToFolder(file.id, file.path)}
+                  } ${isDeleting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  onClick={() => {
+                    if (!isDeleting && file.isFolder) {
+                      navigateToFolder(file.id, file.path);
+                    }
+                  }}
                 >
+                  {/* Оверлей для удаления */}
+                  {isDeleting && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10 rounded-lg">
+                      <div className="flex flex-col items-center text-white">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                        <p className="text-sm mt-2">Удаление...</p>
+                      </div>
+                    </div>
+                  )}
+                  
                   {viewMode === 'grid' ? (
                     <>
                       {/* Иконка файла/папки */}
@@ -565,17 +715,32 @@ export function FileManagerPage() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation()
-                              setDeleteFileDialog(file)
+                              showDeleteConfirmation(file)
                             }}
                             className="h-6 w-6 p-0 text-red-600 hover:text-red-700 cursor-pointer"
+                            disabled={deletingFiles.has(file.id)}
                           >
-                            <Trash2 className="w-3 h-3" />
+                            {deletingFiles.has(file.id) ? (
+                              <div className="w-3 h-3 border border-red-600 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3 h-3" />
+                            )}
                           </Button>
                         </div>
                       </div>
                     </>
                   ) : (
                     <>
+                      {/* Оверлей для удаления в list режиме */}
+                      {isDeleting && (
+                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10 rounded-lg">
+                          <div className="flex items-center text-white">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            <span className="text-sm">Удаление...</span>
+                          </div>
+                        </div>
+                      )}
+                      
                       {/* Иконка и имя файла */}
                       <div className="flex items-center flex-1 min-w-0">
                         {file.isFolder ? (
@@ -673,17 +838,23 @@ export function FileManagerPage() {
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation()
-                            setDeleteFileDialog(file)
+                            showDeleteConfirmation(file)
                           }}
                           className="text-red-600 hover:text-red-700 cursor-pointer"
+                          disabled={deletingFiles.has(file.id)}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {deletingFiles.has(file.id) ? (
+                            <div className="w-4 h-4 border border-red-600 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
                         </Button>
                       </div>
                     </>
                   )}
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
 
@@ -765,11 +936,92 @@ export function FileManagerPage() {
 
       {/* Диалог удаления файла */}
       <DeleteFileDialog
-        isOpen={!!deleteFileDialog}
-        onClose={() => setDeleteFileDialog(null)}
-        fileName={deleteFileDialog?.originalName}
-        onConfirm={() => deleteFileDialog && handleDeleteFile(deleteFileDialog)}
+        isOpen={deleteDialog.isOpen}
+        onClose={() => setDeleteDialog(prev => ({ ...prev, isOpen: false }))}
+        fileName={deleteDialog.fileName}
+        isProtected={deleteDialog.isProtected}
+        usedIn={deleteDialog.usedIn}
+        userRole="ADMIN" // TODO: получать роль пользователя из контекста
+        onConfirm={() => {
+          if (deleteDialog.fileId) {
+            // Сначала закрываем диалог
+            setDeleteDialog(prev => ({ ...prev, isOpen: false }))
+            // Затем запускаем принудительное удаление
+            handleDeleteFile(deleteDialog.fileId, true, deleteDialog.isFolder)
+          }
+        }}
       />
+
+      {/* Диалог подтверждения удаления */}
+      <Dialog open={confirmDeleteDialog.isOpen} onOpenChange={(open) => {
+        if (!open) {
+          setConfirmDeleteDialog({
+            isOpen: false,
+            fileId: null,
+            fileName: '',
+            isFolder: false
+          })
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Подтвердите удаление</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <p className="text-gray-600">
+              Вы действительно хотите удалить {confirmDeleteDialog.isFolder ? 'папку' : 'файл'}{' '}
+              <span className="font-medium">&quot;{confirmDeleteDialog.fileName}&quot;</span>?
+            </p>
+            {confirmDeleteDialog.isFolder && (
+              <p className="text-sm text-orange-600 mt-2">
+                ⚠️ Все содержимое папки также будет удалено
+              </p>
+            )}
+          </div>
+          
+          <div className="flex justify-end gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => setConfirmDeleteDialog({
+                isOpen: false,
+                fileId: null,
+                fileName: '',
+                isFolder: false
+              })}
+              disabled={confirmDeleteDialog.fileId ? deletingFiles.has(confirmDeleteDialog.fileId) : false}
+            >
+              Отмена
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => {
+                if (confirmDeleteDialog.fileId) {
+                  // Сначала закрываем диалог
+                  setConfirmDeleteDialog({
+                    isOpen: false,
+                    fileId: null,
+                    fileName: '',
+                    isFolder: false
+                  })
+                  // Затем запускаем удаление
+                  handleDeleteFile(confirmDeleteDialog.fileId, false, confirmDeleteDialog.isFolder)
+                }
+              }}
+              disabled={confirmDeleteDialog.fileId ? deletingFiles.has(confirmDeleteDialog.fileId) : false}
+            >
+              {confirmDeleteDialog.fileId && deletingFiles.has(confirmDeleteDialog.fileId) ? (
+                <>
+                  <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Удаление...
+                </>
+              ) : (
+                'Удалить'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Модальное окно переименования папки */}
       <RenameFolderModal
@@ -778,6 +1030,7 @@ export function FileManagerPage() {
         folderId={renameFolderModal?.id || 0}
         currentName={renameFolderModal?.name || ""}
         onSuccess={() => {
+          setRenameFolderModal(null)
           loadFiles(currentFolderId, currentPage)
           loadFolderTree()
         }}

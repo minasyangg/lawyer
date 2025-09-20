@@ -7,7 +7,6 @@ import {
   listFiles, 
   deleteFile, 
   deleteFolder,
-  renameFolder,
   getFolderTree,
   type FileManagerItem,
   type FolderTreeNode
@@ -22,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { DeleteFileDialog } from "./DeleteFileDialog"
+import { RenameFolderModal } from "./RenameFolderModal"
 import { 
   Upload, 
   File, 
@@ -82,9 +82,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
   const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set())
   const [showCreateFolder, setShowCreateFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState("")
-  const [showRenameFolder, setShowRenameFolder] = useState(false)
-  const [renamingFolderId, setRenamingFolderId] = useState<number | null>(null)
-  const [renameValue, setRenameValue] = useState("")
+  const [renameFolderModal, setRenameFolderModal] = useState<{ id: number; name: string } | null>(null)
   const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set())
   
   // Состояние для диалога удаления
@@ -382,45 +380,6 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
     }
   }
 
-  const handleRenameFolder = async () => {
-    if (!renamingFolderId || !renameValue.trim()) return
-
-    try {
-      const result = await renameFolder(renamingFolderId, renameValue.trim())
-      if (result.success) {
-        // Обновляем дерево папок
-        fetchFolders()
-        // Обновляем список файлов
-        fetchFiles()
-        
-        // Обновляем breadcrumbs если переименованная папка есть в них
-        setBreadcrumbs(prev => 
-          prev.map(crumb => 
-            crumb.id === renamingFolderId 
-              ? { ...crumb, name: renameValue.trim() }
-              : crumb
-          )
-        )
-        
-        toast.success('Папка переименована')
-        setShowRenameFolder(false)
-        setRenamingFolderId(null)
-        setRenameValue("")
-      } else {
-        toast.error(result.error || 'Ошибка переименования папки')
-      }
-    } catch (error) {
-      console.error('Rename folder failed:', error)
-      toast.error('Ошибка переименования папки')
-    }
-  }
-
-  const startRenameFolder = (folderId: number, currentName: string) => {
-    setRenamingFolderId(folderId)
-    setRenameValue(currentName)
-    setShowRenameFolder(true)
-  }
-
   const navigateToFolder = async (folderId: number | null, folderName: string = 'Root') => {
     setCurrentFolderId(folderId)
     
@@ -540,7 +499,7 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
             className="p-1 hover:bg-gray-200 rounded"
             onClick={(e) => {
               e.stopPropagation()
-              startRenameFolder(folder.id, folder.name)
+              setRenameFolderModal({ id: folder.id, name: folder.name })
             }}
             title="Переименовать папку"
           >
@@ -902,60 +861,6 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
           </Dialog>
         )}
 
-        {/* Диалог переименования папки */}
-        {showRenameFolder && (
-          <Dialog open={showRenameFolder} onOpenChange={setShowRenameFolder}>
-            <DialogContent 
-              className="sm:max-w-md"
-              onSubmit={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-              }}
-            >
-              <DialogHeader>
-                <DialogTitle>Переименовать папку</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="rename-folder-name">Новое название папки</Label>
-                  <Input
-                    id="rename-folder-name"
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    placeholder="Введите новое название папки"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        handleRenameFolder()
-                      }
-                    }}
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button 
-                    variant="outline"
-                    type="button"
-                    onClick={() => {
-                      setShowRenameFolder(false)
-                      setRenamingFolderId(null)
-                      setRenameValue("")
-                    }}
-                  >
-                    Отмена
-                  </Button>
-                  <Button 
-                    type="button"
-                    onClick={handleRenameFolder} 
-                    disabled={!renameValue.trim()}
-                  >
-                    Переименовать
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
-
         {/* Футер */}
         <div className="flex justify-between items-center pt-4 border-t">
           <p className="text-sm text-gray-500">
@@ -981,6 +886,20 @@ export function FileManager({ isOpen, onClose, onSelect, selectMode = false }: F
         usedIn={deleteDialog.usedIn}
         userRole="ADMIN" // TODO: получать роль пользователя из контекста
       />
+
+      {/* Диалог переименования папки */}
+      {renameFolderModal && (
+        <RenameFolderModal
+          isOpen={true}
+          onClose={() => setRenameFolderModal(null)}
+          onSuccess={() => {
+            setRenameFolderModal(null)
+            fetchFiles()
+          }}
+          folderId={renameFolderModal.id}
+          currentName={renameFolderModal.name}
+        />
+      )}
     </Dialog>
   )
 }

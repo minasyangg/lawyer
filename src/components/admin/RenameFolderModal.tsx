@@ -14,6 +14,7 @@ import {
 import { Loader2 } from 'lucide-react'
 import { folderNameValidationSchema, getFolderNamePreview } from '@/lib/validations/folder'
 import { toast } from 'sonner'
+import { renameFolder } from '@/app/actions/filemanager'
 
 interface RenameFolderModalProps {
   isOpen: boolean
@@ -70,18 +71,7 @@ export function RenameFolderModal({
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/filemanager/rename-folder', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          folderId,
-          newName: newName.trim(),
-        }),
-      })
-
-      const result = await response.json()
+      const result = await renameFolder(folderId, newName.trim())
 
       if (result.success) {
         toast.success('Папка успешно переименована')
