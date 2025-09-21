@@ -407,7 +407,7 @@ export function FileManagerPage({ userRole = 'ADMIN', mode = 'full', onFileSelec
           onViewModeChange={setViewMode}
           onUploadClick={() => setUploadDialog(true)}
           onCreateFolderClick={() => setCreateFolderDialog(true)}
-          canCreateFolder={userRole === 'ADMIN'}
+          canCreateFolder={userRole === 'ADMIN' || userRole === 'EDITOR'}
           uploadLoading={uploadLoading}
           createFolderLoading={createFolderLoading}
         />
