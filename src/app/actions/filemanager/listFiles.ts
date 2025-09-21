@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
 import { createVirtualFileUrl } from '@/lib/virtualPaths'
 import { checkMultipleFilesUsage } from './checkFileUsage'
+import { withCache, CACHE_KEYS, CACHE_TTL } from '@/lib/redis'
 
 const prisma = new PrismaClient()
 
@@ -55,88 +56,97 @@ export async function listFiles(
       throw new Error('User not found')
     }
 
-    const skip = (page - 1) * limit
+    // Create cache key including user ID, folder ID, page, and limit
+    const cacheKey = CACHE_KEYS.FILES_LIST(`${user.id}:${folderId}:${page}:${limit}`)
 
-    const where = {
-      uploadedBy: user.id,
-      ...(folderId ? { folderId: folderId } : { folderId: null })
-    }
+    return await withCache(
+      cacheKey,
+      CACHE_TTL.FILES_LIST,
+      async () => {
+        const skip = (page - 1) * limit
 
-    // Получаем файлы и папки
-    const [files, folders, totalFilesCount, totalFoldersCount] = await Promise.all([
-      prisma.file.findMany({
-        where,
-        include: {
-          folder: true,
-        },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-      prisma.folder.findMany({
-        where: {
-          ownerId: user.id,
-          ...(folderId ? { parentId: folderId } : { parentId: null })
-        },
-        orderBy: { createdAt: 'desc' }
-      }),
-      prisma.file.count({ where }),
-      prisma.folder.count({
-        where: {
-          ownerId: user.id,
-          ...(folderId ? { parentId: folderId } : { parentId: null })
+        const where = {
+          uploadedBy: user.id,
+          ...(folderId ? { folderId: folderId } : { folderId: null })
         }
-      })
-    ])
 
-    const filesWithUrls = files.map(file => ({
-      id: file.id,
-      originalName: file.originalName,
-      filename: file.filename,
-      mimeType: file.mimeType,
-      size: file.size,
-      createdAt: file.createdAt.toISOString(),
-      url: file.virtualId ? createVirtualFileUrl(file.virtualId) : `/api/files/${file.id}`, // Используем virtualId если есть или API route
-      isUsed: false // Будет обновлено ниже
-    }))
+        // Получаем файлы и папки
+        const [files, folders, totalFilesCount, totalFoldersCount] = await Promise.all([
+          prisma.file.findMany({
+            where,
+            include: {
+              folder: true,
+            },
+            orderBy: { createdAt: 'desc' },
+            skip,
+            take: limit,
+          }),
+          prisma.folder.findMany({
+            where: {
+              ownerId: user.id,
+              ...(folderId ? { parentId: folderId } : { parentId: null })
+            },
+            orderBy: { createdAt: 'desc' }
+          }),
+          prisma.file.count({ where }),
+          prisma.folder.count({
+            where: {
+              ownerId: user.id,
+              ...(folderId ? { parentId: folderId } : { parentId: null })
+            }
+          })
+        ])
 
-    // Проверяем использование файлов в статьях
-    const fileIds = files.map(f => f.id)
-    const usageResults = await checkMultipleFilesUsage(fileIds)
+        const filesWithUrls = files.map(file => ({
+          id: file.id,
+          originalName: file.originalName,
+          filename: file.filename,
+          mimeType: file.mimeType,
+          size: file.size,
+          createdAt: file.createdAt.toISOString(),
+          url: file.virtualId ? createVirtualFileUrl(file.virtualId) : `/api/files/${file.id}`, // Используем virtualId если есть или API route
+          isUsed: false // Будет обновлено ниже
+        }))
 
-    // Обновляем информацию об использовании
-    filesWithUrls.forEach(file => {
-      const usage = usageResults[file.id]
-      file.isUsed = usage?.isUsed || false
-    })
+        // Проверяем использование файлов в статьях
+        const fileIds = files.map(f => f.id)
+        const usageResults = await checkMultipleFilesUsage(fileIds)
 
-    // Преобразуем папки в формат FileItem
-    const foldersAsFileItems = folders.map(folder => ({
-      id: folder.id,
-      originalName: folder.name,
-      filename: folder.name,
-      mimeType: 'folder',
-      size: 0,
-      createdAt: folder.createdAt.toISOString(),
-      url: `/uploads/${folder.path}`,
-      isFolder: true,
-      path: folder.path,
-      isUsed: false // Папки не используются в статьях
-    }))
+        // Обновляем информацию об использовании
+        filesWithUrls.forEach(file => {
+          const usage = usageResults[file.id]
+          file.isUsed = usage?.isUsed || false
+        })
 
-    // Объединяем папки и файлы
-    const allItems = [...foldersAsFileItems, ...filesWithUrls]
-    const totalCount = totalFilesCount + totalFoldersCount
+        // Преобразуем папки в формат FileItem
+        const foldersAsFileItems = folders.map(folder => ({
+          id: folder.id,
+          originalName: folder.name,
+          filename: folder.name,
+          mimeType: 'folder',
+          size: 0,
+          createdAt: folder.createdAt.toISOString(),
+          url: `/uploads/${folder.path}`,
+          isFolder: true,
+          path: folder.path,
+          isUsed: false // Папки не используются в статьях
+        }))
 
-    return {
-      files: allItems,
-      pagination: {
-        page,
-        limit,
-        total: totalCount,
-        pages: Math.ceil(totalCount / limit)
+        // Объединяем папки и файлы
+        const allItems = [...foldersAsFileItems, ...filesWithUrls]
+        const totalCount = totalFilesCount + totalFoldersCount
+
+        return {
+          files: allItems,
+          pagination: {
+            page,
+            limit,
+            total: totalCount,
+            pages: Math.ceil(totalCount / limit)
+          }
+        }
       }
-    }
+    )
 
   } catch (error) {
     console.error('Files fetch error:', error)

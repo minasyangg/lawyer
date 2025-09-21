@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
 import { saveFileUniversalWithDetails, generateFileName, getFolderPhysicalPath, MAX_FILE_SIZE, ALLOWED_IMAGE_TYPES, ALLOWED_DOCUMENT_TYPES } from '@/lib/utils/file-utils'
 import { generateVirtualPath, createVirtualFileUrl } from '@/lib/virtualPaths'
+import { invalidateCache } from '@/lib/redis'
 
 const prisma = new PrismaClient()
 
@@ -161,6 +162,10 @@ export async function uploadFile(formData: FormData): Promise<UploadResult> {
         createdAt: dbFile.createdAt.toISOString(),
       })
     }
+
+    // Invalidate cache after successful upload
+    await invalidateCache(`files:*`)
+    await invalidateCache(`files:tree:*`)
 
     return { success: true, files: savedFiles }
 

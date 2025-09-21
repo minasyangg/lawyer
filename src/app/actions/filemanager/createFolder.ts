@@ -7,6 +7,7 @@ import { join } from 'path'
 import { getStorageInfo } from '@/lib/utils/universal-file-utils'
 import { validateAndProcessFolderName } from '@/lib/utils/folder-validation'
 import { createFolderSchema } from '@/lib/validations/folder'
+import { invalidateCache } from '@/lib/redis'
 
 const prisma = new PrismaClient()
 
@@ -144,6 +145,10 @@ export async function createFolder(name: string, parentId: number | null = null)
       isFolder: true,
       path: folder.path
     }
+
+    // Invalidate cache after successful creation
+    await invalidateCache(`files:*`)
+    await invalidateCache(`files:tree:*`)
 
     return {
       success: true,

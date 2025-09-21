@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
 import { createClient } from '@supabase/supabase-js'
 import { renameFolderSchema } from '@/lib/validations/folder'
+import { invalidateCache } from '@/lib/redis'
 
 const prisma = new PrismaClient()
 
@@ -322,6 +323,10 @@ export async function renameFolder(folderId: number, newName: string): Promise<R
       isFolder: true,
       path: updatedFolder.path
     }
+
+    // Invalidate cache after successful rename
+    await invalidateCache(`files:*`)
+    await invalidateCache(`files:tree:*`)
 
     return {
       success: true,

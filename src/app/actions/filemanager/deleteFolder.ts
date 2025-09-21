@@ -6,6 +6,7 @@ import { rmdir } from 'fs/promises'
 import { join } from 'path'
 import { deleteFile } from '@/lib/utils/universal-file-utils'
 import { getStorageInfo } from '@/lib/utils/universal-file-utils'
+import { invalidateCache } from '@/lib/redis'
 
 const prisma = new PrismaClient()
 
@@ -182,6 +183,10 @@ export async function deleteFolder(folderId: number, force: boolean = false): Pr
     } else {
       console.log('Skipping physical folder deletion (cloud storage)')
     }
+
+    // Invalidate cache after successful deletion
+    await invalidateCache(`files:*`)
+    await invalidateCache(`files:tree:*`)
 
     return { success: true }
 

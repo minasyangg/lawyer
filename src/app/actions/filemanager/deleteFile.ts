@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
 import { checkFileUsage } from './checkFileUsage'
 import { deleteFile as deleteFileFromStorage } from '@/lib/utils/universal-file-utils'
+import { invalidateCache } from '@/lib/redis'
 
 const prisma = new PrismaClient()
 
@@ -120,6 +121,10 @@ export async function deleteFile(fileId: number, force: boolean = false): Promis
     await prisma.file.delete({
       where: { id: fileId }
     })
+
+    // Invalidate cache after successful deletion
+    await invalidateCache(`files:*`)
+    await invalidateCache(`files:tree:*`)
 
     return { success: true }
 
