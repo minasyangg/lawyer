@@ -109,7 +109,7 @@ export function FileList({
                   </Button>
                 )}
                 
-                {file.isFolder && userRole === 'ADMIN' && (
+                {file.isFolder && (userRole === 'ADMIN' || userRole === 'EDITOR') && (
                   <Button
                     size="sm"
                     variant="ghost"
@@ -117,20 +117,23 @@ export function FileList({
                       e.stopPropagation()
                       onEditFolderClick(file)
                     }}
+                    title="Переименовать"
                   >
                     <Edit2 className="h-4 w-4" />
                   </Button>
                 )}
                 
-                {userRole === 'ADMIN' && (
+                {(userRole === 'ADMIN' || userRole === 'EDITOR') && (
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={(e) => {
                       e.stopPropagation()
-                      onDeleteClick(file)
+                      if (!file.isUsed) onDeleteClick(file)
                     }}
                     className="text-red-600 hover:text-red-700"
+                    disabled={!!file.isUsed}
+                    title={file.isUsed ? 'Файл используется' : 'Удалить'}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

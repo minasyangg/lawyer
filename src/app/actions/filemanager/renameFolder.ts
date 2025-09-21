@@ -195,6 +195,7 @@ export async function renameFolder(folderId: number, newName: string): Promise<R
       validatedName 
     })
 
+
     // Находим папку в базе данных
     console.log('🔍 RenameFolder: Looking for folder in database', { folderId })
     
@@ -231,6 +232,9 @@ export async function renameFolder(folderId: number, newName: string): Promise<R
       console.log('❌ RenameFolder: Access denied')
       return { success: false, error: 'Access denied' }
     }
+
+    // EDITOR может переименовывать свои папки, даже если в них есть используемые файлы
+    // (переименование не влияет на использование файлов)
 
     // Формируем новый путь
     const oldPath = folder.path

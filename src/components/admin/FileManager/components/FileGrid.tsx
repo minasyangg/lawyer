@@ -116,7 +116,7 @@ export function FileGrid({
                     </Button>
                   )}
                   
-                  {file.isFolder && userRole === 'ADMIN' && (
+                  {file.isFolder && (userRole === 'ADMIN' || userRole === 'EDITOR') && (
                     <Button
                       size="sm"
                       variant="secondary"
@@ -125,20 +125,23 @@ export function FileGrid({
                         onEditFolderClick(file)
                       }}
                       className="h-6 w-6 p-0"
+                      title="Переименовать"
                     >
                       <Edit2 className="h-3 w-3" />
                     </Button>
                   )}
                   
-                  {userRole === 'ADMIN' && (
+                  {(userRole === 'ADMIN' || userRole === 'EDITOR') && (
                     <Button
                       size="sm"
                       variant="destructive"
                       onClick={(e) => {
                         e.stopPropagation()
-                        onDeleteClick(file)
+                        if (!file.isUsed) onDeleteClick(file)
                       }}
                       className="h-6 w-6 p-0"
+                      disabled={!!file.isUsed}
+                      title={file.isUsed ? 'Файл используется' : 'Удалить'}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
