@@ -13,7 +13,7 @@ export default function LogoutButton() {
       })
 
       if (response.ok) {
-        router.push('/admin/login')
+        router.push('/')
         router.refresh()
       }
     } catch (error) {
@@ -25,7 +25,7 @@ export default function LogoutButton() {
     <button
       onClick={handleLogout}
       className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
-      title="Logout"
+      title="Выйти"
     >
       <LogOut className="w-4 h-4" />
     </button>

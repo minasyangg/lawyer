@@ -1,6 +1,57 @@
 
 @use "tailwindcss";
 
+// === Light Premium Color Palette ===
+$color-bg-main: #FFFFFF
+$color-bg-secondary: #F8F9FA
+$color-bg-card: #FFFFFF
+$color-border: #E9ECEF
+$color-text-main: #212529
+$color-text-secondary: #6C757D
+$color-accent-gold: #FFD700
+$color-accent-blue: #007BFF
+
+// === Typography ===
+$font-main: 'Inter', 'Segoe UI', Arial, sans-serif
+$font-heading: 'Montserrat', 'Inter', 'Segoe UI', Arial, sans-serif
+
+body
+	background: $color-bg-main
+	color: $color-text-main
+	font-family: $font-main
+
+h1, h2, h3, h4, h5, h6
+	font-family: $font-heading
+
+.premium-card
+	background: $color-bg-card
+	border: 1px solid $color-border
+	color: $color-text-main
+	border-radius: 1rem
+	box-shadow: 0 2px 16px 0 rgba(0,0,0,0.08)
+
+.premium-accent
+	color: $color-accent-gold
+
+.premium-btn
+	background: $color-accent-gold
+	color: $color-bg-main
+	font-weight: 600
+	border-radius: 0.5rem
+	padding: 0.75rem 2rem
+	transition: background 0.2s, color 0.2s
+	&:hover
+		background: $color-accent-blue
+		color: $color-text-main
+
+.premium-link
+	color: $color-accent-blue
+	&:hover
+		color: $color-accent-gold
+
+.premium-border
+	border-color: $color-border
+
 
 
 

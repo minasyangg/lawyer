@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { error: 'Email и пароль обязательны' },
         { status: 400 }
       )
     }
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     if (!user) {
       console.log('❌ Authentication failed - user not found or invalid password')
       return NextResponse.json(
-        { error: 'Invalid credentials' },
+        { error: 'Неверные учетные данные' },
         { status: 401 }
       )
     }
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ Login error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Внутренняя ошибка сервера' },
       { status: 500 }
     )
   }

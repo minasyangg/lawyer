@@ -34,7 +34,7 @@ export async function middleware(request: NextRequest) {
 
     if (!sessionCookie?.value) {
       console.log('❌ Middleware: No session cookie found')
-      return NextResponse.redirect(new URL('/admin/login', request.url))
+      return NextResponse.redirect(new URL('/login', request.url))
     }
 
     try {
@@ -44,7 +44,7 @@ export async function middleware(request: NextRequest) {
       // Только ADMIN может заходить в админ область
       if (user.userRole !== 'ADMIN') {
         console.log('❌ Middleware: Access denied - user role is:', user.userRole)
-        return NextResponse.redirect(new URL('/admin/login', request.url))
+        return NextResponse.redirect(new URL('/login', request.url))
       }
       
       console.log('✅ Middleware: Admin access granted')
@@ -59,7 +59,7 @@ export async function middleware(request: NextRequest) {
     const sessionCookie = request.cookies.get('admin-session')
 
     if (!sessionCookie?.value) {
-      return NextResponse.redirect(new URL('/admin/login', request.url))
+      return NextResponse.redirect(new URL('/login', request.url))
     }
 
     try {
@@ -67,7 +67,7 @@ export async function middleware(request: NextRequest) {
       
       // Только EDITOR может заходить в editor область
       if (user.userRole !== 'EDITOR') {
-        return NextResponse.redirect(new URL('/admin/login', request.url))
+        return NextResponse.redirect(new URL('/login', request.url))
       }
       
     } catch {

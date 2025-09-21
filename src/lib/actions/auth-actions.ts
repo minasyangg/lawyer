@@ -3,6 +3,8 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
+import { cookies } from 'next/headers'
+
 
 const prisma = new PrismaClient()
 
@@ -71,4 +73,10 @@ export async function createAdminUser(data: FormData) {
       errors: { general: ['Failed to create admin user'] }
     }
   }
+}
+
+export async function logout() {
+  const cookieStore = await cookies()
+  cookieStore.delete('admin-session')
+  // redirect('/') убран для корректной работы realtime logout
 }
