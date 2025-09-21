@@ -24,7 +24,8 @@
     "db:status:prod": "node scripts/prisma-runner.js migrate status --prod",
     "db:fresh:prod": "node scripts/prisma-runner.js migrate reset --force --prod && node prisma/seeds/runAllSeeds.js",
     "db:seed:single": "node prisma/seeds/seed.js",
-    "fix-cyrillic": "tsx scripts/fix-cyrillic-folders.ts"
+		 "dev:mobile": "next dev --hostname 172.19.0.1"
+		
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.884.0",

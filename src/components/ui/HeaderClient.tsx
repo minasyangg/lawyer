@@ -6,7 +6,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createSlugFromTitle } from "@/lib/services"
 import { useCurrentUser } from "@/lib/hooks/useCurrentUser"
-import { logout } from "@/lib/actions/auth-actions"
+import BurgerMenu from "@/components/ui/BurgerMenu"
 
 interface HeaderClientProps {
   services: Array<{ id: number; title: string }>
@@ -28,22 +28,16 @@ const customStyles = `
 
 export default function HeaderClient({ services }: HeaderClientProps) {
   const [isServicesOpen, setIsServicesOpen] = useState(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [showAllServices, setShowAllServices] = useState(false)
-  const [authKey, setAuthKey] = useState(0) // Ключ для принудительного обновления
-  const { user } = useCurrentUser(authKey)
+  const { user } = useCurrentUser()
   const router = useRouter()
   
   const maxVisibleServices = 6
   const displayServices = showAllServices ? services : services.slice(0, maxVisibleServices)
   const hasMoreServices = services.length > maxVisibleServices
 
-  const handleLogout = async () => {
-    await logout()
-    // Принудительно обновляем состояние аутентификации
-    setAuthKey(prev => prev + 1)
-    // Не делаем router.push, позволяем middleware перенаправить
-  }
+
+
 
   useEffect(() => {
     const style = document.createElement('style')
@@ -62,7 +56,8 @@ export default function HeaderClient({ services }: HeaderClientProps) {
           <Image src="/img/logo.svg" alt="AlexSite Logo" width={40} height={40} priority />
           <span className="font-bold text-xl premium-accent" style={{ fontFamily: 'Montserrat, Inter, Segoe UI, Arial, sans-serif' }}>ПФК</span>
         </div>
-        <nav className="hidden md:flex gap-8 items-center">
+  {/* Desktop nav hidden on <=1024px, burger visible */}
+  <nav className="hidden lg:flex gap-8 items-center">
           <Link href="/" className="premium-link font-medium">
             Главная
           </Link>
@@ -181,137 +176,10 @@ export default function HeaderClient({ services }: HeaderClientProps) {
           </div>
         </nav>
         
-        <button 
-          className="md:hidden p-2 rounded focus:outline-none focus:ring-2 focus:ring-accent-gold"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
-          <Image src="/img/menu.svg" alt="Открыть меню" width={24} height={24} />
-        </button>
+        {/* Burger button visible на laptop и ниже */}
+        <BurgerMenu services={services} />
       </div>
       
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden premium-card border-t premium-border shadow-lg">
-          <div className="container mx-auto max-w-screen-xl px-4 py-4">
-            <nav className="flex flex-col gap-4">
-              <Link 
-                href="/" 
-                className="premium-link font-medium py-2 px-2 rounded transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Главная
-              </Link>
-              
-              <div>
-                <button 
-                  className="premium-link font-medium py-2 px-2 flex items-center justify-between w-full rounded transition-colors"
-                  onClick={() => setIsServicesOpen(!isServicesOpen)}
-                >
-                  Услуги
-                  <svg className={`w-4 h-4 transform transition-transform duration-200 ${isServicesOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                
-                {isServicesOpen && (
-                  <div className="ml-4 mt-2">
-                    <div className="rounded-lg p-3 premium-card">
-                      <div className="space-y-1">
-                        {displayServices.map((service, index) => (
-                          <Link
-                            key={service.id}
-                            href={`/${createSlugFromTitle(service.title)}`}
-                            className="block premium-link py-2 px-3 text-sm rounded transition-all duration-200"
-                            onClick={() => {
-                              setIsMobileMenuOpen(false)
-                              setIsServicesOpen(false)
-                            }}
-                            style={{
-                              animation: isServicesOpen ? `fadeInUp 0.3s ease-out ${index * 30}ms both` : 'none'
-                            }}
-                          >
-                            {service.title}
-                          </Link>
-                        ))}
-                        {hasMoreServices && !showAllServices && (
-                          <button
-                            onClick={() => setShowAllServices(true)}
-                            className="w-full text-left premium-link py-2 px-3 text-sm rounded transition-colors duration-200 border-t premium-border mt-2 pt-3"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span>Показать еще ({services.length - maxVisibleServices})</span>
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </div>
-                          </button>
-                        )}
-                        {showAllServices && hasMoreServices && (
-                          <button
-                            onClick={() => setShowAllServices(false)}
-                            className="w-full text-left py-2 px-3 text-sm rounded transition-colors duration-200 border-t premium-border mt-2 pt-3" style={{ color: '#6C757D' }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span>Свернуть</span>
-                              <svg className="w-4 h-4 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </div>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <Link 
-                href="/publications" 
-                className="premium-link font-medium py-2 px-2 rounded transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Публикации
-              </Link>
-              <Link 
-                href="/contacts" 
-                className="premium-link font-medium py-2 px-2 rounded transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Контакты
-              </Link>
-              
-              {/* Mobile Auth Button */}
-              <div className="border-t premium-border mt-4 pt-4">
-                {user ? (
-                  <button
-                    onClick={() => {
-                      handleLogout()
-                      setIsMobileMenuOpen(false)
-                    }}
-                    className="flex items-center gap-2 w-full text-left py-2 px-2 text-gray-700 hover:text-red-600 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    Выйти
-                  </button>
-                ) : (
-                  <Link
-                    href="/login"
-                    className="flex items-center gap-2 py-2 px-2 text-gray-700 hover:text-blue-600 transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    Войти
-                  </Link>
-                )}
-              </div>
-            </nav>
-          </div>
-        </div>
-      )}
     </header>
   )
 }
