@@ -29,8 +29,9 @@ export default function LoginPage() {
         return
       }
 
-      // On success, redirect to admin dashboard or home
-      router.push('/admin')
+      // On success, use redirectUrl returned by API (role-based)
+      const redirectUrl = data?.redirectUrl || '/'
+      router.push(redirectUrl)
     } catch (err) {
       console.error('Login error:', err)
       setError('Network error')
@@ -41,8 +42,18 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md bg-white p-8 rounded-lg shadow">
-        <h1 className="text-2xl font-bold mb-6">Вход в админку</h1>
+      <div className="w-full max-w-md">
+        <button
+          onClick={() => router.push('/')}
+          className="mb-4 inline-flex items-center gap-2 text-sm text-gray-700 hover:underline"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          На главную
+        </button>
+        <div className="bg-white p-8 rounded-lg shadow">
+          <h1 className="text-2xl font-bold mb-6">Вход в админку</h1>
         {error && <div className="mb-4 text-red-600">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -75,6 +86,7 @@ export default function LoginPage() {
             {loading ? 'Вхожу...' : 'Войти'}
           </button>
         </form>
+        </div>
       </div>
     </div>
   )

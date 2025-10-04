@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email и пароль обязательны' },
+        { error: 'Email and password are required' },
         { status: 400 }
       )
     }
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     if (!user) {
       console.log('❌ Authentication failed - user not found or invalid password')
       return NextResponse.json(
-        { error: 'Неверные учетные данные' },
+        { error: 'Invalid credentials' },
         { status: 401 }
       )
     }
@@ -40,14 +40,18 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
+      path: '/',
       maxAge: 60 * 60 * 24 * 7, // 7 days
     })
 
-    return NextResponse.json({ success: true, user })
+    // Determine redirect URL based on role so client can navigate appropriately
+    const redirectUrl = user.userRole === 'ADMIN' ? '/admin' : user.userRole === 'EDITOR' ? '/editor' : '/'
+
+    return NextResponse.json({ success: true, user, redirectUrl })
   } catch (error) {
     console.error('❌ Login error:', error)
     return NextResponse.json(
-      { error: 'Внутренняя ошибка сервера' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
