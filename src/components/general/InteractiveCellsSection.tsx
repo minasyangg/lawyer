@@ -31,17 +31,19 @@ export default function InteractiveCellsSection() {
   const [activeCell, setActiveCell] = useState(2) // По умолчанию активна 2-я ячейка
 
   return (
-    <section className="w-full py-[50px] px-[25px]">
-      {/* full-width layout: cards span the full viewport width; stack on small screens; no gaps between cards */}
-      <div className="w-full flex flex-col md:flex-row">
+    <section className="w-full py-[35px] md:py-[40px] lg:py-[50px] px-0 lg:px-[25px]">
+      {/* Вертикальный stack на mobile/tablet, горизонтальный на desktop */}
+      <div className="w-full flex flex-col lg:flex-row">
         {cells.map((cell) => {
           const isActive = activeCell === cell.id
 
           return (
               <div
                 key={cell.id}
-                className="relative flex-1 min-w-0 cursor-pointer overflow-hidden"
-                style={{ aspectRatio: '4 / 5' }}
+                className="relative flex-1 min-w-0 cursor-pointer overflow-hidden mb-[-20px] last:mb-0 lg:mb-0"
+                style={{ 
+                  aspectRatio: '4 / 4.5' // Уменьшена высота на 10% для mobile (было 4/5)
+                }}
                 onMouseEnter={() => setActiveCell(cell.id)}
                 onClick={() => setActiveCell(cell.id)}
               >
@@ -66,20 +68,20 @@ export default function InteractiveCellsSection() {
 
                 {/* Active content (text over image) - opacity/transform animated to prevent FOUC */}
                 <div
-                  className={`relative z-10 h-full flex flex-col justify-between p-10 transition-all duration-900 ease-out ${isActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}
+                  className={`relative z-10 h-full flex flex-col justify-between p-6 md:p-8 lg:p-10 transition-all duration-900 ease-out ${isActive ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}
                   style={{ willChange: 'opacity, transform' }}
                 >
                   <div>
-                    <div className="text-[64px] font-bold text-white opacity-50 leading-none mb-4">
+                    <div className="text-[48px] md:text-[56px] lg:text-[64px] font-bold text-white opacity-50 leading-none mb-3 md:mb-3.5 lg:mb-4">
                       {cell.number}
                     </div>
-                    <h3 className="text-[32px] font-bold text-white leading-tight">
+                    <h3 className="text-[24px] md:text-[28px] lg:text-[32px] font-bold text-white leading-tight">
                       {cell.title}
                     </h3>
                   </div>
 
                   <div>
-                    <p className="text-[18px] text-white leading-relaxed">
+                    <p className="text-[14px] md:text-[16px] lg:text-[18px] text-white leading-relaxed">
                       {cell.description}
                     </p>
                   </div>
@@ -87,13 +89,13 @@ export default function InteractiveCellsSection() {
 
                 {/* Inactive centered content - same mounting, inverse visibility */}
                 <div
-                  className={`absolute inset-0 flex flex-col items-center justify-center p-10 transition-all duration-900 ease-out ${isActive ? 'opacity-0' : 'opacity-100'}`}
+                  className={`absolute inset-0 flex flex-col items-center justify-center p-6 md:p-8 lg:p-10 transition-all duration-900 ease-out ${isActive ? 'opacity-0' : 'opacity-100'}`}
                   style={{ willChange: 'opacity' }}
                 >
-                  <div className="text-[64px] font-bold text-white opacity-50 leading-none mb-4">
+                  <div className="text-[48px] md:text-[56px] lg:text-[64px] font-bold text-white opacity-50 leading-none mb-3 md:mb-3.5 lg:mb-4">
                     {cell.number}
                   </div>
-                  <h3 className="text-[32px] font-bold text-white leading-tight text-center">
+                  <h3 className="text-[24px] md:text-[28px] lg:text-[32px] font-bold text-white leading-tight text-center">
                     {cell.title}
                   </h3>
                 </div>
@@ -104,3 +106,4 @@ export default function InteractiveCellsSection() {
     </section>
   )
 }
+

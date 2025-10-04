@@ -21,7 +21,7 @@ export default function ServiceCard({ title, description, imageSrc, imageHeight 
   return (
     <div 
       onClick={handleClick}
-      className="group flex flex-col flex-shrink-0 w-[344px] h-[460px] bg-white rounded-2xl overflow-hidden shadow-card hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"
+      className="group flex flex-col flex-shrink-0 w-full h-[460px] bg-white rounded-2xl overflow-hidden shadow-card hover:shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer"
     >
       {/* Изображение услуги - фиксированная высота для всех */}
       <div className="relative w-full h-[145px] overflow-hidden flex-shrink-0">
@@ -36,14 +36,14 @@ export default function ServiceCard({ title, description, imageSrc, imageHeight 
       {/* Контент */}
       <div className="flex-1 flex flex-col p-5 pt-6">
         <div className="flex-1">
-          {/* Заголовок */}
-          <h3 className="text-[32px] font-bold text-gray-900 leading-[1.2] mb-3">
+          {/* Заголовок - адаптивный размер и line-clamp */}
+          <h3 className="text-[24px] md:text-[28px] lg:text-[32px] font-bold text-gray-900 leading-[1.2] mb-3 line-clamp-2">
             {title}
           </h3>
 
-          {/* Описание */}
-          <p className="text-[16px] text-gray-900 leading-[1.2]">
-            {description || 'Body text for whatever you\'d like to add more to the subheading.'}
+          {/* Описание - адаптивный размер и line-clamp */}
+          <p className="text-[14px] md:text-[15px] lg:text-[16px] text-gray-700 leading-[1.4] line-clamp-3">
+            {description || 'Комплексная юридическая поддержка и консультации по всем вопросам.'}
           </p>
         </div>
 

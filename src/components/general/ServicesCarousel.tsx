@@ -61,29 +61,34 @@ export default function ServicesCarousel() {
 
   return (
     <div className="relative w-full">
-      {/* Часть 1: Синий блок с градиентом + карусель */}
-      <section className="w-full bg-gradient-primary" style={{ padding: '80px 60px 80px 200px', height: '422px' }}>
+      {/* Часть 1: Синий блок с градиентом + карусель - адаптивная высота */}
+      <section 
+        className="w-full bg-gradient-primary px-[25px] py-[50px] md:px-[40px] md:py-[60px] lg:px-[60px] lg:py-[80px] xl:pl-[200px]"
+        style={{ 
+          height: 'auto',
+          minHeight: '400px'
+        }}
+      >
         <div className="container mx-auto max-w-screen-xl">
-          <div className="flex flex-col gap-10">
-            {/* Заголовок + Текст + Кнопка */}
-            <div className="flex items-center justify-center gap-[60px]">
-              {/* Заголовок слева */}
-              <h2 className="text-[48px] font-bold text-white leading-[1.2] whitespace-nowrap">
+          <div className="flex flex-col gap-6 md:gap-8 lg:gap-10">
+            {/* Заголовок + Текст + Кнопка - адаптивная раскладка */}
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-center gap-6 md:gap-8 lg:gap-[60px]">
+              {/* Заголовок */}
+              <h2 className="text-[32px] md:text-[40px] lg:text-[48px] font-bold text-white leading-[1.2]">
                 Услуги ПФК
               </h2>
 
-              {/* Текст и кнопка справа */}
-              <div className="flex flex-col gap-10">
-                {/* Текст */}
-                <p className="text-[20px] text-white leading-[1.2] w-[715px] h-[61px]">
+              {/* Текст и кнопка */}
+              <div className="flex flex-col gap-5 md:gap-7 lg:gap-10">
+                {/* Текст - адаптивная ширина */}
+                <p className="text-[14px] md:text-[17px] lg:text-[20px] text-white leading-[1.2] max-w-full lg:max-w-[715px]">
                   Консультации, сопровождение сделок, представительство в суде и комплексная поддержка.
                 </p>
 
-                {/* CTA Кнопка */}
+                {/* CTA Кнопка - адаптивные отступы */}
                 <Link 
                   href="/contacts" 
-                  className="group inline-flex items-center justify-center gap-4 text-[16px] font-bold text-black bg-white rounded-lg w-fit"
-                  style={{ padding: '16px 16px 16px 24px' }}
+                  className="group inline-flex items-center justify-center gap-3 md:gap-3.5 lg:gap-4 text-[14px] md:text-[15px] lg:text-[16px] font-bold text-black bg-white rounded-lg w-fit px-5 py-3 md:px-6 md:py-3.5 lg:px-6 lg:py-4 lg:pl-6"
                 >
                   <span>Связаться с нами</span>
                   <Image 
@@ -99,28 +104,39 @@ export default function ServicesCarousel() {
 
             {/* Карусель */}
             <div className="relative z-20">
-              {/* Контейнер карусели - показываем 3.5 карточки */}
+              {/* Контейнер карусели - адаптивное количество карточек */}
               <div
                 ref={scrollRef}
                 className="flex gap-5 overflow-x-auto scroll-smooth"
                 style={{ 
                   scrollbarWidth: 'none', 
                   msOverflowStyle: 'none',
-                  maxWidth: '1204px' // 344*3 + 172 + 60 = 1204px (3 полных + 0.5 + 3 gap)
+                  maxWidth: '100%'
                 }}
               >
                 {services.map((service) => (
-                  <ServiceCard
+                  <div 
                     key={service.id}
-                    title={service.title}
-                    imageSrc={service.imageSrc}
-                    imageHeight={service.imageHeight}
-                  />
+                    className="flex-shrink-0"
+                    style={{
+                      // Mobile: показываем 1 карточку + 20% следующей
+                      // Tablet: показываем 2 карточки
+                      // Desktop: показываем 3.5 карточки (фиксированная ширина 344px)
+                      width: 'calc(80vw - 30px)',
+                      maxWidth: '344px'
+                    }}
+                  >
+                    <ServiceCard
+                      title={service.title}
+                      imageSrc={service.imageSrc}
+                      imageHeight={service.imageHeight}
+                    />
+                  </div>
                 ))}
               </div>
 
-              {/* Навигация - в нижнем правом углу, 30px от карточек */}
-              <div className="absolute right-20    bottom-[-100px] flex gap-0 z-30">
+              {/* Навигация - скрываем на mobile/tablet, показываем только на desktop */}
+              <div className="hidden lg:flex absolute right-20 bottom-[-100px] gap-0 z-30">
                 {/* Стрелка влево */}
                 <button
                   onClick={() => scroll('left')}
@@ -148,8 +164,8 @@ export default function ServicesCarousel() {
         </div>
       </section>
 
-      {/* Часть 2: Фото (600px высота) */}
-      <div className="relative w-full h-[600px]">
+      {/* Часть 2: Фото (600px высота) - скрываем на mobile */}
+      <div className="relative w-full h-[400px] md:h-[500px] lg:h-[600px] hidden md:block">
         <Image
           src="/img/services-section-photo-6058bc.png"
           alt="Офис"
@@ -158,21 +174,19 @@ export default function ServicesCarousel() {
         />
       </div>
 
-      {/* Часть 3: Белый фон (120px высота) */}
-      <div className="relative w-full h-[120px] bg-white">
-        {/* Блок "Кому подойдут наши услуги?" - примыкает к правому нижнему углу части 3 */}
+      {/* Часть 3: Белый фон - адаптивная высота */}
+      <div className="relative w-full h-[80px] md:h-[100px] lg:h-[120px] bg-white">
+        {/* Блок "Кому подойдут наши услуги?" - 70% ширины экрана */}
         <div 
-          className="absolute rounded-tl-2xl rounded-bl-2xl" 
+          className="absolute rounded-tl-2xl rounded-bl-2xl px-[25px] py-[30px] md:px-[40px] md:py-[40px] lg:px-[60px] lg:py-[80px]" 
           style={{ 
-            width: '65%',
-            height: '220px',
+            width: '70%',
             right: '0',
             bottom: '0',
-            padding: '80px 60px',
             background: 'linear-gradient(90deg, rgba(4, 38, 161, 1) 0%, rgba(0, 39, 179, 1) 100%)'
           }}
         >
-          <h2 className="text-[48px] font-bold text-white leading-[1.2]">
+          <h2 className="text-[24px] md:text-[36px] lg:text-[48px] font-bold text-white leading-[1.2]">
             Кому подойдут наши услуги?
           </h2>
         </div>
@@ -181,6 +195,12 @@ export default function ServicesCarousel() {
       <style jsx>{`
         .scroll-smooth::-webkit-scrollbar {
           display: none;
+        }
+        
+        @media (min-width: 768px) and (max-width: 1023px) {
+          .flex-shrink-0 {
+            width: calc(47vw - 30px) !important;
+          }
         }
       `}</style>
     </div>

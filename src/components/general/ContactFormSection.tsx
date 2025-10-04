@@ -27,10 +27,10 @@ export default function ContactFormSection() {
   }
 
   return (
-    <section className="relative w-full flex justify-center" style={{ marginBottom: '-250px', zIndex: 10 }}>
-      <div className="flex w-full max-w-[1175px] h-[751px] rounded-2xl overflow-hidden shadow-lg">
-        {/* Левая часть - Фон с текстом (40%) */}
-        <div className="relative w-[40%] flex items-end">
+    <section className="relative w-full flex justify-center  mb-[-150px] md:mb-[-200px] lg:mb-[-250px]" style={{ zIndex: 10 }}>
+      <div className="flex flex-col md:flex-row w-full max-w-[1175px] h-auto md:h-[751px] rounded-2xl overflow-hidden shadow-lg mx-[25px] md:mx-[40px]">
+        {/* Левая часть - Фон с текстом (40%) - скрываем на mobile */}
+        <div className="relative w-full md:w-[40%] hidden md:flex items-end">
           {/* Фоновое изображение */}
           <Image
             src="/img/contact-background-7d3ad3.png"
@@ -48,18 +48,18 @@ export default function ContactFormSection() {
           />
 
           {/* Контент */}
-          <div className="relative z-10 p-10 pb-[40px] pt-[80px] flex flex-col gap-[10px]">
-            <h2 className="text-[48px] font-bold text-white leading-[1.2] mb-4">
+          <div className="relative z-10 p-6 md:p-8 lg:p-10 pb-[30px] md:pb-[35px] lg:pb-[40px] pt-[60px] md:pt-[70px] lg:pt-[80px] flex flex-col gap-[8px] md:gap-[9px] lg:gap-[10px]">
+            <h2 className="text-[36px] md:text-[42px] lg:text-[48px] font-bold text-white leading-[1.2] mb-3 md:mb-3.5 lg:mb-4">
               Обращение
             </h2>
-            <div className="text-[20px] text-white leading-[1.5] font-medium">
-              <p className="mb-4">
+            <div className="text-[16px] md:text-[18px] lg:text-[20px] text-white leading-[1.5] font-medium">
+              <p className="mb-3 md:mb-3.5 lg:mb-4">
                 Благодарим Вас за интерес к нашей компании, мы всегда рады помочь Вам.
               </p>
-              <p className="mb-4">
+              <p className="mb-3 md:mb-3.5 lg:mb-4">
                 Просим Вас оставить обращение нам на электронную почту, чтобы мы могли связаться с Вами и дать первичную консультацию.
               </p>
-              <p className="mb-4">
+              <p className="mb-3 md:mb-3.5 lg:mb-4">
                 Информируем Вас, что вся информация полученная от Вас является строго конфиденциальной.
               </p>
               <p>
@@ -69,97 +69,97 @@ export default function ContactFormSection() {
           </div>
         </div>
 
-        {/* Правая часть - Форма (60%) */}
-        <div className="w-[60%] bg-white flex items-center justify-center p-10">
-          <form onSubmit={handleSubmit} className="w-full max-w-[512px] flex flex-col gap-[34px]">
-            <div className="flex flex-col gap-[26px]">
+        {/* Правая часть - Форма (60% на desktop, 100% на mobile) */}
+        <div className="w-full md:w-[60%] bg-white flex items-center justify-center p-6 md:p-8 lg:p-10">
+          <form onSubmit={handleSubmit} className="w-full max-w-[512px] flex flex-col gap-[24px] md:gap-[29px] lg:gap-[34px]">
+            <div className="flex flex-col gap-[20px] md:gap-[23px] lg:gap-[26px]">
               {/* Заголовок */}
-              <div className="h-[51px]">
-                <h3 className="text-[32px] font-semibold text-black leading-[1.5]">
+              <div className="h-auto md:h-[51px]">
+                <h3 className="text-[24px] md:text-[28px] lg:text-[32px] font-semibold text-black leading-[1.5]">
                   Свяжитесь со мной
                 </h3>
               </div>
 
               {/* Поля формы */}
-              <div className="flex flex-col gap-6">
-                {/* Имя и Фамилия */}
-                <div className="flex gap-[26px]">
-                  <div className="flex-1 flex flex-col gap-2">
-                    <label htmlFor="firstName" className="text-[16px] font-medium text-black leading-[1.5]">
-                      Имя
-                    </label>
-                    <input
-                      type="text"
-                      id="firstName"
-                      name="firstName"
-                      value={formData.firstName}
-                      onChange={handleChange}
-                      placeholder="Jane"
-                      className="w-full px-4 py-3 border border-[#E0E0E0] rounded-lg text-[16px] text-[#828282] leading-[1.5] focus:outline-none focus:border-primary shadow-sm"
-                    />
-                  </div>
-                  <div className="flex-1 flex flex-col gap-2">
-                    <label htmlFor="lastName" className="text-[16px] font-medium text-black leading-[1.5]">
-                      Фамилия
-                    </label>
-                    <input
-                      type="text"
-                      id="lastName"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleChange}
-                      placeholder="Smitherton"
-                      className="w-full px-4 py-3 border border-[#E0E0E0] rounded-lg text-[16px] text-[#828282] leading-[1.5] focus:outline-none focus:border-primary shadow-sm"
-                    />
-                  </div>
+              <div className="flex flex-col gap-2">
+                {/* Имя */}
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="firstName" className="text-[14px] md:text-[15px] lg:text-[16px] font-medium text-black leading-[1.5]">
+                    Имя
+                  </label>
+                  <input
+                    type="text"
+                    id="firstName"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    placeholder="Jane"
+                    className="w-full px-4 py-3 border border-[#E0E0E0] rounded-lg text-[14px] md:text-[15px] lg:text-[16px] text-[#828282] leading-[1.5] focus:outline-none focus:border-primary shadow-sm"
+                  />
+                </div>
+                
+                {/* Фамилия */}
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="lastName" className="text-[14px] md:text-[15px] lg:text-[16px] font-medium text-black leading-[1.5]">
+                    Фамилия
+                  </label>
+                  <input
+                    type="text"
+                    id="lastName"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    placeholder="Smitherton"
+                    className="w-full px-4 py-3 border border-[#E0E0E0] rounded-lg text-[14px] md:text-[15px] lg:text-[16px] text-[#828282] leading-[1.5] focus:outline-none focus:border-primary shadow-sm"
+                  />
                 </div>
 
-                {/* ОГРН и Email */}
-                <div className="flex flex-col gap-6">
-                  <div className="flex flex-col gap-2 h-[80px]">
-                    <label htmlFor="ogrn" className="text-[16px] font-medium text-black leading-[1.5]">
-                      ОГРН / ОГРНИП
-                    </label>
-                    <input
-                      type="text"
-                      id="ogrn"
-                      name="ogrn"
-                      value={formData.ogrn}
-                      onChange={handleChange}
-                      placeholder="1111111111111"
-                      className="w-full px-4 py-3 border border-[#E0E0E0] rounded-lg text-[16px] text-[#828282] leading-[1.5] focus:outline-none focus:border-primary shadow-sm"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2 h-[80px]">
-                    <label htmlFor="email" className="text-[16px] font-medium text-black leading-[1.5]">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      placeholder="email@janesfakedomain.net"
-                      className="w-full px-4 py-3 border border-[#E0E0E0] rounded-lg text-[16px] text-[#828282] leading-[1.5] focus:outline-none focus:border-primary shadow-sm"
-                    />
-                  </div>
+                {/* ОГРН */}
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="ogrn" className="text-[14px] md:text-[15px] lg:text-[16px] font-medium text-black leading-[1.5]">
+                    ОГРН / ОГРНИП
+                  </label>
+                  <input
+                    type="text"
+                    id="ogrn"
+                    name="ogrn"
+                    value={formData.ogrn}
+                    onChange={handleChange}
+                    placeholder="1111111111111"
+                    className="w-full px-4 py-3 border border-[#E0E0E0] rounded-lg text-[14px] md:text-[15px] lg:text-[16px] text-[#828282] leading-[1.5] focus:outline-none focus:border-primary shadow-sm"
+                  />
+                </div>
+                
+                {/* Email */}
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="email" className="text-[14px] md:text-[15px] lg:text-[16px] font-medium text-black leading-[1.5]">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="email@janesfakedomain.net"
+                    className="w-full px-4 py-3 border border-[#E0E0E0] rounded-lg text-[14px] md:text-[15px] lg:text-[16px] text-[#828282] leading-[1.5] focus:outline-none focus:border-primary shadow-sm"
+                  />
+                </div>
                   
-                  {/* Вопрос */}
-                  <div className="flex flex-col gap-2">
-                    <label htmlFor="question" className="text-[16px] font-medium text-black leading-[1.5]">
-                      Опишите Ваш вопрос
-                    </label>
-                    <textarea
-                      id="question"
-                      name="question"
-                      value={formData.question}
-                      onChange={handleChange}
-                      placeholder="Enter your question or message"
-                      rows={4}
-                      className="w-full px-4 py-3 border border-[#E0E0E0] rounded-lg text-[16px] text-[#828282] leading-[1.5] focus:outline-none focus:border-primary shadow-sm resize-none"
-                    />
-                  </div>
+                {/* Вопрос */}
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="question" className="text-[14px] md:text-[15px] lg:text-[16px] font-medium text-black leading-[1.5]">
+                    Опишите Ваш вопрос
+                  </label>
+                  <textarea
+                    id="question"
+                    name="question"
+                    value={formData.question}
+                    onChange={handleChange}
+                    placeholder="Enter your question or message"
+                    rows={4}
+                    className="w-full px-4 py-3 border border-[#E0E0E0] rounded-lg text-[14px] md:text-[15px] lg:text-[16px] text-[#828282] leading-[1.5] focus:outline-none focus:border-primary shadow-sm resize-none"
+                  />
                 </div>
               </div>
             </div>
@@ -191,7 +191,7 @@ export default function ContactFormSection() {
             <button
               type="submit"
               disabled={!formData.agreedToPolicy}
-              className="w-full px-6 py-4 bg-[#060606] text-white text-[16px] font-bold leading-[1.5] rounded-lg hover:bg-[#1a1a1a] transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-6 py-4 bg-[#060606] text-white text-[16px] font-bold leading-[1.5] rounded-lg hover:bg-[#1a1a1a] transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed md:mb-8 lg:mb-10"
             >
               Обращение
             </button>
