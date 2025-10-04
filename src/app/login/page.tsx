@@ -3,10 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-
-type UserRole = 'ADMIN' | 'EDITOR' | 'CLIENT'
+// ...existing imports
 
 interface FloatingInputProps {
   id: string
@@ -61,7 +58,6 @@ function FloatingInput({ id, name, type, label, required }: FloatingInputProps) 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  const [selectedRole, setSelectedRole] = useState<UserRole>('CLIENT')
   const router = useRouter()
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -74,7 +70,7 @@ export default function Login() {
     const password = formData.get('password') as string
 
     try {
-      console.log('Attempting login with:', { email, password: '***', role: selectedRole })
+    console.log('Attempting login with:', { email, password: '***' })
 
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -90,24 +86,15 @@ export default function Login() {
       if (response.ok && result.success) {
         console.log('Login successful, redirecting...')
 
-        // Проверяем, соответствует ли роль пользователя выбранной роли
+        // Перенаправляем в зависимости от роли, привязанной к аккаунту
         const userRole = result.user.userRole
-        const roleMap = { ADMIN: 'ADMIN', EDITOR: 'EDITOR', CLIENT: 'USER' }
-        const requiredRole = roleMap[selectedRole]
-
-        if (userRole !== requiredRole) {
-          setError(`Доступ запрещен. У вас нет прав ${selectedRole.toLowerCase() === 'client' ? 'клиента' : selectedRole.toLowerCase() === 'editor' ? 'редактора' : 'администратора'}.`)
-          return
-        }
-
-        // Перенаправляем в зависимости от выбранной роли
-        if (selectedRole === 'ADMIN') {
+        if (userRole === 'ADMIN') {
           router.push('/admin')
-        } else if (selectedRole === 'EDITOR') {
+        } else if (userRole === 'EDITOR') {
           router.push('/editor')
         } else {
-          // Для CLIENT перенаправляем на главную
-          router.push('/')
+          // Для обычного пользователя перенаправляем в личный кабинет
+          router.push('/client')
         }
 
         router.refresh()
@@ -132,19 +119,7 @@ export default function Login() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <Label htmlFor="role">Роль</Label>
-            <Select value={selectedRole} onValueChange={(value) => setSelectedRole(value as UserRole)}>
-              <SelectTrigger className="mt-1">
-                <SelectValue placeholder="Выберите роль" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="CLIENT">Клиент</SelectItem>
-                <SelectItem value="EDITOR">Редактор</SelectItem>
-                <SelectItem value="ADMIN">Администратор</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* role selection removed - role is determined by account linked to email */}
 
           <div>
             <FloatingInput

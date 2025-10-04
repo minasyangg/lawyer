@@ -70,9 +70,15 @@ export async function createUser(data: FormData) {
   }
 
   try {
+    // Check for duplicate email
+    const existing = await prisma.user.findUnique({ where: { email: validatedFields.data.email } })
+    if (existing) {
+      return { errors: { email: ['Email already in use'] } }
+    }
+
     // Hash the password
     const hashedPassword = await bcrypt.hash(validatedFields.data.password, 12)
-    
+
     await prisma.user.create({
       data: {
         name: validatedFields.data.name,

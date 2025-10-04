@@ -32,6 +32,7 @@ export function FileImage({ src, alt, className, fill = false, sizes }: FileImag
       className={className}
       sizes={sizes}
       unoptimized={true} // Отключаем оптимизацию для внешних URL
+      loading="lazy"
       onError={() => setError(true)}
     />
   )

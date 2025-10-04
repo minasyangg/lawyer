@@ -49,3 +49,42 @@ export function createSlugFromTitle(title: string): string {
     .replace(/--+/g, '-')
     .replace(/^-+|-+$/g, '')
 }
+
+export type RecentPublication = {
+  id: number
+  title: string
+  excerpt?: string | null
+  slug: string
+  date: string
+  cover?: string | null
+}
+
+export async function getRecentPublications(limit = 3): Promise<RecentPublication[]> {
+  const withFiles = await prisma.article.findMany({
+    where: { published: true },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    include: {
+      files: {
+        include: { file: true },
+        take: 1
+      }
+    }
+  })
+
+  return withFiles.map(a => {
+    // a.files is (ArticleFile & { file: File | null })[]
+    const firstArticleFile = a.files && a.files.length > 0 ? a.files[0] : undefined
+    const fileObj = firstArticleFile && 'file' in firstArticleFile ? firstArticleFile.file : undefined
+    const cover = fileObj && fileObj.filename ? `/api/files/direct/${fileObj.filename}` : null
+
+    return {
+      id: a.id,
+      title: a.title,
+      excerpt: a.excerpt,
+      slug: a.slug,
+      date: a.createdAt.toISOString().split('T')[0],
+      cover,
+    }
+  })
+}

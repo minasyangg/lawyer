@@ -35,6 +35,12 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     }).format(new Date(date))
   }
 
+  // Ensure images inside article HTML lazy-load to save bandwidth and improve CLS
+  const addLazyToImages = (html: string) => {
+    // Add loading="lazy" to <img> tags that don't already have a loading attribute
+    return html.replace(/<img(?![^>]*loading=)([^>]*?)>/gi, '<img loading="lazy"$1>')
+  }
+
   // Get related articles from the same category
   const relatedArticles = await getPublishedArticles(
     article.categoryId || undefined, 
@@ -95,9 +101,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
           {/* Article Content */}
           <div className="mb-12">
-            <div 
+            <div
               className="text-gray-800 leading-relaxed rich-text-content prose-custom"
-              dangerouslySetInnerHTML={{ __html: article.content }}
+              // use processed HTML with lazy-loaded images
+              dangerouslySetInnerHTML={{ __html: addLazyToImages(article.content) }}
             />
           </div>
 

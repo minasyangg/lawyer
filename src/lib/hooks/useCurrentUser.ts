@@ -1,43 +1,50 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
-interface User {
-  id: number
-  email: string
-  name: string
-  userRole: string
-}
+type CurrentUser = {
+	id?: number
+	name?: string
+	email?: string
+	userRole?: string
+} | null
 
-export function useCurrentUser(refreshKey?: number) {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+export function useCurrentUser() {
+	const [user, setUser] = useState<CurrentUser>(null)
 
-  const checkAuth = async () => {
-    setLoading(true)
-    try {
-      const response = await fetch('/api/auth/check', {
-        method: 'GET',
-        credentials: 'include'
-      })
+	useEffect(() => {
+		let mounted = true
 
-      if (response.ok) {
-        const userData = await response.json()
-        setUser(userData)
-      } else {
-        setUser(null)
-      }
-    } catch (error) {
-      console.error('Error checking auth:', error)
-      setUser(null)
-    } finally {
-      setLoading(false)
-    }
-  }
+		// First try to read a server-injected global (if the app sets it)
+		const globalObj = globalThis as unknown as Record<string, unknown>
+		if (globalObj && 'CURRENT_USER' in globalObj) {
+			const cu = globalObj['CURRENT_USER'] as CurrentUser
+			if (mounted) setUser(cu)
+			return () => {
+				mounted = false
+			}
+		}
 
-  useEffect(() => {
-    checkAuth()
-  }, [refreshKey])
+		// Fallback: fetch current user from the auth check endpoint
+		;(async () => {
+			try {
+				const res = await fetch('/api/auth/check')
+				if (!mounted) return
+				if (!res.ok) {
+					setUser(null)
+					return
+				}
+				const data = await res.json()
+				setUser((data && data.user) || null)
+			} catch (err) {
+				if (mounted) setUser(null)
+			}
+		})()
 
-  return { user, loading, refetch: checkAuth }
+		return () => {
+			mounted = false
+		}
+	}, [])
+
+	return { user }
 }

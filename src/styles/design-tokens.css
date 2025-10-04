@@ -1,0 +1,36 @@
+:root {
+  /* Colors from Figma frame */
+  --color-bg-gradient-start: #051F90; /* from linear gradient start */
+  --color-bg-gradient-end: #0B1C48; /* gradient end */
+  --color-white: #FFFFFF;
+  --color-060606: #060606;
+  --color-323232: #323232;
+  --color-56647F: #56647F;
+  --color-0426A1: #0426A1;
+  --color-0B1C48: #0B1C48;
+  --color-929292: #929292;
+
+  /* Primary tokens */
+  --color-primary: #0426A1; /* use strong blue */
+  --color-accent: #0B1C48; /* dark accent */
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+
+  /* sizes (from Figma styles) */
+  --text-64: 4rem; /* 64px */
+  --text-48: 3rem; /* 48px */
+  --text-38: 2.375rem; /* 38px */
+  --text-32: 2rem; /* 32px */
+  --text-20: 1.25rem; /* 20px */
+  --text-18: 1.125rem; /* 18px */
+  --text-16: 1rem; /* 16px */
+  --text-14: 0.875rem; /* 14px */
+  --text-12: 0.75rem; /* 12px */
+
+  /* weights */
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+}
