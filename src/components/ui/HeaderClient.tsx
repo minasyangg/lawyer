@@ -40,8 +40,8 @@ export default function HeaderClient({ services }: HeaderClientProps) {
     <header className="w-full bg-white border-b border-gray-200">
       <div className="container mx-auto max-w-screen-xl px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Image src="/img/logo.svg" alt="AlexSite Logo" width={40} height={40} priority />
-          <span className="font-bold text-xl" style={{ fontFamily: 'Montserrat, Inter, Segoe UI, Arial, sans-serif' }}>ПФК</span>
+          <Image src="/img/logo-vector.svg" alt="ПФК Логотип" width={44} height={22} priority />
+          <span className="font-bold text-xl font-display" style={{ color: '#000000' }}>ПФК</span>
         </div>
 
         <nav className="hidden lg:flex gap-8 items-center">
@@ -85,9 +85,19 @@ export default function HeaderClient({ services }: HeaderClientProps) {
 
           <div className="ml-4">
             {!user ? (
-              <Link href="/login" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-primary rounded-md shadow-sm hover:bg-[#03206f] transition-colors">Войти</Link>
+              <Link href="/login" className="group inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-primary rounded-md shadow-button hover:bg-primary-dark transition-all duration-200">
+                <span>Войти</span>
+                <svg className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-[5px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
             ) : (
-              <button onClick={() => { if (user.userRole === 'ADMIN') router.push('/admin'); else if (user.userRole === 'EDITOR') router.push('/editor'); else router.push('/client'); }} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary transition-colors">Личный кабинет</button>
+              <button onClick={() => { if (user.userRole === 'ADMIN') router.push('/admin'); else if (user.userRole === 'EDITOR') router.push('/editor'); else router.push('/client'); }} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.655 6.879 1.804M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Личный кабинет
+              </button>
             )}
           </div>
         </nav>

@@ -1,24 +1,18 @@
-
 import React from "react";
-import SectionInfo from "../components/section/SectionInfo";
-import SectionServices from "../components/section/SectionServices";
-import Header from "../components/ui/Header";
-import SectionActuality from "../components/section/SectionActuality";
-import SectionArticles from "../components/section/SectionArticles";
-import Footer from "../components/ui/Footer";
-import HomeClient from "../components/ui/HomeClient";
+import Header from "@/components/ui/Header";
+import HeroSection from "@/components/general/HeroSection";
+import ServicesCarousel from "@/components/general/ServicesCarousel";
 
 export default function Home() {
-	return (
-		<>
-			<Header />
-			<SectionInfo />
-			<SectionServices />
-			<HomeClient />
-			<SectionActuality />
-			{/* Recent publications section */}
-			<SectionArticles />
-			<Footer />
-		</>
-	);
+  return (
+    <>
+      <Header />
+      <main>
+        <HeroSection />
+        <ServicesCarousel />
+        
+        {/* Остальные секции будут добавлены после проверки Services */}
+      </main>
+    </>
+  );
 }
