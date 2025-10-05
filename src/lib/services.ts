@@ -50,41 +50,68 @@ export function createSlugFromTitle(title: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-export type RecentPublication = {
-  id: number
-  title: string
-  excerpt?: string | null
-  slug: string
-  date: string
-  cover?: string | null
-}
-
-export async function getRecentPublications(limit = 3): Promise<RecentPublication[]> {
-  const withFiles = await prisma.article.findMany({
-    where: { published: true },
-    orderBy: { createdAt: 'desc' },
+/**
+ * Получает последние 3 статьи для услуги
+ * Приоритет:
+ * 1. Статьи из данной категории (serviceId)
+ * 2. Статьи из других категорий
+ * 3. Статьи без категории (categoryId === null)
+ * Всегда возвращает до `limit` статей
+ */
+export async function getRelatedArticles(serviceId: number, limit: number = 3) {
+  // 1. Получаем статьи из той же категории
+  const categoryArticles = await prisma.article.findMany({
+    where: {
+      categoryId: serviceId,
+      published: true,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
     take: limit,
-    include: {
-      files: {
-        include: { file: true },
-        take: 1
-      }
-    }
+    select: {
+      id: true,
+      title: true,
+      excerpt: true,
+      slug: true,
+    },
   })
 
-  return withFiles.map(a => {
-    // a.files is (ArticleFile & { file: File | null })[]
-    const firstArticleFile = a.files && a.files.length > 0 ? a.files[0] : undefined
-    const fileObj = firstArticleFile && 'file' in firstArticleFile ? firstArticleFile.file : undefined
-    const cover = fileObj && fileObj.filename ? `/api/files/direct/${fileObj.filename}` : null
+  // Если уже есть достаточно статей из категории, возвращаем их
+  if (categoryArticles.length >= limit) {
+    return categoryArticles.slice(0, limit)
+  }
 
-    return {
-      id: a.id,
-      title: a.title,
-      excerpt: a.excerpt,
-      slug: a.slug,
-      date: a.createdAt.toISOString().split('T')[0],
-      cover,
-    }
+  // 2. Добавляем статьи из других категорий (включая статьи без категории)
+  const remainingCount = limit - categoryArticles.length
+  const otherArticles = await prisma.article.findMany({
+    where: {
+      OR: [
+        {
+          categoryId: {
+            not: serviceId,
+          },
+        },
+        {
+          categoryId: null,
+        },
+      ],
+      published: true,
+      id: {
+        notIn: categoryArticles.map(a => a.id),
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+    take: remainingCount,
+    select: {
+      id: true,
+      title: true,
+      excerpt: true,
+      slug: true,
+    },
   })
+
+  return [...categoryArticles, ...otherArticles]
 }

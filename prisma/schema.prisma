@@ -55,6 +55,7 @@ model Service {
   title       String           @unique
   description String
   extraInfo   String?
+  heroImage   String?          // Путь к изображению героя услуги, например "/img/services/bankruptcy.png"
   details     ServiceDetails[]
   articles    Article[]
 }
