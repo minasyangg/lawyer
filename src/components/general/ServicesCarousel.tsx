@@ -50,6 +50,7 @@ export default function ServicesCarousel() {
   const firstImageRef = useRef<HTMLDivElement>(null as unknown as HTMLDivElement)
   const [blueHeight, setBlueHeight] = useState<number | null>(null)
   const navRef = useRef<HTMLDivElement | null>(null)
+  const [isDesktop, setIsDesktop] = useState(false)
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -65,17 +66,35 @@ export default function ServicesCarousel() {
 
   // Measure the bottom of the first card image relative to the blue section
   useLayoutEffect(() => {
+    // desktop state
+    function handleDesktopResize() {
+      setIsDesktop(window.innerWidth >= 1024)
+    }
+    handleDesktopResize()
+    window.addEventListener('resize', handleDesktopResize)
+
     function recalc() {
       if (!sectionRef.current || !firstImageRef.current) return
       const sectionRect = sectionRef.current.getBoundingClientRect()
       const imageRect = firstImageRef.current.getBoundingClientRect()
-  const imageBottomRelative = imageRect.bottom - sectionRect.top
-  // set a minimum to avoid collapsing too small
-  setBlueHeight(Math.max(0, Math.round(imageBottomRelative)))
+
+      // For mobile/tablet ensure the blue section covers the full carousel so cards fit inside
+      const viewportWidth = window.innerWidth
+      if (viewportWidth < 1024 && scrollRef.current) {
+        const scRect = scrollRef.current.getBoundingClientRect()
+        const scBottomRelative = scRect.bottom - sectionRect.top
+        // add small padding to avoid tight clipping
+        setBlueHeight(Math.max(0, Math.round(scBottomRelative + 16)))
+        return
+      }
+
+      const imageBottomRelative = imageRect.bottom - sectionRect.top
+      // set a minimum to avoid collapsing too small
+      setBlueHeight(Math.max(0, Math.round(imageBottomRelative)))
     }
 
     recalc()
-    window.addEventListener('resize', recalc)
+  window.addEventListener('resize', recalc)
 
     // align nav buttons with the visible right edge of the scroll container
     function alignNav() {
@@ -99,14 +118,15 @@ export default function ServicesCarousel() {
       nav.style.right = `${rightOffset}px`
     }
 
-    alignNav()
-    window.addEventListener('resize', alignNav)
+  alignNav()
+  window.addEventListener('resize', alignNav)
     const scEl = scrollRef.current
     if (scEl) scEl.addEventListener('scroll', alignNav)
 
     return () => {
       window.removeEventListener('resize', recalc)
       window.removeEventListener('resize', alignNav)
+      window.removeEventListener('resize', handleDesktopResize)
       if (scEl) scEl.removeEventListener('scroll', alignNav)
     }
   }, [])
@@ -116,10 +136,10 @@ export default function ServicesCarousel() {
       {/* Часть 1: Синий блок с градиентом + карусель - адаптивная высота */}
       <section 
         ref={sectionRef}
-        className="w-full bg-gradient-primary px-[25px] py-[50px] md:px-[40px] md:py-[60px] lg:px-[60px] lg:py-[80px] xl:pl-[200px]"
+        className="w-full bg-gradient-primary px-[25px] pt-0 md:pt-[50px] lg:pt-[80px] pb-[40px] md:pb-[50px] lg:pb-[80px] md:px-[40px] lg:px-[60px] xl:pl-[200px]"
         style={{ 
           height: blueHeight ? `${blueHeight}px` : undefined,
-          minHeight: '400px',
+          minHeight: '240px',
           transition: 'height 200ms ease'
         }}
       >
@@ -221,7 +241,7 @@ export default function ServicesCarousel() {
 
       {/* Часть 2: Фото - делаем абсолютным и позиционируем по вычисленному blueHeight. */}
       {/* Spacer нужен, чтобы сохранить высоту потока документа. */}
-      <div className="w-full h-[400px] md:h-[500px] lg:h-[600px]" aria-hidden="true" />
+  <div className="hidden lg:block w-full h-[600px]" aria-hidden="true" />
 
       <div
         className="hidden md:block pointer-events-none"
@@ -234,7 +254,7 @@ export default function ServicesCarousel() {
           zIndex: 10,
         }}
       >
-        <div className="relative w-full h-[400px] md:h-[500px] lg:h-[600px]">
+        <div className="relative w-full h-[200px] md:h-[300px] lg:h-[600px]">
           <Image
             src="/img/services-section-photo-6058bc.png"
             alt="Офис"
@@ -244,17 +264,11 @@ export default function ServicesCarousel() {
         </div>
       </div>
 
-      {/* Часть 3: Белый фон - адаптивная высота */}
-      <div className="relative w-full h-[80px] md:h-[100px] lg:h-[120px] bg-white">
+  {/* Часть 3: Белый фон - адаптивная высота */}
+  <div className="relative w-full h-auto lg:h-[120px] bg-white">
         {/* Блок "Кому подойдут наши услуги?" - 70% ширины экрана */}
-        <div 
-          className="absolute rounded-tl-2xl rounded-bl-2xl px-[25px] py-[30px] md:px-[40px] md:py-[40px] lg:px-[60px] lg:py-[80px] z-50" 
-          style={{ 
-            width: '70%',
-            right: '0',
-            bottom: '0',
-            background: 'linear-gradient(90deg, rgba(4, 38, 161, 1) 0%, rgba(0, 39, 179, 1) 100%)'
-          }}
+        <div
+          className="relative lg:absolute left-0 right-0 lg:left-auto lg:right-0 rounded-none lg:rounded-tl-2xl lg:rounded-bl-2xl px-[20px] py-[27px] md:px-[30px] md:py-[35px] lg:px-[60px] w-screen md:w-screen lg:w-[70vw] z-50 translate-y-0 lg:translate-y-[-40%] lg:h-[160px] lg:flex lg:items-center bg-gradient-to-r from-[#0426A1] to-[#0027B3]"
         >
           <h2 className="text-[24px] md:text-[36px] lg:text-[48px] font-bold text-white leading-[1.2]">
             Кому подойдут наши услуги?

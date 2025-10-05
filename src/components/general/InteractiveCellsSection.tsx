@@ -28,10 +28,19 @@ const cells = [
 ]
 
 export default function InteractiveCellsSection() {
-  const [activeCell, setActiveCell] = useState(2) // По умолчанию активна 2-я ячейка
+  const [activeCell, setActiveCell] = useState(2) // По умолчанию активна 2-я ячейка (will be adjusted on mount)
+
+  // On client mount set the default active cell depending on viewport:
+  // mobile/tablet -> 1, desktop (>=1024) -> 2
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return
+    const isDesktop = window.innerWidth >= 1024
+    setActiveCell(isDesktop ? 2 : 1)
+    // We intentionally do not watch resize here to avoid overriding user interaction
+  }, [])
 
   return (
-    <section className="w-full py-[35px] md:py-[40px] lg:py-[50px] px-0 lg:px-[25px]">
+  <section className="w-full pt-0 pb-[35px] md:pt-0 md:pb-[40px] lg:pt-[50px] lg:pb-[50px] px-0 lg:px-[25px] lg:mt-10">
       {/* Вертикальный stack на mobile/tablet, горизонтальный на desktop */}
       <div className="w-full flex flex-col lg:flex-row">
         {cells.map((cell) => {
