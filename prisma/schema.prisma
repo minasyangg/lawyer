@@ -1,0 +1,247 @@
+model FileEntity {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  name      String
+  isFolder  Boolean
+  parentId  Int?
+  path      String?
+  size      Int?
+  mimeType  String?
+  url       String?
+  createdAt DateTime @default(now())
+
+  parent    FileEntity? @relation("FolderParent", fields: [parentId], references: [id])
+  children  FileEntity[] @relation("FolderParent")
+  user      User        @relation(fields: [userId], references: [id])
+}
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Enums для системы аутентификации
+enum UserRole {
+  ADMIN
+  EDITOR  
+  USER
+}
+
+enum UserStatus {
+  PENDING     // Ожидает модерации (для публичной регистрации)
+  APPROVED    // Одобрен админом
+  REJECTED    // Отклонен админом
+  ACTIVE      // Активный пользователь
+  SUSPENDED   // Заблокирован
+}
+
+enum LoginAttemptResult {
+  SUCCESS
+  FAILED
+  BLOCKED
+  TWO_FACTOR_REQUIRED
+  TWO_FACTOR_FAILED
+}
+
+model Service {
+  id          Int              @id @default(autoincrement())
+  title       String           @unique
+  description String
+  extraInfo   String?
+  details     ServiceDetails[]
+  articles    Article[]
+}
+
+model ServiceDetails {
+  id          Int     @id @default(autoincrement())
+  category    String
+  services    String
+  serviceId   Int?
+  service     Service? @relation(fields: [serviceId], references: [id])
+}
+
+model User {
+  id                    Int       @id @default(autoincrement())
+  name                  String
+  email                 String    @unique
+  password              String?
+  userRole              UserRole  @default(USER)
+  status                UserStatus @default(ACTIVE)
+  
+  // 2FA настройки
+  twoFactorEnabled      Boolean   @default(false)
+  twoFactorSecret       String?   @unique
+  twoFactorBackupCodes  Json?     // Массив backup кодов
+  
+  // Управление аккаунтом
+  isActive              Boolean   @default(true)
+  emailVerified         Boolean   @default(false)
+  lastLogin             DateTime?
+  failedLoginAttempts   Int       @default(0)
+  lockedUntil           DateTime?
+  
+  // Восстановление пароля
+  passwordResetToken    String?   @unique
+  passwordResetExpires  DateTime?
+  
+  // Метаданные
+  registrationNote      String?   // Комментарий при регистрации
+  rejectionReason       String?   // Причина отклонения заявки
+  
+  // Timestamps
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  
+  // Relations
+  articles              Article[]
+  files                 File[]
+  folders               Folder[]
+  fileEntities          FileEntity[]
+  loginLogs             LoginLog[]
+  
+  // Кто создал/модерировал пользователя
+  createdUsers          User[]    @relation("UserCreatedBy")
+  createdBy             User?     @relation("UserCreatedBy", fields: [createdById], references: [id])
+  createdById           Int?
+  
+  @@index([email])
+  @@index([status])
+  @@index([userRole])
+}
+
+// Логирование всех попыток входа
+model LoginLog {
+  id                Int                 @id @default(autoincrement())
+  userId            Int?                // null если пользователь не найден
+  email             String
+  ipAddress         String?
+  userAgent         String?
+  result            LoginAttemptResult
+  failureReason     String?             // "invalid_password", "account_locked", "2fa_required", etc.
+  twoFactorUsed     Boolean             @default(false)
+  sessionId         String?             // ID сессии для отслеживания
+  createdAt         DateTime            @default(now())
+  
+  user              User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([email])
+  @@index([ipAddress])
+  @@index([createdAt])
+  @@index([result])
+}
+
+model Article {
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String
+  excerpt     String?
+  slug        String   @unique
+  published   Boolean  @default(false)
+  categoryId  Int?
+  authorId    Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  author      User     @relation(fields: [authorId], references: [id])
+  category    Service? @relation(fields: [categoryId], references: [id])
+  tags        ArticleTag[]
+  files       ArticleFile[] // Связь с файлами
+}
+
+model Tag {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  slug        String   @unique
+  color       String?
+  createdAt   DateTime @default(now())
+  
+  articles    ArticleTag[]
+}
+
+model ArticleTag {
+  articleId   Int
+  tagId       Int
+  
+  article     Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag         Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  
+  @@id([articleId, tagId])
+}
+
+// Связующая таблица между Article и File
+model ArticleFile {
+  articleId   Int
+  fileId      Int
+  createdAt   DateTime @default(now())
+  
+  article     Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  file        File    @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  
+  @@id([articleId, fileId])
+  @@index([articleId])
+  @@index([fileId])
+}
+
+model File {
+  id          Int      @id @default(autoincrement())
+  originalName String
+  filename     String   @unique
+  path         String   // Логический путь в storage (без домена)
+  virtualPath  String   @default("") // Виртуальный путь для отображения
+  virtualId    String?  @unique // Уникальный виртуальный идентификатор (необязательный)
+  mimeType     String
+  size         Int
+  uploadedBy   Int
+  folderId     Int?
+  
+  // Флаги согласно спецификации
+  isPublic     Boolean  @default(false) // Доступен неавторизованным пользователям
+  isProtected  Boolean  @default(false) // Защищен от удаления (используется в статьях)
+  
+  createdAt    DateTime @default(now())
+  
+  uploader     User     @relation(fields: [uploadedBy], references: [id])
+  folder       Folder?  @relation(fields: [folderId], references: [id])
+  articles     ArticleFile[] // Связь с статьями
+  
+  @@index([uploadedBy])
+  @@index([virtualPath])
+  @@index([virtualId])
+  @@index([isPublic])
+  @@index([isProtected])
+}
+
+model Folder {
+  id          Int      @id @default(autoincrement())
+  name        String
+  path        String
+  virtualPath String?  // Виртуальный путь для отображения (необязательный)
+  virtualId   String?  @unique // Уникальный виртуальный идентификатор (необязательный)
+  ownerId     Int
+  parentId    Int?
+  
+  // Флаги согласно спецификации
+  isPublic     Boolean  @default(false) // Доступна неавторизованным пользователям
+  isProtected  Boolean  @default(false) // Защищена от удаления (содержит файлы статей)
+  
+  createdAt   DateTime @default(now())
+  
+  owner       User     @relation(fields: [ownerId], references: [id])
+  parent      Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children    Folder[] @relation("FolderHierarchy")
+  files       File[]
+  
+  @@unique([ownerId, path])
+  @@index([virtualPath])
+  @@index([virtualId])
+  @@index([isPublic])
+  @@index([isProtected])
+}

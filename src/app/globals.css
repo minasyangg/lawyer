@@ -1,7 +1,123 @@
-
 @import "tailwindcss";
 
+/* Стили для таблиц из RichTextEditor */
+.rich-text-content table { 
+  border-collapse: collapse; 
+  width: 100%; 
+  margin: 10px 0; 
+  border: 1px solid #dee2e6;
+}
 
+.rich-text-content th, 
+.rich-text-content td { 
+  border: 1px solid #dee2e6; 
+  padding: 8px;
+}
+
+.rich-text-content th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
+
+.rich-text-content .table-bordered { 
+  border: 1px solid #dee2e6; 
+}
+
+.rich-text-content .table-bordered th,
+.rich-text-content .table-bordered td { 
+  border: 1px solid #dee2e6; 
+  padding: 8px; 
+}
+
+.rich-text-content .table-striped tbody tr:nth-of-type(odd) { 
+  background-color: rgba(0, 0, 0, 0.05); 
+}
+
+.rich-text-content .table-header { 
+  background-color: #f8f9fa; 
+  font-weight: bold; 
+}
+
+.rich-text-content .table-header-row { 
+  background-color: #e9ecef; 
+}
+
+.rich-text-content .table-alt-row { 
+  background-color: #f8f9fa; 
+}
+
+.rich-text-content .table-highlight { 
+  background-color: #fff3cd; 
+}
+
+/* Базовые стили для изображений - инлайн стили имеют приоритет */
+.rich-text-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.prose-custom img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Кастомные стили для прозы (замена prose) */
+.prose-custom {
+  font-size: 1.125rem;
+  line-height: 1.75;
+  color: #374151;
+}
+
+.prose-custom p {
+  margin-top: 1.25em;
+  margin-bottom: 1.25em;
+}
+
+.prose-custom h1, .prose-custom h2, .prose-custom h3, .prose-custom h4, .prose-custom h5, .prose-custom h6 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin-top: 2em;
+  margin-bottom: 1em;
+}
+
+.prose-custom h1 { font-size: 2.25em; }
+.prose-custom h2 { font-size: 1.875em; }
+.prose-custom h3 { font-size: 1.5em; }
+.prose-custom h4 { font-size: 1.25em; }
+
+.prose-custom ul, .prose-custom ol {
+  margin-top: 1.25em;
+  margin-bottom: 1.25em;
+  padding-left: 1.625em;
+}
+
+.prose-custom li {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.prose-custom blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1em;
+  font-style: italic;
+  margin: 1.5em 0;
+}
+
+/* Общие стили для таблиц во всем приложении */
+table { 
+  border-collapse: collapse; 
+}
+
+table th, 
+table td { 
+  border: 1px solid #dee2e6; 
+  padding: 8px;
+}
+
+table th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
 
 
 

@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colors - используем формат color-* для доступа через bg-*, text-*, border-* */
+  --color-primary: #0426a1;
+  --color-primary-dark: #0b1c48;
+  --color-secondary: #0027b3;
+  --color-dark-gray: #56647f;
+  --color-border-gray: #e5e5e5;
+  --color-background-gray: #f5f5f5;
+  --color-black: #000000;
+  --color-white: #ffffff;
+
+  /* Typography */
+  --font-display: Montserrat, ui-sans-serif, system-ui, sans-serif;
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+
+  /* Font sizes */
+  --text-h1: 48px;
+  --text-h2: 40px;
+  --text-h3: 32px;
+  --text-body: 16px;
+  --text-small: 14px;
+
+  /* Shadows */
+  --shadow-card: 0px 4px 20px 0px rgba(0, 0, 0, 0.08);
+  --shadow-button: 0px 2px 8px 0px rgba(4, 38, 161, 0.16);
+
+  /* Container */
+  --breakpoint-xl: 1280px;
+}
+
+/* Custom utilities */
+@layer utilities {
+  .bg-gradient-primary {
+    background-image: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  }
+
+  .bg-gradient-hero {
+    background-image: linear-gradient(180deg, rgba(4, 38, 161, 0.4) 0%, rgba(11, 28, 72, 0.6) 100%);
+  }
+
+  .bg-gradient-horizontal {
+    background-image: linear-gradient(90deg, rgba(4, 38, 161, 1) 0%, rgba(0, 39, 179, 1) 100%);
+  }
+  
+  .font-display {
+    font-family: var(--font-display);
+  }
+}
