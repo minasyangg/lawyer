@@ -107,7 +107,7 @@ export default function ServicesCarousel() {
               {/* Контейнер карусели - адаптивное количество карточек */}
               <div
                 ref={scrollRef}
-                className="flex gap-5 overflow-x-auto scroll-smooth"
+                className="flex gap-5 overflow-x-auto overflow-y-hidden scroll-smooth"
                 style={{ 
                   scrollbarWidth: 'none', 
                   msOverflowStyle: 'none',
