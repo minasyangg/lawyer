@@ -49,6 +49,7 @@ export default function ServicesCarousel() {
   const sectionRef = useRef<HTMLElement | null>(null)
   const firstImageRef = useRef<HTMLDivElement>(null as unknown as HTMLDivElement)
   const [blueHeight, setBlueHeight] = useState<number | null>(null)
+  const navRef = useRef<HTMLDivElement | null>(null)
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -75,7 +76,39 @@ export default function ServicesCarousel() {
 
     recalc()
     window.addEventListener('resize', recalc)
-    return () => window.removeEventListener('resize', recalc)
+
+    // align nav buttons with the visible right edge of the scroll container
+    function alignNav() {
+      const nav = navRef.current
+      if (!nav) return
+
+  const marginRight = 0 // px — убираем отступ, выравниваем по правому краю секции
+
+      if (sectionRef.current) {
+        const sRect = sectionRef.current.getBoundingClientRect()
+        const rightOffset = Math.max(0, Math.round(window.innerWidth - sRect.right + marginRight))
+        nav.style.right = `${rightOffset}px`
+        return
+      }
+
+      // Fallback: если секция не найдена, выравниваем по scroll container
+      const sc = scrollRef.current
+      if (!sc) return
+      const rect = sc.getBoundingClientRect()
+      const rightOffset = Math.max(0, Math.round(window.innerWidth - (rect.left + rect.width) + marginRight))
+      nav.style.right = `${rightOffset}px`
+    }
+
+    alignNav()
+    window.addEventListener('resize', alignNav)
+    const scEl = scrollRef.current
+    if (scEl) scEl.addEventListener('scroll', alignNav)
+
+    return () => {
+      window.removeEventListener('resize', recalc)
+      window.removeEventListener('resize', alignNav)
+      if (scEl) scEl.removeEventListener('scroll', alignNav)
+    }
   }, [])
 
   return (
@@ -158,7 +191,7 @@ export default function ServicesCarousel() {
               </div>
 
               {/* Навигация - скрываем на mobile/tablet, показываем только на desktop */}
-              <div className="hidden lg:flex absolute right-20 bottom-[-100px] gap-0 z-30">
+              <div ref={navRef} className="hidden lg:flex absolute bottom-[-100px] gap-0 z-30">
                 {/* Стрелка влево */}
                 <button
                   onClick={() => scroll('left')}
@@ -215,7 +248,7 @@ export default function ServicesCarousel() {
       <div className="relative w-full h-[80px] md:h-[100px] lg:h-[120px] bg-white">
         {/* Блок "Кому подойдут наши услуги?" - 70% ширины экрана */}
         <div 
-          className="absolute rounded-tl-2xl rounded-bl-2xl px-[25px] py-[30px] md:px-[40px] md:py-[40px] lg:px-[60px] lg:py-[80px]" 
+          className="absolute rounded-tl-2xl rounded-bl-2xl px-[25px] py-[30px] md:px-[40px] md:py-[40px] lg:px-[60px] lg:py-[80px] z-50" 
           style={{ 
             width: '70%',
             right: '0',

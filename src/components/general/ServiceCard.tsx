@@ -36,21 +36,23 @@ export default function ServiceCard({ title, description, imageSrc, imageHeight 
         </div>
 
         {/* Контент */}
-        <div className="flex-1 flex flex-col p-5 pt-6">
-          <div className="flex-1">
-            {/* Заголовок - адаптивный размер и line-clamp */}
+        <div className="flex-1 flex flex-col justify-between p-5 pt-6">
+          {/* Заголовок - фиксированная высота, чтобы выровнять по строкам */}
+          <div className="h-[58px] md:h-[68px] lg:h-[78px]">
             <h3 className="text-[24px] md:text-[28px] lg:text-[32px] font-bold text-gray-900 leading-[1.2] mb-3 line-clamp-2">
               {title}
             </h3>
+          </div>
 
-            {/* Описание - адаптивный размер и line-clamp */}
-            <p className="text-[14px] md:text-[15px] lg:text-[16px] text-gray-700 leading-[1.4] line-clamp-3">
+          {/* Описание - фиксированная высота, чтобы выравнивать блоки между карточками */}
+          <div className="h-[66px] md:h-[72px] lg:h-[80px] overflow-hidden">
+            <p className="text-[14px] md:text-[15px] lg:text-[16px] text-gray-700 leading-[1.4]">
               {description || 'Комплексная юридическая поддержка и консультации по всем вопросам.'}
             </p>
           </div>
 
           {/* Кнопка-иконка */}
-          <div className="flex justify-start mt-6">
+          <div className="flex justify-start">
             <div className="w-14 h-14 rounded-lg bg-primary flex items-center justify-center group-hover:bg-primary-dark transition-colors duration-200">
               <Image
                 src="/img/icon-arrow-bottom-right.svg"
