@@ -76,7 +76,8 @@ async function EditArticleFormWrapper({ id }: { id: number }) {
         id: true,
         title: true,
         description: true,
-        extraInfo: true
+        extraInfo: true,
+        heroImage: true
       },
       orderBy: { title: 'asc' }
     })

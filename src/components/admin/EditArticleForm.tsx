@@ -28,7 +28,14 @@ import type { Article } from "@/lib/actions/article-actions"
 import { updateArticle } from "@/lib/actions/article-actions"
 import { generateSlug, isValidSlug } from "@/lib/utils/slug-utils"
 import { useCallback, useRef } from "react"
-import type { Service as PrismaService } from "@prisma/client"
+
+interface ServiceWithHeroImage {
+  id: number
+  title: string
+  description: string
+  extraInfo: string | null
+  heroImage: string | null
+}
 
 interface Service {
   id: number
@@ -44,7 +51,7 @@ interface Tag {
 
 interface EditArticleFormProps {
   article: Article
-  services: PrismaService[]
+  services: ServiceWithHeroImage[]
   redirectPath?: string
 }
 
