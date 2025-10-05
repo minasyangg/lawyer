@@ -81,7 +81,7 @@ export default function InteractiveCellsSection() {
                   </div>
 
                   <div>
-                    <p className="text-[14px] md:text-[16px] lg:text-[18px] text-white leading-relaxed">
+                    <p className={`text-[14px] md:text-[16px] lg:text-[18px] text-white leading-relaxed ${isActive ? 'pb-9 md:pb-20 lg:pb-0' : ''}`}>
                       {cell.description}
                     </p>
                   </div>
