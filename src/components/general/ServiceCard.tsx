@@ -8,9 +8,10 @@ interface ServiceCardProps {
   description?: string
   imageSrc: string
   imageHeight?: number
+  imageContainerRef?: React.RefObject<HTMLDivElement>
 }
 
-export default function ServiceCard({ title, description, imageSrc, imageHeight = 145 }: ServiceCardProps) {
+export default function ServiceCard({ title, description, imageSrc, imageHeight = 145, imageContainerRef }: ServiceCardProps) {
   const router = useRouter()
 
   const handleClick = () => {
@@ -21,11 +22,11 @@ export default function ServiceCard({ title, description, imageSrc, imageHeight 
   return (
     <div
       onClick={handleClick}
-      className="group flex flex-col flex-shrink-0 w-full h-[460px] bg-white rounded-2xl overflow-x-hidden overflow-y-visible shadow-card hover:shadow-xl transition-all duration-300 cursor-pointer"
+      className="group relative z-30 flex flex-col flex-shrink-0 w-full h-[460px] bg-white rounded-2xl overflow-x-hidden overflow-y-visible shadow-card hover:shadow-xl transition-all duration-300 cursor-pointer"
     >
       <div className="transform-gpu transition-transform duration-300 group-hover:scale-105">
         {/* Изображение услуги - фиксированная высота для всех */}
-        <div className="relative w-full h-[145px] overflow-hidden flex-shrink-0">
+  <div ref={imageContainerRef} className="relative w-full h-[145px] overflow-hidden flex-shrink-0">
           <Image
             src={imageSrc}
             alt={title}

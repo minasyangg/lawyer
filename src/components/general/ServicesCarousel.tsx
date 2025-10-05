@@ -1,6 +1,6 @@
-'use client'
+ 'use client'
 
-import React, { useRef } from 'react'
+import React, { useRef, useLayoutEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import ServiceCard from './ServiceCard'
@@ -46,6 +46,9 @@ const services = [
 
 export default function ServicesCarousel() {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const sectionRef = useRef<HTMLElement | null>(null)
+  const firstImageRef = useRef<HTMLDivElement>(null as unknown as HTMLDivElement)
+  const [blueHeight, setBlueHeight] = useState<number | null>(null)
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -59,14 +62,32 @@ export default function ServicesCarousel() {
     }
   }
 
+  // Measure the bottom of the first card image relative to the blue section
+  useLayoutEffect(() => {
+    function recalc() {
+      if (!sectionRef.current || !firstImageRef.current) return
+      const sectionRect = sectionRef.current.getBoundingClientRect()
+      const imageRect = firstImageRef.current.getBoundingClientRect()
+  const imageBottomRelative = imageRect.bottom - sectionRect.top
+  // set a minimum to avoid collapsing too small
+  setBlueHeight(Math.max(0, Math.round(imageBottomRelative)))
+    }
+
+    recalc()
+    window.addEventListener('resize', recalc)
+    return () => window.removeEventListener('resize', recalc)
+  }, [])
+
   return (
     <div className="relative w-full">
       {/* Часть 1: Синий блок с градиентом + карусель - адаптивная высота */}
       <section 
+        ref={sectionRef}
         className="w-full bg-gradient-primary px-[25px] py-[50px] md:px-[40px] md:py-[60px] lg:px-[60px] lg:py-[80px] xl:pl-[200px]"
         style={{ 
-          height: 'auto',
-          minHeight: '400px'
+          height: blueHeight ? `${blueHeight}px` : undefined,
+          minHeight: '400px',
+          transition: 'height 200ms ease'
         }}
       >
         <div className="container mx-auto max-w-screen-xl">
@@ -130,6 +151,7 @@ export default function ServicesCarousel() {
                       title={service.title}
                       imageSrc={service.imageSrc}
                       imageHeight={service.imageHeight}
+                      imageContainerRef={service.id === services[0].id ? firstImageRef : undefined}
                     />
                   </div>
                 ))}
@@ -164,14 +186,29 @@ export default function ServicesCarousel() {
         </div>
       </section>
 
-      {/* Часть 2: Фото (600px высота) - скрываем на mobile */}
-      <div className="relative w-full h-[400px] md:h-[500px] lg:h-[600px] hidden md:block">
-        <Image
-          src="/img/services-section-photo-6058bc.png"
-          alt="Офис"
-          fill
-          className="object-cover"
-        />
+      {/* Часть 2: Фото - делаем абсолютным и позиционируем по вычисленному blueHeight. */}
+      {/* Spacer нужен, чтобы сохранить высоту потока документа. */}
+      <div className="w-full h-[400px] md:h-[500px] lg:h-[600px]" aria-hidden="true" />
+
+      <div
+        className="hidden md:block pointer-events-none"
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: blueHeight ? `${blueHeight}px` : undefined,
+          height: 'auto',
+          zIndex: 10,
+        }}
+      >
+        <div className="relative w-full h-[400px] md:h-[500px] lg:h-[600px]">
+          <Image
+            src="/img/services-section-photo-6058bc.png"
+            alt="Офис"
+            fill
+            className="object-cover"
+          />
+        </div>
       </div>
 
       {/* Часть 3: Белый фон - адаптивная высота */}
