@@ -15,7 +15,7 @@ export default function HeroSection() {
           priority
         />
         {/* Градиент overlay */}
-        <div className="absolute inset-0 bg-gradient-hero" />
+  <div className="absolute inset-0 z-[1] bg-gradient-hero pointer-events-none" />
       </div>
 
       {/* Контент */}

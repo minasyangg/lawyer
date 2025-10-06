@@ -1,7 +1,7 @@
 import React from 'react'
 import Image from 'next/image'
 import Header from '@/components/ui/Header'
-import Footer from '@/components/ui/Footer'
+import Footer from '@/components/section/Footer'
 import ContactForm from '@/components/forms/ContactForm'
 
 export default function ContactsPage() {
@@ -62,7 +62,7 @@ export default function ContactsPage() {
         </section>
       </main>
       
-      <Footer />
+    <Footer paddingTop="pt-[200px] md:pt-[320px] lg:pt-[370px]" />
     </div>
   )
 }

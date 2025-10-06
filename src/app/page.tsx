@@ -16,7 +16,7 @@ export default function Home() {
         <InteractiveCellsSection />
         <ContactFormSection />
       </main>
-      <Footer />
+    <Footer paddingTop="pt-[200px] md:pt-[320px] lg:pt-[370px]" />
     </>
   );
 }

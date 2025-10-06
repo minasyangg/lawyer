@@ -1,9 +1,17 @@
 import React from 'react'
 import Link from 'next/link'
 
-export default function Footer() {
+interface FooterProps {
+  paddingTop?: string
+}
+
+const Footer: React.FC<FooterProps> = ({ paddingTop }) => {
+  // Значения по умолчанию (большой padding)
+  const defaultPadding = 'pt-[200px] md:pt-[320px] lg:pt-[370px]';
+  // Если передан paddingTop проп, используем его, иначе дефолт
+  const pt = paddingTop || defaultPadding;
   return (
-    <footer className="w-full bg-[#56647F] pt-[200px] md:pt-[320px] lg:pt-[370px] pb-[30px] md:pb-[37px] lg:pb-[44px] px-[25px] md:px-[40px] lg:px-[60px]">
+    <footer className={`w-full bg-[#56647F] ${pt} pb-[30px] md:pb-[37px] lg:pb-[44px] px-[25px] md:px-[40px] lg:px-[60px]`}>
       <div className="container mx-auto max-w-screen-xl">
         <div className="flex flex-col lg:flex-row gap-8 md:gap-9 lg:gap-10 pb-8 md:pb-9 lg:pb-10">
           {/* Колонка 1: ПФК + Описание */}
@@ -77,5 +85,6 @@ export default function Footer() {
         </div>
       </div>
     </footer>
-  )
-}
+  );
+};
+export default Footer;

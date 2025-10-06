@@ -86,9 +86,8 @@ export default async function ServicePage({ params }: ServicePageProps) {
             className="object-cover object-center"
             sizes="100vw"
           />
-          {/* Затемнение overlay - градиент по дизайну Figma */}
-          <div className="absolute opacity-80 inset-0 bg-gradient-to-b from-[#0426A1] to-[#0B1C48]" aria-hidden="true" />
-          
+				{/* Градиент overlay */}
+	        <div className="absolute inset-0 z-[1] bg-gradient-hero pointer-events-none" />
           {/* Контент */}
           <div className="relative z-10 container mx-auto max-w-screen-xl px-[25px] md:px-[40px] lg:px-[60px]">
             <div className="flex flex-col gap-[60px] max-w-4xl">
@@ -144,7 +143,7 @@ export default async function ServicePage({ params }: ServicePageProps) {
         <ReadPublicationsCTA />
       </main>
 
-      <Footer />
+  <Footer paddingTop="pt-[60px] md:pt-[50px] lg:pt-[70px]" />
     </div>
   )
 }
