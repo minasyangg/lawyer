@@ -36,7 +36,7 @@ interface FileItem {
   mimeType: string
 }
 
-  const handleAddDocument = (file: FileItem) => {
+  const handleFileSelect = (file: FileItem) => {
     // Проверяем, что это документ (не изображение)
     if (file.mimeType.startsWith('image/')) {
       return // Игнорируем изображения
@@ -150,7 +150,13 @@ interface FileItem {
             <DialogHeader>
               <DialogTitle>Выберите файл</DialogTitle>
             </DialogHeader>
-            <FileManager userRole="ADMIN" />
+            <FileManager 
+              userRole="ADMIN" 
+              onFileSelect={(file) => {
+                handleFileSelect(file)
+                setFileManagerOpen(false)
+              }}
+            />
           </DialogContent>
         </Dialog>
       )}

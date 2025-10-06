@@ -3,7 +3,7 @@ import Header from "@/components/ui/Header";
 import HeroSection from "@/components/general/HeroSection";
 import ServicesCarousel from "@/components/general/ServicesCarousel";
 import InteractiveCellsSection from "@/components/general/InteractiveCellsSection";
-import ContactFormSection from "@/components/general/ContactFormSection";
+import ContactFormSection from "@/components/forms/ContactFormSection";
 import Footer from "@/components/section/Footer";
 
 export default function Home() {
@@ -16,7 +16,7 @@ export default function Home() {
         <InteractiveCellsSection />
         <ContactFormSection />
       </main>
-      <Footer />
+    <Footer paddingTop="pt-[200px] md:pt-[320px] lg:pt-[370px]" />
     </>
   );
 }

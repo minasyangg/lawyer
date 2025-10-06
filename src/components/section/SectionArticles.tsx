@@ -1,7 +1,7 @@
 import LoadingLink from '@/components/ui/LoadingLink'
 import FallbackImage from '@/components/ui/FallbackImage'
 import React from 'react'
-import { getRecentPublications } from '@/lib/services'
+import { getPublishedArticles } from '@/lib/actions/article-actions'
 
 type Publication = {
   id: number
@@ -33,7 +33,18 @@ const ArrowRight = ({ className = '' }: { className?: string }) => (
 )
 
 export default async function SectionArticles() {
-  const posts: Publication[] = await getRecentPublications(3)
+  const articles = await getPublishedArticles(undefined, 3)
+  
+  // Преобразуем статьи в формат Publication
+  const posts: Publication[] = articles.map(article => ({
+    id: article.id,
+    title: article.title,
+    excerpt: article.excerpt,
+    slug: article.slug,
+    date: article.createdAt.toISOString(),
+    cover: null // У статей пока нет поля coverImage
+  }))
+  
   // Layout: left column - stacked latest posts; right column - big image panel with heading and CTA
   const mainImage = posts[0]?.cover || null
   const stack = posts.slice(0, 3)

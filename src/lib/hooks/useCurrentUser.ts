@@ -36,7 +36,7 @@ export function useCurrentUser() {
 				}
 				const data = await res.json()
 				setUser((data && data.user) || null)
-			} catch (err) {
+			} catch {
 				if (mounted) setUser(null)
 			}
 		})()

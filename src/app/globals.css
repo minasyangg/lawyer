@@ -1,4 +1,6 @@
+/* tailwind safelist: bg-gradient-hero */
 @import "tailwindcss";
+@import "./design-tokens.css";
 
 /* Стили для таблиц из RichTextEditor */
 .rich-text-content table { 
