@@ -1,6 +1,6 @@
 import React from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
+import ContactRedirectButton from '@/components/ui/ContactRedirectButton'
 
 export default function HeroSection() {
   return (
@@ -54,19 +54,19 @@ export default function HeroSection() {
           </ul>
 
           {/* CTA Кнопка - адаптивный размер */}
-          <Link 
-            href="/contacts" 
+          <ContactRedirectButton
             className="group inline-flex items-center gap-2 md:gap-2.5 lg:gap-3 px-5 py-2.5 md:px-6 md:py-3 lg:px-8 lg:py-4 text-[14px] md:text-[15px] lg:text-[16px] font-bold text-white bg-primary rounded-lg shadow-button hover:bg-primary-dark transition-all duration-200"
+            loadingLabel="Переход..."
           >
             <span>Связаться с нами</span>
-            <Image 
-              src="/img/icon-chevron-right.svg" 
-              alt="" 
-              width={6} 
+            <Image
+              src="/img/icon-chevron-right.svg"
+              alt=""
+              width={6}
               height={10}
               className="transition-transform duration-200 group-hover:translate-x-[5px]"
             />
-          </Link>
+          </ContactRedirectButton>
         </div>
       </div>
     </section>

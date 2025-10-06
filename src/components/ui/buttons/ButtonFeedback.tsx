@@ -1,7 +1,8 @@
 import React from "react";
+import ContactRedirectButton, { ContactRedirectButtonProps } from "@/components/ui/ContactRedirectButton";
 
 interface ButtonFeedbackProps {
-  onClick?: () => void;
+  onClick?: ContactRedirectButtonProps["onClick"];
 }
 
 export default function ButtonFeedback({ onClick }: ButtonFeedbackProps) {
@@ -13,10 +14,11 @@ export default function ButtonFeedback({ onClick }: ButtonFeedbackProps) {
             Мы всегда ждем Ваших обращений
           </h2>
           <div className="flex flex-col gap-10">
-            <button
+            <ContactRedirectButton
               type="button"
               onClick={onClick}
               className="inline-flex items-center justify-center gap-4 bg-white rounded-lg px-6 py-4 transition-opacity hover:opacity-90"
+              loadingLabel="Переход..."
             >
               <span className="font-inter text-base font-bold leading-[1.5] text-[#060606]">
                 Связаться с нами
@@ -37,7 +39,7 @@ export default function ButtonFeedback({ onClick }: ButtonFeedbackProps) {
                   strokeLinejoin="round"
                 />
               </svg>
-            </button>
+            </ContactRedirectButton>
           </div>
         </div>
       </div>

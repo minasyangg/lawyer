@@ -11,7 +11,7 @@ interface ServiceCardProps {
   imageContainerRef?: React.RefObject<HTMLDivElement>
 }
 
-export default function ServiceCard({ title, description, imageSrc, imageHeight = 145, imageContainerRef }: ServiceCardProps) {
+export default function ServiceCard({ title, description, imageSrc, imageContainerRef }: ServiceCardProps) {
   const router = useRouter()
 
   const handleClick = () => {

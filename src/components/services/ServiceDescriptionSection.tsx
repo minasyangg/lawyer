@@ -1,4 +1,4 @@
-'use client'
+import ContactRedirectButton from '@/components/ui/ContactRedirectButton'
 
 interface ServiceDescriptionSectionProps {
   title: string
@@ -9,11 +9,6 @@ export default function ServiceDescriptionSection({
   title,
   description,
 }: ServiceDescriptionSectionProps) {
-  const handleConsultation = () => {
-    // Здесь можно добавить логику открытия формы обратной связи
-    console.log('Открытие формы консультации')
-  }
-
   return (
     <section className="w-full bg-[#F2F7FA] py-14 md:py-20">
       <div className="container mx-auto max-w-screen-xl px-[25px] md:px-[40px] lg:px-[60px]">
@@ -30,9 +25,9 @@ export default function ServiceDescriptionSection({
 
           {/* Кнопка */}
           <div className="mt-6">
-            <button
-              onClick={handleConsultation}
+            <ContactRedirectButton
               className="inline-flex items-center justify-center gap-4 bg-[#0426A1] hover:bg-[#0426A1]/90 text-white font-inter font-bold text-base rounded-lg px-6 py-4 transition-opacity hover:opacity-90 focus:outline-none"
+              loadingLabel="Переход..."
             >
               <span>Получить первичную консультацию</span>
               <svg
@@ -51,7 +46,7 @@ export default function ServiceDescriptionSection({
                   strokeLinejoin="round"
                 />
               </svg>
-            </button>
+            </ContactRedirectButton>
           </div>
         </div>
       </div>

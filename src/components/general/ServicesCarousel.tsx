@@ -1,7 +1,7 @@
- 'use client'
+'use client'
 
 import React, { useRef, useLayoutEffect, useState } from 'react'
-import Link from 'next/link'
+import ContactRedirectButton from '@/components/ui/ContactRedirectButton'
 import Image from 'next/image'
 import ServiceCard from './ServiceCard'
 
@@ -50,7 +50,6 @@ export default function ServicesCarousel() {
   const firstImageRef = useRef<HTMLDivElement>(null as unknown as HTMLDivElement)
   const [blueHeight, setBlueHeight] = useState<number | null>(null)
   const navRef = useRef<HTMLDivElement | null>(null)
-  const [isDesktop, setIsDesktop] = useState(false)
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -66,13 +65,6 @@ export default function ServicesCarousel() {
 
   // Measure the bottom of the first card image relative to the blue section
   useLayoutEffect(() => {
-    // desktop state
-    function handleDesktopResize() {
-      setIsDesktop(window.innerWidth >= 1024)
-    }
-    handleDesktopResize()
-    window.addEventListener('resize', handleDesktopResize)
-
     function recalc() {
       if (!sectionRef.current || !firstImageRef.current) return
       const sectionRect = sectionRef.current.getBoundingClientRect()
@@ -94,14 +86,14 @@ export default function ServicesCarousel() {
     }
 
     recalc()
-  window.addEventListener('resize', recalc)
+    window.addEventListener('resize', recalc)
 
     // align nav buttons with the visible right edge of the scroll container
     function alignNav() {
       const nav = navRef.current
       if (!nav) return
 
-  const marginRight = 0 // px — убираем отступ, выравниваем по правому краю секции
+      const marginRight = 0 // px — убираем отступ, выравниваем по правому краю секции
 
       if (sectionRef.current) {
         const sRect = sectionRef.current.getBoundingClientRect()
@@ -118,15 +110,14 @@ export default function ServicesCarousel() {
       nav.style.right = `${rightOffset}px`
     }
 
-  alignNav()
-  window.addEventListener('resize', alignNav)
+    alignNav()
+    window.addEventListener('resize', alignNav)
     const scEl = scrollRef.current
     if (scEl) scEl.addEventListener('scroll', alignNav)
 
     return () => {
       window.removeEventListener('resize', recalc)
       window.removeEventListener('resize', alignNav)
-      window.removeEventListener('resize', handleDesktopResize)
       if (scEl) scEl.removeEventListener('scroll', alignNav)
     }
   }, [])
@@ -136,7 +127,7 @@ export default function ServicesCarousel() {
       {/* Часть 1: Синий блок с градиентом + карусель - адаптивная высота */}
       <section 
         ref={sectionRef}
-        className="w-full bg-gradient-primary px-[25px] pt-0 md:pt-[50px] lg:pt-[80px] pb-[40px] md:pb-[50px] lg:pb-[80px] md:px-[40px] lg:px-[60px] xl:pl-[200px]"
+        className="w-full bg-primary px-[25px] pt-0 md:pt-[50px] lg:pt-[80px] pb-[40px] md:pb-[50px] lg:pb-[80px] md:px-[40px] lg:px-[60px] xl:pl-[200px]"
         style={{ 
           height: blueHeight ? `${blueHeight}px` : undefined,
           minHeight: '240px',
@@ -160,19 +151,19 @@ export default function ServicesCarousel() {
                 </p>
 
                 {/* CTA Кнопка - адаптивные отступы */}
-                <Link 
-                  href="/contacts" 
+                <ContactRedirectButton
                   className="group inline-flex items-center justify-center gap-3 md:gap-3.5 lg:gap-4 text-[14px] md:text-[15px] lg:text-[16px] font-bold text-black bg-white rounded-lg w-fit px-5 py-3 md:px-6 md:py-3.5 lg:px-6 lg:py-4 lg:pl-6"
+                  loadingLabel="Переход..."
                 >
                   <span>Связаться с нами</span>
-                  <Image 
-                    src="/img/icon-chevron-right.svg" 
-                    alt="" 
-                    width={6} 
+                  <Image
+                    src="/img/icon-chevron-right.svg"
+                    alt=""
+                    width={6}
                     height={10}
                     className="transition-transform duration-200 group-hover:translate-x-[5px]"
                   />
-                </Link>
+                </ContactRedirectButton>
               </div>
             </div>
 

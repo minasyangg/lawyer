@@ -9,8 +9,6 @@ export default async function Header() {
     services = await getAllServices()
   } catch (err) {
     // If DB is not reachable (dev env), fall back to empty services so header still renders
-    // Log to server console for debugging
-    // eslint-disable-next-line no-console
     console.error('[Header] failed to load services, falling back to empty list', err)
     services = []
   }

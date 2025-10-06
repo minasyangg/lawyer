@@ -8,6 +8,7 @@ import ServicePublicationsSection from '@/components/services/ServicePublication
 import ReadPublicationsCTA from '@/components/services/ReadPublicationsCTA'
 import { getServiceBySlug, getAllServiceSlugs, getRelatedArticles } from '@/lib/services'
 import Image from 'next/image'
+import ContactRedirectButton from '@/components/ui/ContactRedirectButton'
 
 interface ServicePageProps {
   params: Promise<{
@@ -98,7 +99,10 @@ export default async function ServicePage({ params }: ServicePageProps) {
                 <p className="font-inter text-lg md:text-xl font-normal leading-[1.2] text-white">
                   {service.description}
                 </p>
-                <button className="inline-flex items-center justify-center gap-4 bg-white rounded-lg px-6 py-4 transition-opacity hover:opacity-90 w-fit">
+                <ContactRedirectButton
+                  className="inline-flex items-center justify-center gap-4 bg-white rounded-lg px-6 py-4 transition-opacity hover:opacity-90 w-fit"
+                  loadingLabel="Переход..."
+                >
                   <span className="font-inter text-base font-bold leading-[1.5] text-[#060606]">
                     Заказать услугу
                   </span>
@@ -118,7 +122,7 @@ export default async function ServicePage({ params }: ServicePageProps) {
                       strokeLinejoin="round"
                     />
                   </svg>
-                </button>
+                </ContactRedirectButton>
               </div>
             </div>
           </div>

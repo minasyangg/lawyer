@@ -1,14 +1,14 @@
 import Image from "next/image";
+import ContactRedirectButton from "@/components/ui/ContactRedirectButton";
 
 export interface ServiceDescriptionProps {
   title: string;
   shortDescription: string;
   icon?: string;
   features?: string[];
-  onOrder?: () => void;
 }
 
-export default function ServiceDescription({ title, shortDescription, icon, features, onOrder }: ServiceDescriptionProps) {
+export default function ServiceDescription({ title, shortDescription, icon, features }: ServiceDescriptionProps) {
   return (
     <section className="container mx-auto max-w-screen-xl px-4 py-12 flex flex-col md:flex-row items-center gap-8">
       <div className="flex-1">
@@ -23,13 +23,12 @@ export default function ServiceDescription({ title, shortDescription, icon, feat
             ))}
           </ul>
         )}
-        <button
+        <ContactRedirectButton
           className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
-          type="button"
-          onClick={onOrder}
+          loadingLabel="Переход..."
         >
           Заказать услугу
-        </button>
+        </ContactRedirectButton>
       </div>
       {icon && (
         <div className="flex-1 flex justify-center">
