@@ -87,7 +87,7 @@ export default async function ServicePage({ params }: ServicePageProps) {
             sizes="100vw"
           />
           {/* Затемнение overlay - градиент по дизайну Figma */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0426A1] to-[#0B1C48]" aria-hidden="true" />
+          <div className="absolute opacity-80 inset-0 bg-gradient-to-b from-[#0426A1] to-[#0B1C48]" aria-hidden="true" />
           
           {/* Контент */}
           <div className="relative z-10 container mx-auto max-w-screen-xl px-[25px] md:px-[40px] lg:px-[60px]">
