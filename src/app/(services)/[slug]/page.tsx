@@ -44,32 +44,35 @@ export default async function ServicePage({ params }: ServicePageProps) {
   const relatedArticles = await getRelatedArticles(service.id, 3)
 
   // Подготовка карточек услуг практики
-  // Для налоговой практики - две карточки с названиями из Figma
-  const isTaxService = service.title.toLowerCase().includes('налог')
-  
-  const practiceCards = isTaxService && service.details.length >= 2
-    ? [
-        {
-          title: service.details[0]?.category || 'Налоговые споры',
-          items: service.details[0]?.services
-            .split('\n')
-            .filter(line => line.trim())
-            .map(line => line.replace(/^\d+\.\s*/, '').trim()) || []
-        },
-        {
-          title: service.details[1]?.category || 'Налоговый консалтинг',
-          items: service.details[1]?.services
-            .split('\n')
-            .filter(line => line.trim())
-            .map(line => line.replace(/^\d+\.\s*/, '').trim()) || []
-        }
-      ]
-    : [
-        {
-          title: service.details[0]?.category || 'Услуги практики',
-          items: features
-        }
-      ]
+  // Общая логика: 1 колонка — если одна категория; 2 колонки — если две и более (лишние категории добавляем ко второй колонке).
+  function parseItems(text: string | null | undefined) {
+    if (!text) return [] as string[]
+    return text
+      .split('\n')
+      .filter(line => line.trim())
+      .map(line => line.replace(/^\d+\.\s*/, '').trim())
+  }
+
+  let practiceCards: { title: string; items: string[] }[]
+  if (service.details.length === 0) {
+    practiceCards = [{ title: 'Услуги практики', items: features }]
+  } else if (service.details.length === 1) {
+    const d0 = service.details[0]
+    practiceCards = [{ title: d0.category || 'Услуги практики', items: parseItems(d0.services) }]
+  } else {
+    const d0 = service.details[0]
+    const d1 = service.details[1]
+    const left = { title: d0.category || 'Колонка 1', items: parseItems(d0.services) }
+    const rightItems = [...parseItems(d1.services)]
+    // Добавляем оставшиеся категории к правой колонке
+    if (service.details.length > 2) {
+      for (let i = 2; i < service.details.length; i++) {
+        rightItems.push(...parseItems(service.details[i].services))
+      }
+    }
+    const right = { title: d1.category || 'Колонка 2', items: rightItems }
+    practiceCards = [left, right]
+  }
 
   return (
     <div className="min-h-screen flex flex-col">

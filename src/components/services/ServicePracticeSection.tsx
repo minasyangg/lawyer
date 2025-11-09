@@ -31,15 +31,23 @@ export default function ServicePracticeSection({ cards }: ServicePracticeSection
   return (
     <section className="w-full py-12 md:py-16">
       <div className="container mx-auto max-w-screen-xl px-[25px] md:px-[40px] lg:px-[60px]">
-        <div className={`flex flex-col ${cards.length > 1 ? 'md:flex-row' : ''} gap-[34px]`}>
-          {cards.map((card, index) => (
-            <ServicePracticeCard
-              key={index}
-              title={card.title}
-              items={card.items}
-            />
-          ))}
-        </div>
+        {cards.length === 1 && (
+          <div className="max-w-5xl mx-auto">
+            <ServicePracticeCard title={cards[0].title} items={cards[0].items} />
+          </div>
+        )}
+        {cards.length === 2 && (
+          <div className="flex flex-col md:flex-row gap-[34px]">
+            <ServicePracticeCard title={cards[0].title} items={cards[0].items} />
+            <ServicePracticeCard title={cards[1].title} items={cards[1].items} />
+          </div>
+        )}
+        {cards.length > 2 && (
+          <div className="flex flex-col md:flex-row gap-[34px]">
+            <ServicePracticeCard title={cards[0].title} items={cards[0].items} />
+            <ServicePracticeCard title={cards[1].title} items={cards[1].items} />
+          </div>
+        )}
       </div>
     </section>
   )
