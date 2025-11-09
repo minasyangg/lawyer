@@ -15,14 +15,14 @@ export default async function AdminLayout({
   // This layout only applies to protected admin routes
   // Login page has its own layout
   if (!session) {
-    redirect('/admin/login')
+    redirect('/login')
   }
   
   let user
   try {
     user = JSON.parse(session.value)
   } catch {
-    redirect('/admin/login')
+    redirect('/login')
   }
 
   const navigation = [

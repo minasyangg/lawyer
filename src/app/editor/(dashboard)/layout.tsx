@@ -13,7 +13,7 @@ export default async function EditorLayout({
   const session = cookieStore.get('admin-session')
   
   if (!session) {
-    redirect('/admin/login')
+    redirect('/login')
   }
   
   let user
@@ -21,10 +21,10 @@ export default async function EditorLayout({
     user = JSON.parse(session.value)
     // Проверяем, что пользователь имеет роль EDITOR
     if (user.userRole !== 'EDITOR') {
-      redirect('/admin/login')
+      redirect('/login')
     }
   } catch {
-    redirect('/admin/login')
+    redirect('/login')
   }
 
   const navigation = [
