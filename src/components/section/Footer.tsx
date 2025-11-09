@@ -20,11 +20,12 @@ const Footer: React.FC<FooterProps> = async ({ paddingTop }) => {
             <h3 className="text-[18px] md:text-[19px] lg:text-[20px] font-bold leading-[1.5]">
               <Link href="/" className="text-white hover:underline">ПФК</Link>
             </h3>
-            <div className="flex flex-col justify-end gap-2.5 md:gap-2.75 lg:gap-3 flex-1">
+            {/* Заполняем высоту колонки и прижимаем копирайт вниз */}
+            <div className="flex flex-col flex-1 gap-2.5 md:gap-2.75 lg:gap-3">
               <p className="text-[13px] md:text-[13.5px] lg:text-[14px] font-normal text-white leading-[1.43]">
                 Профессиональная юридическая помощь для бизнеса и частных лиц
               </p>
-              <p className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33]">
+              <p className="mt-auto text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33]">
                 © 2025 ПФК. Все права защищены.
               </p>
             </div>
@@ -51,6 +52,9 @@ const Footer: React.FC<FooterProps> = async ({ paddingTop }) => {
                 <Link href="/publications" className="text-[15px] md:text-[15.5px] lg:text-[16px] font-normal text-white leading-[1] hover:underline">
                   Публикации
                 </Link>
+                <Link href="/admin" className="text-[15px] md:text-[15.5px] lg:text-[16px] font-normal text-white leading-[1] hover:underline">
+                  Вход в кабинет
+                </Link>
                 <Link href="/contacts" className="inline-flex justify-center items-center w-full px-5 py-3 md:px-5.5 md:py-3.5 lg:px-6 lg:py-4 mt-5 bg-[#060606] text-white text-[15px] md:text-[15.5px] lg:text-[16px] font-bold leading-[1.5] rounded-lg hover:bg-[#1a1a1a] transition-colors duration-300">
                   Контакты
                 </Link>
@@ -72,25 +76,13 @@ async function ServicesLinks() {
     services = []
   }
   if (!services.length) return null
-  const mid = Math.ceil(services.length / 2)
-  const left = services.slice(0, mid)
-  const right = services.slice(mid)
   return (
-    <div className="flex flex-col md:flex-row gap-4 md:gap-4.5 lg:gap-5 flex-1">
-      <div className="flex flex-col justify-end gap-3 md:gap-3.5 lg:gap-4 flex-1">
-        {left.map(s => (
-          <Link key={s.id} href={`/${createSlugFromTitle(s.title)}`} className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
-            {s.title}
-          </Link>
-        ))}
-      </div>
-      <div className="flex flex-col justify-end gap-3 md:gap-3.5 lg:gap-4 flex-1">
-        {right.map(s => (
-          <Link key={s.id} href={`/${createSlugFromTitle(s.title)}`} className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
-            {s.title}
-          </Link>
-        ))}
-      </div>
+    <div className="flex flex-col gap-3 md:gap-3.5 lg:gap-4">
+      {services.map(s => (
+        <Link key={s.id} href={`/${createSlugFromTitle(s.title)}`} className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
+          {s.title}
+        </Link>
+      ))}
     </div>
   )
 }
