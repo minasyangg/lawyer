@@ -37,11 +37,11 @@ const Footer: React.FC<FooterProps> = ({ paddingTop }) => {
             <div className="flex flex-col md:flex-row gap-4 md:gap-4.5 lg:gap-5 flex-1">
               {/* Первая подколонка */}
               <div className="flex flex-col justify-end gap-3 md:gap-3.5 lg:gap-4 flex-1">
-                <Link href="/services/tax" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
-                  Услуги налоговой практики
+                <Link href="/nalogovaya-praktika" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
+                  Налоговая практика
                 </Link>
-                <Link href="/services/private" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
-                  Услуги частным клиентам
+                <Link href="/chastnym-klientam" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
+                  Частным клиентам
                 </Link>
                 <Link href="/services/intellectual" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
                   Услуги практики по интелектуальным правам
@@ -50,14 +50,14 @@ const Footer: React.FC<FooterProps> = ({ paddingTop }) => {
               
               {/* Вторая подколонка */}
               <div className="flex flex-col justify-end gap-3 md:gap-3.5 lg:gap-4 flex-1">
-                <Link href="/services/bankruptcy" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
-                  Услуги практики банкротства
+                <Link href="/praktika-bankrotstva" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
+                  Практика банкротства
                 </Link>
-                <Link href="/services/disputes" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
-                  Решение спорови взыскание
+                <Link href="/spory-i-vzyskanie" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
+                  Споры и взыскание
                 </Link>
-                <Link href="/services/business" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
-                  Услуги по комплексному сопровождению бизнеса
+                <Link href="/kompleksnoe-soprovozhdenie-biznesa" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
+                  Комплексное сопровождение бизнеса
                 </Link>
               </div>
             </div>

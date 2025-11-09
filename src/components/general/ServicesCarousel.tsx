@@ -8,31 +8,36 @@ import ServiceCard from './ServiceCard'
 const services = [
   {
     id: 1,
-    title: 'Услуги налоговой практики',
+    title: 'Налоговая практика',
+    description: 'Консультирование и защита по налогам',
     imageSrc: '/img/service-tax-7fe93d.png',
     imageHeight: 145,
   },
   {
     id: 2,
-    title: 'Разрешение споров и взыскание',
+    title: 'Споры и взыскание',
+    description: 'Анализ, сопровождение и взыскание в рамках споров',
     imageSrc: '/img/service-dispute-770963.png',
     imageHeight: 146,
   },
   {
     id: 3,
-    title: 'Услуги практики банкротства',
+    title: 'Практика банкротства',
+    description: 'Сопровождение интересов всех участников банкротства',
     imageSrc: '/img/service-bankruptcy-2e9617.png',
     imageHeight: 131,
   },
   {
     id: 4,
     title: 'Частным клиентам',
+    description: 'Услуги физическим лицам по частным вопросам',
     imageSrc: '/img/service-private-638726.png',
     imageHeight: 127,
   },
   {
     id: 5,
-    title: 'Разрешение споров и взыскание',
+    title: 'Споры и взыскание',
+    description: 'Анализ, сопровождение и взыскание в рамках споров',
     imageSrc: '/img/service-dispute-2-4cd064.png',
     imageHeight: 143,
   },
@@ -193,6 +198,7 @@ export default function ServicesCarousel() {
                   >
                     <ServiceCard
                       title={service.title}
+                      description={service.description}
                       imageSrc={service.imageSrc}
                       imageHeight={service.imageHeight}
                       imageContainerRef={service.id === services[0].id ? firstImageRef : undefined}

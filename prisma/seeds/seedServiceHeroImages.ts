@@ -9,15 +9,14 @@ async function main() {
   const serviceImageMap: Record<string, string> = {
     'Налоговая практика': '/img/services/tax-hero.png',
     'Налоговое право': '/img/services/tax-hero.png',
-    'Услуги налоговой практики': '/img/services/tax-hero.png',
     'Банкротство': '/img/services/bankruptcy-hero.png',
-    'Услуги практики банкротства': '/img/services/bankruptcy-hero.png',
+    'Практика банкротства': '/img/services/bankruptcy-hero.png',
     'Споры и арбитраж': '/img/services/dispute-hero.png',
-    'Разрешение споров и взыскание': '/img/services/dispute-hero.png',
+    'Споры и взыскание': '/img/services/dispute-hero.png',
     'Интеллектуальная собственность': '/img/services/intellectual-hero.png',
     'Услуги практики по интелектуальным правам': '/img/services/intellectual-hero.png',
     'Частная практика': '/img/services/bankruptcy-hero.png', // Используем дефолтное изображение
-    'Услуги по комплексному сопровождению бизнеса': '/img/services/bankruptcy-hero.png', // Используем дефолтное изображение
+    'Комплексное сопровождение бизнеса': '/img/services/bankruptcy-hero.png', // Используем дефолтное изображение
   }
 
   let updatedCount = 0

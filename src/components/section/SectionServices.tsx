@@ -2,28 +2,28 @@ import Image from "next/image";
 
 const services = [
   {
-    title: "Услуги налоговой практики",
-    description: "Body text for whatever you’d like to add more to the subheading.",
+    title: "Налоговая практика",
+    description: "Консультирование и защита по налогам",
     image: "/img/services-1.jpg",
   },
   {
-    title: "Услуги практики банкротства",
-    description: "Body text for whatever you’d like to expand on the main point.",
+    title: "Практика банкротства",
+    description: "Сопровождение интересов всех участников банкротства",
     image: "/img/services-2.jpg",
   },
   {
-    title: "Разрешение споров и взыскание",
-    description: "Body text for whatever you’d like to share more.",
+    title: "Споры и взыскание",
+    description: "Анализ, сопровождение и взыскание в рамках споров",
     image: "/img/services-3.jpg",
   },
   {
-    title: "Услуги частным клиентам",
-    description: "Body text for whatever you’d like to add more to the subheading.",
+    title: "Частным клиентам",
+    description: "Услуги физическим лицам по частным вопросам",
     image: "/img/services-1.jpg",
   },
   {
-    title: "Услуги по комплексному сопровождению бизнеса",
-    description: "Body text for whatever you’d like to expand on the main point.",
+    title: "Комплексное сопровождение бизнеса",
+    description: "Набор услуг, оказываемых на длительной основе",
     image: "/img/services-2.jpg",
   },
   {
