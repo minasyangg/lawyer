@@ -1,6 +1,7 @@
 "use server"
 
 import { prisma } from '@/lib/prisma'
+import { getFileUrl } from '@/lib/utils/universal-file-utils'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createSlugFromTitle } from '@/lib/services'
@@ -47,9 +48,14 @@ export async function createService(form: FormData) {
   if (exists) {
     return { errors: { title: ['Услуга с таким названием уже существует'] } }
   }
-  await prisma.service.create({ data: parsed.data })
+  // Если heroImage указывает на файл из файлового менеджера, делаем его публичным и нормализуем в прямой CDN URL
+  await makeHeroImagePublic(parsed.data.heroImage)
+  const heroImageNormalized = await normalizeHeroImage(parsed.data.heroImage)
+  const created = await prisma.service.create({ data: { ...parsed.data, heroImage: heroImageNormalized } })
   revalidatePath('/admin/services')
   revalidatePath('/')
+  // На всякий случай инвалидация потенциальной страницы услуги по slug
+  revalidatePath(`/${createSlugFromTitle(created.title)}`)
   return { success: true }
 }
 
@@ -69,10 +75,13 @@ export async function updateService(id: number, form: FormData) {
   const duplicate = await prisma.service.findFirst({ where: { title: parsed.data.title, NOT: { id } } })
   if (duplicate) return { errors: { title: ['Другое значение уже использует это имя'] } }
 
-  await prisma.service.update({ where: { id }, data: parsed.data })
+  await makeHeroImagePublic(parsed.data.heroImage)
+  const heroImageNormalized = await normalizeHeroImage(parsed.data.heroImage)
+  await prisma.service.update({ where: { id }, data: { ...parsed.data, heroImage: heroImageNormalized } })
   revalidatePath('/admin/services')
   revalidatePath('/')
-  revalidatePath(`/services/${createSlugFromTitle(parsed.data.title)}`)
+  // Страница услуги расположена по корневому slug: /{slug}, а не /services/{slug}
+  revalidatePath(`/${createSlugFromTitle(parsed.data.title)}`)
   return { success: true }
 }
 
@@ -91,6 +100,106 @@ export async function deleteService(id: number, confirm: string) {
   revalidatePath('/admin/services')
   revalidatePath('/')
   return { success: true }
+}
+
+// Вспомогательная функция: делает файл публичным по heroImage URL (поддержка /api/files/:id и /api/files/virtual/:virtualId)
+async function makeHeroImagePublic(heroImage: string | null | undefined) {
+  if (!heroImage) return { ok: false, reason: 'empty' as const }
+  try {
+    // Нормализуем строку (убираем лишние пробелы)
+    const src = heroImage.trim()
+    const where: { id?: number; virtualId?: string; path?: string; filename?: string; virtualPath?: string } = {}
+
+    // Поддержка различных форматов heroImage:
+    // 1) /api/files/virtual/{virtualId}
+    // 2) /api/files/{id}
+    // 3) Прямой CDN/Supabase URL (попробуем определить по filename в конце пути)
+    // 4) Хранилищный путь (file.path) или virtualPath
+    const virtualMatch = src.match(/\/api\/files\/virtual\/([^/?#]+)/)
+    const idMatch = src.match(/\/api\/files\/(\d+)(?:$|[/?#])/)
+
+    if (virtualMatch) {
+      where.virtualId = virtualMatch[1]
+      console.info('[service-actions] heroImage match: virtualId', where.virtualId)
+    } else if (idMatch) {
+      where.id = Number(idMatch[1])
+      console.info('[service-actions] heroImage match: id', where.id)
+    } else if (!src.startsWith('/api/')) {
+      // Возможный вариант: это путь или внешний URL
+      const fileNameMatch = src.match(/([^/]+)$/)
+      const baseName = fileNameMatch ? fileNameMatch[1] : undefined
+
+      // Пробуем найти по точному пути, по virtualPath и по имени файла
+      const candidate = await prisma.file.findFirst({
+        where: {
+          OR: [
+            { path: src },
+            { virtualPath: src },
+            ...(baseName ? [{ filename: baseName }] : [])
+          ]
+        },
+        select: { id: true, isPublic: true }
+      })
+      if (candidate) {
+        if (!candidate.isPublic) {
+          await prisma.file.update({ where: { id: candidate.id }, data: { isPublic: true } })
+          console.info('[service-actions] heroImage made public by path/filename', { id: candidate.id })
+        } else {
+          console.info('[service-actions] heroImage already public by path/filename', { id: candidate.id })
+        }
+        return { ok: true as const }
+      }
+
+      console.warn('[service-actions] heroImage not found by path/filename', { src, baseName })
+      return { ok: false as const, reason: 'not-found' as const }
+    } else {
+      console.warn('[service-actions] heroImage unrecognized format', { src })
+      return { ok: false as const, reason: 'unrecognized' as const }
+    }
+
+    const file = await prisma.file.findFirst({ where, select: { id: true, isPublic: true } })
+    if (file) {
+      if (!file.isPublic) {
+        await prisma.file.update({ where: { id: file.id }, data: { isPublic: true } })
+        console.info('[service-actions] heroImage made public', { id: file.id })
+      } else {
+        console.info('[service-actions] heroImage already public', { id: file.id })
+      }
+      return { ok: true as const }
+    } else {
+      console.warn('[service-actions] heroImage file record not found', { where })
+      return { ok: false as const, reason: 'not-found' as const }
+    }
+  } catch (e) {
+    console.error('[service-actions] Failed to mark heroImage public', e)
+    return { ok: false as const, reason: 'error' as const }
+  }
+}
+
+// Преобразует heroImage из внутренних /api/files/virtual/:id или /api/files/:id в прямой CDN/Supabase URL для корректной работы next/image
+async function normalizeHeroImage(heroImage: string | null | undefined): Promise<string | null> {
+  if (!heroImage) return null
+  const src = heroImage.trim()
+  // Уже внешний URL — оставляем
+  if (src.startsWith('http://') || src.startsWith('https://')) return src
+  try {
+    const virtualMatch = src.match(/\/api\/files\/virtual\/([^/?#]+)/)
+    const idMatch = src.match(/\/api\/files\/(\d+)(?:$|[/?#])/)
+    let file = null
+    if (virtualMatch) {
+      file = await prisma.file.findFirst({ where: { virtualId: virtualMatch[1] }, select: { path: true } })
+    } else if (idMatch) {
+      file = await prisma.file.findFirst({ where: { id: Number(idMatch[1]) }, select: { path: true } })
+    }
+    if (file?.path) {
+      const direct = await getFileUrl(file.path)
+      console.info('[service-actions] heroImage normalized to direct URL', { direct })
+      return direct
+    }
+  } catch (e) {
+    console.warn('[service-actions] heroImage normalization failed, keep original', { src, error: (e as Error).message })
+  }
+  return src
 }
 
 export async function listServices() {
