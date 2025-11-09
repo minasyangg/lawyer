@@ -37,12 +37,14 @@ export default function LoginPage() {
       const nextParam = searchParams?.get('next')
       const target = nextParam || data?.redirectUrl || '/'
 
-      // Используем full-page переход, чтобы cookie точно подхватились middleware
-      if (typeof window !== 'undefined') {
-        window.location.assign(target)
-      } else {
-        router.replace(target)
-      }
+      // Небольшая микрозадержка, чтобы браузер применил Set-Cookie перед переходом
+      setTimeout(() => {
+        if (typeof window !== 'undefined') {
+          window.location.href = target
+        } else {
+          router.replace(target)
+        }
+      }, 15)
     } catch (err) {
       console.error('Login error:', err)
       setError('Network error')

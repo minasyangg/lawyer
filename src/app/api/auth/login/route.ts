@@ -31,23 +31,23 @@ export async function POST(request: NextRequest) {
       userRole: user.userRole
     })
 
-    // Create a simple session cookie
-    const cookieStore = await cookies()
+    // Prepare cookie data
     const sessionData = JSON.stringify(user)
     console.log('🍪 Setting session cookie with data:', sessionData)
-    
-    cookieStore.set('admin-session', sessionData, {
+
+    // Determine redirect URL based on role so client can navigate appropriately
+    const redirectUrl = user.userRole === 'ADMIN' ? '/admin' : user.userRole === 'EDITOR' ? '/editor' : '/'
+
+    // Use NextResponse so Set-Cookie header is actually sent with fetch response
+    const response = NextResponse.json({ success: true, user, redirectUrl })
+    response.cookies.set('admin-session', sessionData, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       path: '/',
       maxAge: 60 * 60 * 24 * 7, // 7 days
     })
-
-    // Determine redirect URL based on role so client can navigate appropriately
-    const redirectUrl = user.userRole === 'ADMIN' ? '/admin' : user.userRole === 'EDITOR' ? '/editor' : '/'
-
-    return NextResponse.json({ success: true, user, redirectUrl })
+    return response
   } catch (error) {
     console.error('❌ Login error:', error)
     return NextResponse.json(
