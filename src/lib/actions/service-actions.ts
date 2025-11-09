@@ -28,7 +28,11 @@ const ServiceSchema = z.object({
   description: z.string().min(5).max(500), // hero subtitle
   extraInfo: z.string().nullable().optional().transform(v => v === '' ? null : v),
   heroImage: z.string().nullable().optional().transform(v => v === '' ? null : v),
-  cardExcerpt: z.string().nullable().optional().transform(v => v === '' ? null : v)
+  cardExcerpt: z.string().nullable().optional().transform(v => v === '' ? null : v),
+  practiceColumns: z.preprocess(v => {
+    if (v === '2' || v === 2) return 2
+    return 1
+  }, z.number().int().min(1).max(2)).optional().default(1)
 })
 
 export async function createService(form: FormData) {
@@ -40,7 +44,8 @@ export async function createService(form: FormData) {
     description: form.get('description') as string,
     extraInfo: form.get('extraInfo') as string | null,
     heroImage: form.get('heroImage') as string | null,
-    cardExcerpt: form.get('cardExcerpt') as string | null
+    cardExcerpt: form.get('cardExcerpt') as string | null,
+    practiceColumns: form.get('practiceColumns') as string | null
   }
   const parsed = ServiceSchema.safeParse(data)
   if (!parsed.success) {
@@ -56,6 +61,7 @@ export async function createService(form: FormData) {
   // cardImage добавлено недавно — во время миграции клиентские тайпинги могут быть не обновлены
   // cardImage временно опустим до обновления Prisma client
   const created = await prisma.service.create({ data: { ...parsed.data, heroImage: heroImageNormalized, cardImage: heroImageNormalized } })
+  // Set a short-lived cookie flag via header for Saved banner (handled client side by ServiceForm for now)
   revalidatePath('/admin/services')
   revalidatePath('/')
   // На всякий случай инвалидация потенциальной страницы услуги по slug
@@ -73,7 +79,8 @@ export async function updateService(id: number, form: FormData) {
     description: form.get('description') as string,
     extraInfo: form.get('extraInfo') as string | null,
     heroImage: form.get('heroImage') as string | null,
-    cardExcerpt: form.get('cardExcerpt') as string | null
+    cardExcerpt: form.get('cardExcerpt') as string | null,
+    practiceColumns: form.get('practiceColumns') as string | null
   }
   const parsed = ServiceSchema.safeParse(data)
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }

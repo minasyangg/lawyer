@@ -236,20 +236,36 @@ ${service.extraInfo || service.description}
 
   // Создаем статьи в базе данных
   let createdCount = 0;
+  let updatedCount = 0;
   for (const publication of publications) {
     try {
-      await prisma.article.create({
-        data: publication
+      const upserted = await prisma.article.upsert({
+        where: { slug: publication.slug },
+        update: {
+          title: publication.title,
+          excerpt: publication.excerpt,
+          content: publication.content,
+          published: publication.published,
+          categoryId: publication.categoryId,
+          authorId: publication.authorId,
+        },
+        create: publication,
       });
-      console.log(`✅ Создана статья: ${publication.title}`);
-      createdCount++;
+      if (upserted.createdAt.getTime() === upserted.updatedAt.getTime()) {
+        console.log(`✅ Создана статья: ${publication.title}`);
+        createdCount++;
+      } else {
+        console.log(`♻️ Обновлена статья: ${publication.title}`);
+        updatedCount++;
+      }
     } catch (error) {
-      console.log(`❌ Ошибка создания статьи "${publication.title}": ${error.message}`);
+      console.log(`❌ Ошибка upsert статьи "${publication.title}": ${error.message}`);
     }
   }
 
   console.log(`\n📊 Результат:`);
   console.log(`   Создано публикаций: ${createdCount}`);
+  console.log(`   Обновлено публикаций: ${updatedCount}`);
   console.log('✅ Seed публикаций выполнен успешно!');
 }
 

@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client'
+// CommonJS version for runAllSeeds.js
+const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
 
 async function main() {
@@ -32,15 +33,19 @@ async function main() {
 
   for (const service of services) {
     const cardExcerpt = service.description.slice(0, 180)
-    await prisma.service.create({
-      data: {
-        ...service,
-        cardExcerpt,
-        // По умолчанию heroImage можно оставить null или указать плейсхолдер
-        heroImage: service.heroImage || null,
-        cardImage: service.cardImage || null,
-      }
-    });
+    // Проверяем уникальность по title чтобы сиды можно запускать повторно
+    const exists = await prisma.service.findFirst({ where: { title: service.title } })
+    if (!exists) {
+      await prisma.service.create({
+        data: {
+          ...service,
+          cardExcerpt,
+          heroImage: service.heroImage || null,
+          cardImage: service.cardImage || null,
+          practiceColumns: 1,
+        }
+      });
+    }
   }
 
   console.log('Services seeded successfully');

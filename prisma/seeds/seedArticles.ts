@@ -283,13 +283,26 @@ async function main() {
     }
   ];
 
+  let created = 0
+  let updated = 0
   for (const articleData of articles) {
-    await prisma.article.create({
-      data: articleData
-    });
+    const upserted = await prisma.article.upsert({
+      where: { slug: articleData.slug },
+      update: {
+        title: articleData.title,
+        excerpt: articleData.excerpt,
+        content: articleData.content,
+        published: articleData.published,
+        categoryId: articleData.categoryId,
+        authorId: articleData.authorId,
+      },
+      create: articleData,
+    })
+    if (upserted.createdAt.getTime() === upserted.updatedAt.getTime()) created++
+    else updated++
   }
 
-  console.log('Articles seeded successfully');
+  console.log(`Articles seeded successfully (created: ${created}, updated: ${updated})`);
 }
 
 main()

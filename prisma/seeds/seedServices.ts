@@ -32,13 +32,16 @@ async function main() {
   ];
 
   for (const service of services) {
-    await prisma.service.create({
-      data: {
-        ...service,
-        // Заполняем краткое описание для карточек автоматически (если не задано)
-        cardExcerpt: service.description.slice(0, 180)
-      }
-    });
+    const exists = await prisma.service.findFirst({ where: { title: service.title } })
+    if (!exists) {
+      await prisma.service.create({
+        data: {
+          ...service,
+          cardExcerpt: service.description.slice(0, 180),
+          practiceColumns: 1
+        }
+      });
+    }
   }
 
   console.log('Services seeded successfully');

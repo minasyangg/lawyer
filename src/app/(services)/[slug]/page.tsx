@@ -53,25 +53,30 @@ export default async function ServicePage({ params }: ServicePageProps) {
       .map(line => line.replace(/^\d+\.\s*/, '').trim())
   }
 
+  // Собираем карточки по категориям
+  const detailCards: { title: string; items: string[] }[] = service.details.length === 0
+    ? [{ title: 'Услуги практики', items: features }]
+    : service.details.map((d, idx) => ({ title: d.category || `Категория ${idx + 1}`, items: parseItems(d.services) }))
+
+  // Применяем явный выбор количества колонок
+  const columnsPref = (service as { practiceColumns?: number }).practiceColumns === 2 ? 2 : 1
   let practiceCards: { title: string; items: string[] }[]
-  if (service.details.length === 0) {
-    practiceCards = [{ title: 'Услуги практики', items: features }]
-  } else if (service.details.length === 1) {
-    const d0 = service.details[0]
-    practiceCards = [{ title: d0.category || 'Услуги практики', items: parseItems(d0.services) }]
+  if (columnsPref === 1) {
+    // Объединяем все пункты в одну карту
+    const mergedItems = detailCards.flatMap(c => c.items)
+    const title = detailCards[0]?.title || 'Услуги практики'
+    practiceCards = [{ title, items: mergedItems }]
   } else {
-    const d0 = service.details[0]
-    const d1 = service.details[1]
-    const left = { title: d0.category || 'Колонка 1', items: parseItems(d0.services) }
-    const rightItems = [...parseItems(d1.services)]
-    // Добавляем оставшиеся категории к правой колонке
-    if (service.details.length > 2) {
-      for (let i = 2; i < service.details.length; i++) {
-        rightItems.push(...parseItems(service.details[i].services))
+    if (detailCards.length <= 1) {
+      practiceCards = detailCards.length === 1 ? [detailCards[0]] : [{ title: 'Услуги практики', items: features }]
+    } else {
+      const left = detailCards[0]
+      const right = { title: detailCards[1].title, items: [...detailCards[1].items] }
+      for (let i = 2; i < detailCards.length; i++) {
+        right.items.push(...detailCards[i].items)
       }
+      practiceCards = [left, right]
     }
-    const right = { title: d1.category || 'Колонка 2', items: rightItems }
-    practiceCards = [left, right]
   }
 
   return (

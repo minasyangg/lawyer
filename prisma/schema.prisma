@@ -58,6 +58,7 @@ model Service {
   heroImage   String?          // Путь к изображению героя услуги, например "/img/services/bankruptcy.png"
   cardImage   String?          // Изображение для карточек услуг (по умолчанию совпадает с heroImage)
   cardExcerpt String?          // Краткое описание для карточек на главной
+  practiceColumns Int          @default(1) // Явный выбор: 1 или 2 колонки в секции практики
   details     ServiceDetails[]
   articles    Article[]
 }
