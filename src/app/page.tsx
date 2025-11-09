@@ -1,7 +1,7 @@
 import React from "react";
 import Header from "@/components/ui/Header";
 import HeroSection from "@/components/general/HeroSection";
-import ServicesCarousel from "@/components/general/ServicesCarousel";
+import ServicesCarouselServer from "@/components/general/ServicesCarouselServer";
 import InteractiveCellsSection from "@/components/general/InteractiveCellsSection";
 import ContactFormSection from "@/components/forms/ContactFormSection";
 import Footer from "@/components/section/Footer";
@@ -12,7 +12,7 @@ export default function Home() {
       <Header />
       <main>
         <HeroSection />
-        <ServicesCarousel />
+  <ServicesCarouselServer />
         <InteractiveCellsSection />
         <ContactFormSection />
       </main>

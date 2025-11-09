@@ -5,46 +5,20 @@ import ContactRedirectButton from '@/components/ui/ContactRedirectButton'
 import Image from 'next/image'
 import ServiceCard from './ServiceCard'
 
-const services = [
-  {
-    id: 1,
-    title: 'Услуги налоговой практики',
-    imageSrc: '/img/service-tax-7fe93d.png',
-    imageHeight: 145,
-  },
-  {
-    id: 2,
-    title: 'Разрешение споров и взыскание',
-    imageSrc: '/img/service-dispute-770963.png',
-    imageHeight: 146,
-  },
-  {
-    id: 3,
-    title: 'Услуги практики банкротства',
-    imageSrc: '/img/service-bankruptcy-2e9617.png',
-    imageHeight: 131,
-  },
-  {
-    id: 4,
-    title: 'Частным клиентам',
-    imageSrc: '/img/service-private-638726.png',
-    imageHeight: 127,
-  },
-  {
-    id: 5,
-    title: 'Разрешение споров и взыскание',
-    imageSrc: '/img/service-dispute-2-4cd064.png',
-    imageHeight: 143,
-  },
-  {
-    id: 6,
-    title: 'Услуги практики по интеллектуальным правам',
-    imageSrc: '/img/service-intellectual-27f422.png',
-    imageHeight: 222,
-  },
-]
+type ServiceDto = {
+  id: number
+  title: string
+  description: string
+  cardImage?: string | null
+  heroImage?: string | null
+  cardExcerpt?: string | null
+}
 
-export default function ServicesCarousel() {
+interface Props {
+  services: ServiceDto[]
+}
+
+export default function ServicesCarousel({ services }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const sectionRef = useRef<HTMLElement | null>(null)
   const firstImageRef = useRef<HTMLDivElement>(null as unknown as HTMLDivElement)
@@ -193,8 +167,8 @@ export default function ServicesCarousel() {
                   >
                     <ServiceCard
                       title={service.title}
-                      imageSrc={service.imageSrc}
-                      imageHeight={service.imageHeight}
+                      description={service.cardExcerpt || service.description}
+                      imageSrc={service.cardImage || service.heroImage || '/img/services-section-photo-6058bc.png'}
                       imageContainerRef={service.id === services[0].id ? firstImageRef : undefined}
                     />
                   </div>

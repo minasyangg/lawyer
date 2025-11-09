@@ -8,26 +8,24 @@ async function main() {
   // Маппинг названий услуг на пути к изображениям (из шаблонов Figma)
   const serviceImageMap = {
     // 1. Услуги практики банкротства (node 28:1475)
-    'Услуги практики банкротства': '/img/services/bankruptcy-hero.png',
+    'Практика банкротства': '/img/services/bankruptcy-hero.png',
     'Банкротство': '/img/services/bankruptcy-hero.png',
     
     // 2. Услуги налоговой практики / Разрешение споров и взыскание (node 28:1390)
-    'Услуги налоговой практики': '/img/services/tax-hero.png',
+    'Налоговая практика': '/img/services/tax-hero.png',
     'Налоговая практика': '/img/services/tax-hero.png',
     'Налоговое право': '/img/services/tax-hero.png',
-    'Разрешение споров и взыскание': '/img/services/dispute-hero.png',
+    'Споры и взыскание': '/img/services/dispute-hero.png',
     'Споры и арбитраж': '/img/services/dispute-hero.png',
     
     // 3. Услуги по комплексному сопровождению бизнеса (node 28:1645)
-    'Услуги по комплексному сопровождению бизнеса': '/img/services/bankruptcy-hero.png',
+    'Комплексное сопровождение бизнеса': '/img/services/bankruptcy-hero.png',
     
     // 4. Услуги практики по интеллектуальным правам (node 28:1730)
-    'Услуги практики по интелектуальным правам': '/img/services/intellectual-hero.png',
-    'Услуги практики по интеллектуальным правам': '/img/services/intellectual-hero.png',
     'Интеллектуальная собственность': '/img/services/intellectual-hero.png',
     
     // 5. Услуги частным клиентам (используем дефолтное изображение)
-    'Услуги частным клиентам': '/img/services/bankruptcy-hero.png',
+    'Частным клиентам': '/img/services/bankruptcy-hero.png',
     'Частная практика': '/img/services/bankruptcy-hero.png',
   }
 

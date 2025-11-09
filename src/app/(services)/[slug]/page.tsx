@@ -44,32 +44,40 @@ export default async function ServicePage({ params }: ServicePageProps) {
   const relatedArticles = await getRelatedArticles(service.id, 3)
 
   // Подготовка карточек услуг практики
-  // Для налоговой практики - две карточки с названиями из Figma
-  const isTaxService = service.title.toLowerCase().includes('налог')
-  
-  const practiceCards = isTaxService && service.details.length >= 2
-    ? [
-        {
-          title: service.details[0]?.category || 'Налоговые споры',
-          items: service.details[0]?.services
-            .split('\n')
-            .filter(line => line.trim())
-            .map(line => line.replace(/^\d+\.\s*/, '').trim()) || []
-        },
-        {
-          title: service.details[1]?.category || 'Налоговый консалтинг',
-          items: service.details[1]?.services
-            .split('\n')
-            .filter(line => line.trim())
-            .map(line => line.replace(/^\d+\.\s*/, '').trim()) || []
-        }
-      ]
-    : [
-        {
-          title: service.details[0]?.category || 'Услуги практики',
-          items: features
-        }
-      ]
+  // Общая логика: 1 колонка — если одна категория; 2 колонки — если две и более (лишние категории добавляем ко второй колонке).
+  function parseItems(text: string | null | undefined) {
+    if (!text) return [] as string[]
+    return text
+      .split('\n')
+      .filter(line => line.trim())
+      .map(line => line.replace(/^\d+\.\s*/, '').trim())
+  }
+
+  // Собираем карточки по категориям
+  const detailCards: { title: string; items: string[] }[] = service.details.length === 0
+    ? [{ title: 'Услуги практики', items: features }]
+    : service.details.map((d, idx) => ({ title: d.category || `Категория ${idx + 1}`, items: parseItems(d.services) }))
+
+  // Применяем явный выбор количества колонок
+  const columnsPref = (service as { practiceColumns?: number }).practiceColumns === 2 ? 2 : 1
+  let practiceCards: { title: string; items: string[] }[]
+  if (columnsPref === 1) {
+    // Объединяем все пункты в одну карту
+    const mergedItems = detailCards.flatMap(c => c.items)
+    const title = detailCards[0]?.title || 'Услуги практики'
+    practiceCards = [{ title, items: mergedItems }]
+  } else {
+    if (detailCards.length <= 1) {
+      practiceCards = detailCards.length === 1 ? [detailCards[0]] : [{ title: 'Услуги практики', items: features }]
+    } else {
+      const left = detailCards[0]
+      const right = { title: detailCards[1].title, items: [...detailCards[1].items] }
+      for (let i = 2; i < detailCards.length; i++) {
+        right.items.push(...detailCards[i].items)
+      }
+      practiceCards = [left, right]
+    }
+  }
 
   return (
     <div className="min-h-screen flex flex-col">

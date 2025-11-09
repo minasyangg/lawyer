@@ -3,8 +3,21 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const seedsDir = __dirname;
-const files = fs.readdirSync(seedsDir)
-  .filter(f => /^seed.*\.js$/.test(f) && f !== 'runAllSeeds.js');
+
+// Определяем порядок запуска seed файлов
+const orderedFiles = [
+  'seed.js',                    // Сначала аутентификация
+  'seedServices.js',            // Затем услуги
+  'seedServiceDetails.js',      // Детали услуг (зависит от услуг)
+  'seedServiceHeroImages.js',   // Hero изображения (зависит от услуг)
+  'seedTags.js',
+  'seedTags.new.js',
+  'seedUsers.js',
+  'seedPublications.js'         // Публикации (зависят от пользователей и услуг)
+];
+
+// Фильтруем только существующие файлы
+const files = orderedFiles.filter(f => fs.existsSync(path.join(seedsDir, f)));
 
 if (files.length === 0) {
   console.log('No seed files found.');

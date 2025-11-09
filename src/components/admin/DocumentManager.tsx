@@ -151,6 +151,7 @@ interface FileItem {
               <DialogTitle>Выберите файл</DialogTitle>
             </DialogHeader>
             <FileManager 
+              mode="dialog"
               userRole="ADMIN" 
               onFileSelect={(file) => {
                 handleFileSelect(file)

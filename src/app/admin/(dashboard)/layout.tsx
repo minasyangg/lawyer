@@ -1,4 +1,4 @@
-import { Users, LayoutDashboard, Settings, FileText, FolderOpen } from "lucide-react"
+import { Users, LayoutDashboard, Settings, FileText, FolderOpen, Briefcase } from "lucide-react"
 import Link from "next/link"
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
@@ -28,6 +28,7 @@ export default async function AdminLayout({
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Users', href: '/admin/users', icon: Users },
+    { name: 'Services', href: '/admin/services', icon: Briefcase },
     { name: 'Articles', href: '/admin/articles', icon: FileText },
     { name: 'File Manager', href: '/admin/files', icon: FolderOpen },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
