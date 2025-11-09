@@ -12,7 +12,8 @@ const orderedFiles = [
   'seedServiceHeroImages.js',   // Hero изображения (зависит от услуг)
   'seedTags.js',
   'seedTags.new.js',
-  'seedUsers.js'
+  'seedUsers.js',
+  'seedPublications.js'         // Публикации (зависят от пользователей и услуг)
 ];
 
 // Фильтруем только существующие файлы
