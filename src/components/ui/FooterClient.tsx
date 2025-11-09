@@ -14,7 +14,9 @@ export default function FooterClient({ services }: FooterClientProps) {
           {/* Company Info */}
           <div className="md:col-span-1">
             <div className="flex items-center gap-3 mb-4">
-              <span className="font-bold text-2xl text-black">ПФК</span>
+              <Link href="/" className="font-bold text-2xl text-black hover:text-gray-700 transition-colors">
+                ПФК
+              </Link>
             </div>
             <p className="text-gray-600 text-sm mb-4">
               Профессиональная юридическая помощь для бизнеса и частных лиц

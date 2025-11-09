@@ -40,8 +40,10 @@ export default function HeaderClient({ services }: HeaderClientProps) {
     <header className="w-full bg-white border-b border-gray-200">
       <div className="container mx-auto max-w-screen-xl px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Image src="/img/logo-vector.svg" alt="ПФК Логотип" width={44} height={22} priority />
-          <span className="font-bold text-xl font-display" style={{ color: '#000000' }}>ПФК</span>
+          <Link href="/" className="flex items-center gap-3">
+            <Image src="/img/logo-vector.svg" alt="ПФК Логотип" width={44} height={22} priority />
+            <span className="font-bold text-xl font-display" style={{ color: '#000000' }}>ПФК</span>
+          </Link>
         </div>
 
         <nav className="hidden lg:flex gap-8 items-center">
