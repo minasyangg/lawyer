@@ -1,8 +1,9 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { toast } from 'react-hot-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import FileManager from '@/components/admin/FileManager/FileManager'
 import { createService, updateService } from '@/lib/actions/service-actions'
@@ -13,6 +14,7 @@ interface ServiceFormProps {
   initial?: {
     title: string
     description: string
+    cardExcerpt?: string | null
     extraInfo?: string | null
     heroImage?: string | null
   }
@@ -22,7 +24,9 @@ interface ServiceFormProps {
 export default function ServiceForm({ mode, serviceId, initial, redirectPath = '/admin/services' }: ServiceFormProps) {
   const [fileDialogOpen, setFileDialogOpen] = useState(false)
   const [heroImage, setHeroImage] = useState(initial?.heroImage || '')
+  const [cardExcerpt, setCardExcerpt] = useState(initial?.cardExcerpt || '')
   const [pending, setPending] = useState(false)
+  const [isMutating, startTransition] = useTransition()
   const [errors, setErrors] = useState<Record<string, string[]>>({})
   const router = useRouter()
 
@@ -31,6 +35,7 @@ export default function ServiceForm({ mode, serviceId, initial, redirectPath = '
     setPending(true)
     setErrors({})
     form.set('heroImage', heroImage)
+    form.set('cardExcerpt', cardExcerpt)
     try {
       let res: ActionResult | undefined
       if (mode === 'create') {
@@ -40,20 +45,32 @@ export default function ServiceForm({ mode, serviceId, initial, redirectPath = '
       }
       if (res?.errors) {
         setErrors(res.errors)
+        toast.error('Есть ошибки. Проверьте поля формы.')
       } else if (res?.success) {
-        // После успешного сохранения переходим по redirectPath
-        router.push(redirectPath)
-        router.refresh()
+        toast.success('Услуга успешно сохранена')
+        startTransition(() => {
+          router.push(redirectPath)
+          router.refresh()
+        })
       }
     } catch (e) {
       console.error(e)
+      toast.error('Ошибка при сохранении')
     } finally {
       setPending(false)
     }
   }
 
   return (
-    <form action={handleSubmit} className="space-y-6">
+    <form action={handleSubmit} className="space-y-6 relative">
+      {(pending || isMutating) && (
+        <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-50 rounded-md">
+          <div className="flex flex-col items-center gap-2">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+            <p className="text-sm text-gray-700">Сохранение...</p>
+          </div>
+        </div>
+      )}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">Название услуги</label>
         <input name="title" defaultValue={initial?.title} required maxLength={120} className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -63,6 +80,12 @@ export default function ServiceForm({ mode, serviceId, initial, redirectPath = '
         <label className="block text-sm font-medium text-gray-700">Hero подзаголовок (description)</label>
         <textarea name="description" defaultValue={initial?.description} required maxLength={500} rows={3} className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
         {errors.description && <p className="text-xs text-red-600">{errors.description[0]}</p>}
+      </div>
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">Краткое описание для карточки (cardExcerpt)</label>
+        <textarea name="cardExcerpt" value={cardExcerpt} onChange={e => setCardExcerpt(e.target.value)} maxLength={200} rows={3} className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <p className="text-xs text-gray-500">Это краткий текст под названием услуги на главной странице. Рекомендуется до 1–2 предложений (до 200 символов).</p>
+        {errors.cardExcerpt && <p className="text-xs text-red-600">{errors.cardExcerpt[0]}</p>}
       </div>
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">Полное описание (extraInfo)</label>
@@ -79,7 +102,7 @@ export default function ServiceForm({ mode, serviceId, initial, redirectPath = '
         {errors.heroImage && <p className="text-xs text-red-600">{errors.heroImage[0]}</p>}
       </div>
       <div className="flex justify-end gap-3">
-        <Button type="submit" disabled={pending} className="bg-blue-600 hover:bg-blue-700">{pending ? 'Сохранение...' : (mode === 'create' ? 'Создать' : 'Сохранить')}</Button>
+        <Button type="submit" disabled={pending || isMutating} className="bg-blue-600 hover:bg-blue-700">{(pending || isMutating) ? 'Сохранение...' : (mode === 'create' ? 'Создать' : 'Сохранить')}</Button>
       </div>
 
       {fileDialogOpen && (

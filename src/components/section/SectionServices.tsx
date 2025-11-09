@@ -1,8 +1,19 @@
 import Image from "next/image";
 import { getAllServices } from "@/lib/services";
 
+interface ServiceWithOptionalCardImage {
+  id: number;
+  title: string;
+  description: string;
+  extraInfo: string | null;
+  heroImage: string | null;
+  // cardImage может отсутствовать до обновления Prisma client
+  cardImage?: string | null;
+  cardExcerpt?: string | null;
+}
+
 export default async function SectionServices() {
-  const services = await getAllServices();
+  const services = await getAllServices() as ServiceWithOptionalCardImage[];
   return (
     <section className="container mx-auto max-w-screen-xl px-4 py-16">
       <h2 className="text-3xl md:text-4xl font-bold mb-10 text-center">Услуги ПФК</h2>
@@ -11,7 +22,7 @@ export default async function SectionServices() {
           <article key={service.id} className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
             <div className="w-full h-64 relative mb-4">
               <Image
-                src={service.heroImage || "/img/services-section-photo-6058bc.png"}
+                src={service.cardImage || service.heroImage || "/img/services-section-photo-6058bc.png"}
                 alt={service.title}
                 fill
                 sizes="(max-width: 768px) 100vw, 33vw"
@@ -20,7 +31,7 @@ export default async function SectionServices() {
               />
             </div>
             <h3 className="text-xl font-semibold mb-2 text-center">{service.title}</h3>
-            <p className="text-gray-600 text-center text-base">{service.description}</p>
+            <p className="text-gray-600 text-center text-base">{service.cardExcerpt || service.description}</p>
           </article>
         ))}
       </div>

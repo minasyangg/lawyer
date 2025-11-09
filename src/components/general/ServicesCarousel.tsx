@@ -9,7 +9,9 @@ type ServiceDto = {
   id: number
   title: string
   description: string
+  cardImage?: string | null
   heroImage?: string | null
+  cardExcerpt?: string | null
 }
 
 interface Props {
@@ -165,8 +167,8 @@ export default function ServicesCarousel({ services }: Props) {
                   >
                     <ServiceCard
                       title={service.title}
-                      description={service.description}
-                      imageSrc={service.heroImage || '/img/services-section-photo-6058bc.png'}
+                      description={service.cardExcerpt || service.description}
+                      imageSrc={service.cardImage || service.heroImage || '/img/services-section-photo-6058bc.png'}
                       imageContainerRef={service.id === services[0].id ? firstImageRef : undefined}
                     />
                   </div>

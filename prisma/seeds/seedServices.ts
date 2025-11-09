@@ -33,7 +33,11 @@ async function main() {
 
   for (const service of services) {
     await prisma.service.create({
-      data: service
+      data: {
+        ...service,
+        // Заполняем краткое описание для карточек автоматически (если не задано)
+        cardExcerpt: service.description.slice(0, 180)
+      }
     });
   }
 

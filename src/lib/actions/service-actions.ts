@@ -27,7 +27,8 @@ const ServiceSchema = z.object({
   title: z.string().min(2).max(120),
   description: z.string().min(5).max(500), // hero subtitle
   extraInfo: z.string().nullable().optional().transform(v => v === '' ? null : v),
-  heroImage: z.string().nullable().optional().transform(v => v === '' ? null : v)
+  heroImage: z.string().nullable().optional().transform(v => v === '' ? null : v),
+  cardExcerpt: z.string().nullable().optional().transform(v => v === '' ? null : v)
 })
 
 export async function createService(form: FormData) {
@@ -38,7 +39,8 @@ export async function createService(form: FormData) {
     title: form.get('title') as string,
     description: form.get('description') as string,
     extraInfo: form.get('extraInfo') as string | null,
-    heroImage: form.get('heroImage') as string | null
+    heroImage: form.get('heroImage') as string | null,
+    cardExcerpt: form.get('cardExcerpt') as string | null
   }
   const parsed = ServiceSchema.safeParse(data)
   if (!parsed.success) {
@@ -51,7 +53,9 @@ export async function createService(form: FormData) {
   // Если heroImage указывает на файл из файлового менеджера, делаем его публичным и нормализуем в прямой CDN URL
   await makeHeroImagePublic(parsed.data.heroImage)
   const heroImageNormalized = await normalizeHeroImage(parsed.data.heroImage)
-  const created = await prisma.service.create({ data: { ...parsed.data, heroImage: heroImageNormalized } })
+  // cardImage добавлено недавно — во время миграции клиентские тайпинги могут быть не обновлены
+  // cardImage временно опустим до обновления Prisma client
+  const created = await prisma.service.create({ data: { ...parsed.data, heroImage: heroImageNormalized, cardImage: heroImageNormalized } })
   revalidatePath('/admin/services')
   revalidatePath('/')
   // На всякий случай инвалидация потенциальной страницы услуги по slug
@@ -62,11 +66,14 @@ export async function createService(form: FormData) {
 export async function updateService(id: number, form: FormData) {
   const user = await getCurrentUser();
   assertAdmin(user)
+  // Remember previous title to revalidate old slug if title changes
+  const prev = await prisma.service.findUnique({ where: { id }, select: { title: true } })
   const data = {
     title: form.get('title') as string,
     description: form.get('description') as string,
     extraInfo: form.get('extraInfo') as string | null,
-    heroImage: form.get('heroImage') as string | null
+    heroImage: form.get('heroImage') as string | null,
+    cardExcerpt: form.get('cardExcerpt') as string | null
   }
   const parsed = ServiceSchema.safeParse(data)
   if (!parsed.success) return { errors: parsed.error.flatten().fieldErrors }
@@ -77,11 +84,16 @@ export async function updateService(id: number, form: FormData) {
 
   await makeHeroImagePublic(parsed.data.heroImage)
   const heroImageNormalized = await normalizeHeroImage(parsed.data.heroImage)
-  await prisma.service.update({ where: { id }, data: { ...parsed.data, heroImage: heroImageNormalized } })
+  await prisma.service.update({ where: { id }, data: { ...parsed.data, heroImage: heroImageNormalized, cardImage: heroImageNormalized } })
   revalidatePath('/admin/services')
   revalidatePath('/')
   // Страница услуги расположена по корневому slug: /{slug}, а не /services/{slug}
-  revalidatePath(`/${createSlugFromTitle(parsed.data.title)}`)
+  const newSlug = createSlugFromTitle(parsed.data.title)
+  revalidatePath(`/${newSlug}`)
+  if (prev && prev.title && prev.title !== parsed.data.title) {
+    const oldSlug = createSlugFromTitle(prev.title)
+    revalidatePath(`/${oldSlug}`)
+  }
   return { success: true }
 }
 
@@ -91,6 +103,8 @@ export async function deleteService(id: number, confirm: string) {
   if (confirm !== 'YES') {
     return { errors: { confirm: ['Требуется подтверждение удаления (YES)'] } }
   }
+  // Remember slug to revalidate after deletion
+  const toDelete = await prisma.service.findUnique({ where: { id }, select: { title: true } })
   // Detach articles, delete ServiceDetails, then service
   await prisma.$transaction(async (tx) => {
     await tx.article.updateMany({ where: { categoryId: id }, data: { categoryId: null } })
@@ -99,6 +113,9 @@ export async function deleteService(id: number, confirm: string) {
   })
   revalidatePath('/admin/services')
   revalidatePath('/')
+  if (toDelete?.title) {
+    revalidatePath(`/${createSlugFromTitle(toDelete.title)}`)
+  }
   return { success: true }
 }
 

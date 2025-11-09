@@ -1,6 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+import { PrismaClient } from '@prisma/client'
+const prisma = new PrismaClient()
 
 async function main() {
   const services = [
@@ -32,8 +31,15 @@ async function main() {
   ];
 
   for (const service of services) {
+    const cardExcerpt = service.description.slice(0, 180)
     await prisma.service.create({
-      data: service
+      data: {
+        ...service,
+        cardExcerpt,
+        // По умолчанию heroImage можно оставить null или указать плейсхолдер
+        heroImage: service.heroImage || null,
+        cardImage: service.cardImage || null,
+      }
     });
   }
 
@@ -42,9 +48,9 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error(e);
-    process.exit(1);
+    console.error(e)
+    process.exit(1)
   })
   .finally(async () => {
-    await prisma.$disconnect();
-  });
+    await prisma.$disconnect()
+  })
