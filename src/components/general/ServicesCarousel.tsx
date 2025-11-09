@@ -5,45 +5,18 @@ import ContactRedirectButton from '@/components/ui/ContactRedirectButton'
 import Image from 'next/image'
 import ServiceCard from './ServiceCard'
 
-const services = [
-  {
-    id: 1,
-    title: 'Налоговая практика',
-    description: 'Консультирование и защита по налогам',
-    imageSrc: '/img/service-tax-7fe93d.png',
-    imageHeight: 145,
-  },
-  {
-    id: 2,
-    title: 'Споры и взыскание',
-    description: 'Анализ, сопровождение и взыскание в рамках споров',
-    imageSrc: '/img/service-dispute-770963.png',
-    imageHeight: 146,
-  },
-  {
-    id: 3,
-    title: 'Практика банкротства',
-    description: 'Сопровождение интересов всех участников банкротства',
-    imageSrc: '/img/service-bankruptcy-2e9617.png',
-    imageHeight: 131,
-  },
-  {
-    id: 4,
-    title: 'Частным клиентам',
-    description: 'Услуги физическим лицам по частным вопросам',
-    imageSrc: '/img/service-private-638726.png',
-    imageHeight: 127,
-  },
-  {
-    id: 5,
-    title: 'Комплексное сопровождение бизнеса',
-    description: 'Набор услуг, оказываемых на длительной основе',
-    imageSrc: '/img/service-complex-tools.png',
-    imageHeight: 143,
-  },
-]
+type ServiceDto = {
+  id: number
+  title: string
+  description: string
+  heroImage?: string | null
+}
 
-export default function ServicesCarousel() {
+interface Props {
+  services: ServiceDto[]
+}
+
+export default function ServicesCarousel({ services }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const sectionRef = useRef<HTMLElement | null>(null)
   const firstImageRef = useRef<HTMLDivElement>(null as unknown as HTMLDivElement)
@@ -193,8 +166,7 @@ export default function ServicesCarousel() {
                     <ServiceCard
                       title={service.title}
                       description={service.description}
-                      imageSrc={service.imageSrc}
-                      imageHeight={service.imageHeight}
+                      imageSrc={service.heroImage || '/img/services-section-photo-6058bc.png'}
                       imageContainerRef={service.id === services[0].id ? firstImageRef : undefined}
                     />
                   </div>

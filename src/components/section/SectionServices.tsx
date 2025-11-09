@@ -1,34 +1,8 @@
 import Image from "next/image";
+import { getAllServices } from "@/lib/services";
 
-const services = [
-  {
-    title: "Налоговая практика",
-    description: "Консультирование и защита по налогам",
-    image: "/img/services-1.jpg",
-  },
-  {
-    title: "Практика банкротства",
-    description: "Сопровождение интересов всех участников банкротства",
-    image: "/img/services-2.jpg",
-  },
-  {
-    title: "Споры и взыскание",
-    description: "Анализ, сопровождение и взыскание в рамках споров",
-    image: "/img/services-3.jpg",
-  },
-  {
-    title: "Частным клиентам",
-    description: "Услуги физическим лицам по частным вопросам",
-    image: "/img/services-1.jpg",
-  },
-  {
-    title: "Комплексное сопровождение бизнеса",
-    description: "Набор услуг, оказываемых на длительной основе",
-    image: "/img/services-2.jpg",
-  },
-];
-
-export default function SectionServices() {
+export default async function SectionServices() {
+  const services = await getAllServices()
   return (
     <section className="container mx-auto max-w-screen-xl px-4 py-16">
       <h2 className="text-3xl md:text-4xl font-bold mb-10 text-center">Услуги ПФК</h2>
@@ -37,7 +11,7 @@ export default function SectionServices() {
           <article key={idx} className="bg-white rounded-xl shadow p-6 flex flex-col items-center">
             <div className="w-full h-64 relative mb-4">
               <Image
-                src={service.image}
+                src={service.heroImage || "/img/services-section-photo-6058bc.png"}
                 alt={service.title}
                 fill
                 sizes="(max-width: 768px) 100vw, 33vw"

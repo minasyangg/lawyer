@@ -1,11 +1,12 @@
 import React from 'react'
 import Link from 'next/link'
+import { getAllServices, createSlugFromTitle } from '@/lib/services'
 
 interface FooterProps {
   paddingTop?: string
 }
 
-const Footer: React.FC<FooterProps> = ({ paddingTop }) => {
+const Footer: React.FC<FooterProps> = async ({ paddingTop }) => {
   // Значения по умолчанию (большой padding)
   const defaultPadding = 'pt-[200px] md:pt-[320px] lg:pt-[370px]';
   // Если передан paddingTop проп, используем его, иначе дефолт
@@ -16,8 +17,8 @@ const Footer: React.FC<FooterProps> = ({ paddingTop }) => {
         <div className="flex flex-col lg:flex-row gap-8 md:gap-9 lg:gap-10 pb-8 md:pb-9 lg:pb-10">
           {/* Колонка 1: ПФК + Описание */}
           <div className="flex flex-col gap-2.5 md:gap-2.75 lg:gap-3 flex-1">
-            <h3 className="text-[18px] md:text-[19px] lg:text-[20px] font-bold text-white leading-[1.5]">
-              ПФК
+            <h3 className="text-[18px] md:text-[19px] lg:text-[20px] font-bold leading-[1.5]">
+              <Link href="/" className="text-white hover:underline">ПФК</Link>
             </h3>
             <div className="flex flex-col justify-end gap-2.5 md:gap-2.75 lg:gap-3 flex-1">
               <p className="text-[13px] md:text-[13.5px] lg:text-[14px] font-normal text-white leading-[1.43]">
@@ -34,30 +35,7 @@ const Footer: React.FC<FooterProps> = ({ paddingTop }) => {
             <h3 className="text-[18px] md:text-[19px] lg:text-[20px] font-bold text-white leading-[1.5]">
               Наши услуги
             </h3>
-            <div className="flex flex-col md:flex-row gap-4 md:gap-4.5 lg:gap-5 flex-1">
-              {/* Первая подколонка */}
-              <div className="flex flex-col justify-end gap-3 md:gap-3.5 lg:gap-4 flex-1">
-                <Link href="/nalogovaya-praktika" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
-                  Налоговая практика
-                </Link>
-                <Link href="/chastnym-klientam" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
-                  Частным клиентам
-                </Link>
-              </div>
-              
-              {/* Вторая подколонка */}
-              <div className="flex flex-col justify-end gap-3 md:gap-3.5 lg:gap-4 flex-1">
-                <Link href="/praktika-bankrotstva" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
-                  Практика банкротства
-                </Link>
-                <Link href="/spory-i-vzyskanie" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
-                  Споры и взыскание
-                </Link>
-                <Link href="/kompleksnoe-soprovozhdenie-biznesa" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
-                  Комплексное сопровождение бизнеса
-                </Link>
-              </div>
-            </div>
+            <ServicesLinks />
           </div>
 
           {/* Колонка 3: Навигация */}
@@ -85,3 +63,34 @@ const Footer: React.FC<FooterProps> = ({ paddingTop }) => {
   );
 };
 export default Footer;
+
+async function ServicesLinks() {
+  let services = [] as { id: number; title: string }[]
+  try {
+    services = await getAllServices()
+  } catch {
+    services = []
+  }
+  if (!services.length) return null
+  const mid = Math.ceil(services.length / 2)
+  const left = services.slice(0, mid)
+  const right = services.slice(mid)
+  return (
+    <div className="flex flex-col md:flex-row gap-4 md:gap-4.5 lg:gap-5 flex-1">
+      <div className="flex flex-col justify-end gap-3 md:gap-3.5 lg:gap-4 flex-1">
+        {left.map(s => (
+          <Link key={s.id} href={`/${createSlugFromTitle(s.title)}`} className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
+            {s.title}
+          </Link>
+        ))}
+      </div>
+      <div className="flex flex-col justify-end gap-3 md:gap-3.5 lg:gap-4 flex-1">
+        {right.map(s => (
+          <Link key={s.id} href={`/${createSlugFromTitle(s.title)}`} className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
+            {s.title}
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
