@@ -120,10 +120,8 @@ async function makeHeroImagePublic(heroImage: string | null | undefined) {
 
     if (virtualMatch) {
       where.virtualId = virtualMatch[1]
-      console.info('[service-actions] heroImage match: virtualId', where.virtualId)
     } else if (idMatch) {
       where.id = Number(idMatch[1])
-      console.info('[service-actions] heroImage match: id', where.id)
     } else if (!src.startsWith('/api/')) {
       // Возможный вариант: это путь или внешний URL
       const fileNameMatch = src.match(/([^/]+)$/)
@@ -143,17 +141,14 @@ async function makeHeroImagePublic(heroImage: string | null | undefined) {
       if (candidate) {
         if (!candidate.isPublic) {
           await prisma.file.update({ where: { id: candidate.id }, data: { isPublic: true } })
-          console.info('[service-actions] heroImage made public by path/filename', { id: candidate.id })
         } else {
-          console.info('[service-actions] heroImage already public by path/filename', { id: candidate.id })
+          // already public
         }
         return { ok: true as const }
       }
 
-      console.warn('[service-actions] heroImage not found by path/filename', { src, baseName })
       return { ok: false as const, reason: 'not-found' as const }
     } else {
-      console.warn('[service-actions] heroImage unrecognized format', { src })
       return { ok: false as const, reason: 'unrecognized' as const }
     }
 
@@ -161,17 +156,15 @@ async function makeHeroImagePublic(heroImage: string | null | undefined) {
     if (file) {
       if (!file.isPublic) {
         await prisma.file.update({ where: { id: file.id }, data: { isPublic: true } })
-        console.info('[service-actions] heroImage made public', { id: file.id })
       } else {
-        console.info('[service-actions] heroImage already public', { id: file.id })
+        // already public
       }
       return { ok: true as const }
     } else {
-      console.warn('[service-actions] heroImage file record not found', { where })
       return { ok: false as const, reason: 'not-found' as const }
     }
-  } catch (e) {
-    console.error('[service-actions] Failed to mark heroImage public', e)
+  } catch {
+    // swallow verbose errors
     return { ok: false as const, reason: 'error' as const }
   }
 }
@@ -193,11 +186,10 @@ async function normalizeHeroImage(heroImage: string | null | undefined): Promise
     }
     if (file?.path) {
       const direct = await getFileUrl(file.path)
-      console.info('[service-actions] heroImage normalized to direct URL', { direct })
       return direct
     }
-  } catch (e) {
-    console.warn('[service-actions] heroImage normalization failed, keep original', { src, error: (e as Error).message })
+  } catch {
+    // keep original on failure
   }
   return src
 }
