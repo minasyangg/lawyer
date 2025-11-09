@@ -36,16 +36,10 @@ const services = [
   },
   {
     id: 5,
-    title: 'Споры и взыскание',
-    description: 'Анализ, сопровождение и взыскание в рамках споров',
-    imageSrc: '/img/service-dispute-2-4cd064.png',
+    title: 'Комплексное сопровождение бизнеса',
+    description: 'Набор услуг, оказываемых на длительной основе',
+    imageSrc: '/img/service-complex-tools.png',
     imageHeight: 143,
-  },
-  {
-    id: 6,
-    title: 'Услуги практики по интеллектуальным правам',
-    imageSrc: '/img/service-intellectual-27f422.png',
-    imageHeight: 222,
   },
 ]
 

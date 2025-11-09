@@ -26,11 +26,6 @@ const services = [
     description: "Набор услуг, оказываемых на длительной основе",
     image: "/img/services-2.jpg",
   },
-  {
-    title: "Услуги практики по интелектуальным правам",
-    description: "Body text for whatever you’d like to share more.",
-    image: "/img/services-3.jpg",
-  },
 ];
 
 export default function SectionServices() {

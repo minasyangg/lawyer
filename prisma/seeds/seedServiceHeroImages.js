@@ -22,8 +22,6 @@ async function main() {
     'Комплексное сопровождение бизнеса': '/img/services/bankruptcy-hero.png',
     
     // 4. Услуги практики по интеллектуальным правам (node 28:1730)
-    'Услуги практики по интелектуальным правам': '/img/services/intellectual-hero.png',
-    'Услуги практики по интеллектуальным правам': '/img/services/intellectual-hero.png',
     'Интеллектуальная собственность': '/img/services/intellectual-hero.png',
     
     // 5. Услуги частным клиентам (используем дефолтное изображение)

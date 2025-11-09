@@ -14,7 +14,6 @@ async function main() {
     'Споры и арбитраж': '/img/services/dispute-hero.png',
     'Споры и взыскание': '/img/services/dispute-hero.png',
     'Интеллектуальная собственность': '/img/services/intellectual-hero.png',
-    'Услуги практики по интелектуальным правам': '/img/services/intellectual-hero.png',
     'Частная практика': '/img/services/bankruptcy-hero.png', // Используем дефолтное изображение
     'Комплексное сопровождение бизнеса': '/img/services/bankruptcy-hero.png', // Используем дефолтное изображение
   }

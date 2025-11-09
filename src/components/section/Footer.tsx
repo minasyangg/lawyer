@@ -43,9 +43,6 @@ const Footer: React.FC<FooterProps> = ({ paddingTop }) => {
                 <Link href="/chastnym-klientam" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
                   Частным клиентам
                 </Link>
-                <Link href="/services/intellectual" className="text-[11px] md:text-[11.5px] lg:text-[12px] font-normal text-white leading-[1.33] hover:underline">
-                  Услуги практики по интелектуальным правам
-                </Link>
               </div>
               
               {/* Вторая подколонка */}
