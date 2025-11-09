@@ -36,7 +36,9 @@ export async function middleware(request: NextRequest) {
 
     if (!sessionCookie?.value) {
       console.log('❌ Middleware: No session cookie found')
-      return NextResponse.redirect(new URL('/login', request.url))
+      const url = new URL('/login', request.url)
+      url.searchParams.set('next', pathname)
+      return NextResponse.redirect(url)
     }
 
     try {
@@ -51,11 +53,17 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/editor', request.url))
       } else {
         console.log('❌ Middleware: Access denied - user role is:', user.userRole)
-        return NextResponse.redirect(new URL('/login', request.url))
+        {
+          const url = new URL('/login', request.url)
+          url.searchParams.set('next', pathname)
+          return NextResponse.redirect(url)
+        }
       }
     } catch (error) {
       console.log('❌ Middleware: Error parsing session cookie:', error)
-      return NextResponse.redirect(new URL('/login', request.url))
+      const url = new URL('/login', request.url)
+      url.searchParams.set('next', pathname)
+      return NextResponse.redirect(url)
     }
   }
 
@@ -64,7 +72,9 @@ export async function middleware(request: NextRequest) {
     const sessionCookie = request.cookies.get('admin-session')
 
     if (!sessionCookie?.value) {
-      return NextResponse.redirect(new URL('/login', request.url))
+      const url = new URL('/login', request.url)
+      url.searchParams.set('next', pathname)
+      return NextResponse.redirect(url)
     }
 
     try {
@@ -72,11 +82,15 @@ export async function middleware(request: NextRequest) {
       
       // Только EDITOR может заходить в editor область
       if (user.userRole !== 'EDITOR') {
-        return NextResponse.redirect(new URL('/login', request.url))
+        const url = new URL('/login', request.url)
+        url.searchParams.set('next', pathname)
+        return NextResponse.redirect(url)
       }
       
     } catch {
-      return NextResponse.redirect(new URL('/login', request.url))
+      const url = new URL('/login', request.url)
+      url.searchParams.set('next', pathname)
+      return NextResponse.redirect(url)
     }
   }
 

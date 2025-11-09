@@ -1,10 +1,11 @@
 "use client"
 
 import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -19,6 +20,9 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        // Гарантируем установку cookie и отсутствие кеша
+        credentials: 'include',
+        cache: 'no-store',
         body: JSON.stringify({ email, password })
       })
 
@@ -29,9 +33,16 @@ export default function LoginPage() {
         return
       }
 
-      // On success, use redirectUrl returned by API (role-based)
-      const redirectUrl = data?.redirectUrl || '/'
-      router.push(redirectUrl)
+      // Учитываем параметр next, если пришли с защищённого маршрута
+      const nextParam = searchParams?.get('next')
+      const target = nextParam || data?.redirectUrl || '/'
+
+      // Используем full-page переход, чтобы cookie точно подхватились middleware
+      if (typeof window !== 'undefined') {
+        window.location.assign(target)
+      } else {
+        router.replace(target)
+      }
     } catch (err) {
       console.error('Login error:', err)
       setError('Network error')
