@@ -866,3 +866,67 @@ export async function createArticleForEditor(data: FormData, authorId: number): 
     }
   }
 }
+
+export async function getPublishedArticlesPaginated(
+  categoryId?: number,
+  page: number = 1,
+  pageSize: number = 6
+): Promise<{ items: Article[]; total: number }> {
+  try {
+    const where = {
+      published: true,
+      ...(categoryId ? { categoryId } : {})
+    } as const
+
+    const [total, articles] = await Promise.all([
+      prisma.article.count({ where }),
+      prisma.article.findMany({
+        where,
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          excerpt: true,
+          slug: true,
+          published: true,
+          categoryId: true,
+          authorId: true,
+          createdAt: true,
+          updatedAt: true,
+          files: { include: { file: true } },
+          author: { select: { id: true, name: true, email: true } },
+          category: { select: { id: true, title: true } },
+          tags: {
+            include: {
+              tag: { select: { id: true, name: true, slug: true, color: true } }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: Math.max(0, (Math.max(1, page) - 1) * pageSize),
+        take: pageSize
+      })
+    ])
+
+    const items = articles.map(article => ({
+      ...article,
+      tags: article.tags.map(at => at.tag),
+      files: article.files.map(af => ({
+        id: af.file.id,
+        name: af.file.filename,
+        originalName: af.file.originalName,
+        mimeType: af.file.mimeType,
+        size: af.file.size,
+        virtualId: af.file.virtualId || '',
+        isPublic: af.file.isPublic,
+        isProtected: af.file.isProtected,
+        createdAt: af.file.createdAt
+      }))
+    }))
+
+    return { items, total }
+  } catch (error) {
+    console.error('Error fetching paginated published articles:', error)
+    throw new Error('Failed to fetch paginated published articles')
+  }
+}

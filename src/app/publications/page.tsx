@@ -2,7 +2,7 @@ import { Suspense } from "react"
 import Header from '@/components/ui/Header'
 import Footer from '@/components/ui/Footer'
 import { ArticleList } from '@/components/ui/ArticleList'
-import { getPublishedArticles } from '@/lib/actions/article-actions'
+import { getPublishedArticlesPaginated } from '@/lib/actions/article-actions'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -34,23 +34,31 @@ function ArticleListSkeleton() {
 }
 
 async function ArticleListWrapper({ 
-  searchParams 
+  params 
 }: { 
-  searchParams: { category?: string; limit?: string } 
+  params: { category?: string } 
 }) {
-  const categoryId = searchParams.category ? parseInt(searchParams.category) : undefined
-  const limit = searchParams.limit ? parseInt(searchParams.limit) : 12
-  
-  const [articles, services] = await Promise.all([
-    getPublishedArticles(categoryId, limit),
+  const categoryId = params.category ? parseInt(params.category) : undefined
+  const pageSize = 6
+
+  // Загружаем только первую страницу — дальше подгрузка на клиенте
+  const [{ items, total }, services] = await Promise.all([
+    getPublishedArticlesPaginated(categoryId, 1, pageSize),
     getServices()
   ])
-  
-  return <ArticleList articles={articles} services={services} />
+
+  return (
+    <ArticleList 
+      initialArticles={items} 
+      total={total} 
+      pageSize={pageSize}
+      services={services} 
+    />
+  )
 }
 
 interface PublicationsPageProps {
-  searchParams: Promise<{ category?: string; limit?: string }>
+  searchParams: Promise<{ category?: string; page?: string }>
 }
 
 export default async function PublicationsPage({ searchParams }: PublicationsPageProps) {
@@ -63,15 +71,14 @@ export default async function PublicationsPage({ searchParams }: PublicationsPag
       <main className="flex-1">
         <section className="container mx-auto max-w-screen-xl px-4 py-12">
           <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Publications</h1>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">Публикации</h1>
             <p className="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto">
-              Stay informed with our latest articles and insights on legal matters, 
-              covering various practice areas and current developments in law.
+              Актуальные статьи и разборы по ключевым правовым вопросам, практические кейсы и экспертные комментарии.
             </p>
           </div>
 
           <Suspense fallback={<ArticleListSkeleton />}>
-            <ArticleListWrapper searchParams={params} />
+            <ArticleListWrapper params={params} />
           </Suspense>
         </section>
       </main>
