@@ -41,7 +41,7 @@
     "lucide-react": "^0.544.0",
     "mime-types": "^3.0.1",
     "multer": "^2.0.2",
-    "next": "15.5.4",
+    "next": "15.5.9",
     "next-auth": "^4.24.11",
     "nodemailer": "^6.10.1",
     "prisma": "^6.16.3",
