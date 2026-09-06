@@ -2,9 +2,7 @@ import { Suspense } from "react"
 import { ArticleTable } from "@/components/admin/ArticleTable"
 import { getArticles } from "@/lib/actions/article-actions"
 import { getUsers } from "@/lib/actions/user-actions"
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 async function getServices() {
   return await prisma.service.findMany({
@@ -58,9 +56,9 @@ export default function ArticlesPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Articles</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Статьи</h1>
         <p className="text-gray-600">
-          Create and manage articles for your website. Articles can be categorized by service types.
+          Создание и редактирование статей сайта. Статьи можно распределять по категориям услуг.
         </p>
       </div>
 

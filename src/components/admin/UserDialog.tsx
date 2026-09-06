@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -20,19 +21,25 @@ import {
 } from "@/components/ui/select"
 import { createUser, updateUser, User } from "@/lib/actions/user-actions"
 
+const ROLE_LABELS: Record<string, string> = {
+  USER: 'Пользователь',
+  EDITOR: 'Редактор',
+  ADMIN: 'Администратор',
+}
+
 function RoleSelect({ defaultValue }: { defaultValue: string }) {
   const [value, setValue] = useState(defaultValue)
-  
+
   return (
     <>
       <Select value={value} onValueChange={setValue}>
         <SelectTrigger>
-          <SelectValue placeholder="Select a role" />
+          <SelectValue placeholder="Выберите роль">{ROLE_LABELS[value]}</SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="USER">User</SelectItem>
-          <SelectItem value="EDITOR">Editor</SelectItem>
-          <SelectItem value="ADMIN">Admin</SelectItem>
+          <SelectItem value="USER">{ROLE_LABELS.USER}</SelectItem>
+          <SelectItem value="EDITOR">{ROLE_LABELS.EDITOR}</SelectItem>
+          <SelectItem value="ADMIN">{ROLE_LABELS.ADMIN}</SelectItem>
         </SelectContent>
       </Select>
       <input type="hidden" name="userRole" value={value} />
@@ -70,7 +77,7 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
         setErrors(result.errors)
       }
     } catch {
-      setErrors({ general: ['Something went wrong'] })
+      setErrors({ general: ['Что-то пошло не так'] })
     } finally {
       setIsLoading(false)
     }
@@ -82,25 +89,25 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
         <form action={handleSubmit}>
           <DialogHeader>
             <DialogTitle>
-              {isEditing ? 'Edit User' : 'Create New User'}
+              {isEditing ? 'Редактировать пользователя' : 'Новый пользователь'}
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">Имя</Label>
               <Input
                 id="name"
                 name="name"
                 defaultValue={user?.name || ''}
-                placeholder="Enter user name"
+                placeholder="Введите имя пользователя"
                 required
               />
               {errors.name && (
                 <p className="text-sm text-red-600">{errors.name[0]}</p>
               )}
             </div>
-            
+
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -108,7 +115,7 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
                 name="email"
                 type="email"
                 defaultValue={user?.email || ''}
-                placeholder="Enter email address"
+                placeholder="Введите email"
                 required
               />
               {errors.email && (
@@ -118,12 +125,12 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
 
             {!isEditing && (
               <div className="grid gap-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Пароль</Label>
                 <Input
                   id="password"
                   name="password"
                   type="password"
-                  placeholder="Enter password"
+                  placeholder="Введите пароль"
                   required
                 />
                 {errors.password && (
@@ -131,9 +138,9 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
                 )}
               </div>
             )}
-            
+
             <div className="grid gap-2">
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="role">Роль</Label>
               <RoleSelect defaultValue={user?.userRole || 'USER'} />
               {errors.userRole && (
                 <p className="text-sm text-red-600">{errors.userRole[0]}</p>
@@ -144,7 +151,7 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
               <p className="text-sm text-red-600">{errors.general[0]}</p>
             )}
           </div>
-          
+
           <DialogFooter>
             <Button
               type="button"
@@ -152,10 +159,15 @@ export function UserDialog({ open, onOpenChange, user }: UserDialogProps) {
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
             >
-              Cancel
+              Отмена
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Saving...' : isEditing ? 'Update User' : 'Create User'}
+            <Button type="submit" disabled={isLoading} className="min-w-[110px]">
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Сохранение...
+                </>
+              ) : isEditing ? 'Сохранить' : 'Создать'}
             </Button>
           </DialogFooter>
         </form>

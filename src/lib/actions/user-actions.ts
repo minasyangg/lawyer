@@ -8,15 +8,15 @@ import bcrypt from 'bcryptjs'
 import { requireAdmin, requireAdminOrEditor } from '@/lib/auth/session'
 
 const UserCreateSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  name: z.string().min(1, 'Укажите имя'),
+  email: z.string().email('Некорректный email'),
+  password: z.string().min(6, 'Пароль должен быть не короче 6 символов'),
   userRole: z.enum(['USER', 'EDITOR', 'ADMIN'])
 })
 
 const UserUpdateSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email'),
+  name: z.string().min(1, 'Укажите имя'),
+  email: z.string().email('Некорректный email'),
   userRole: z.enum(['USER', 'EDITOR', 'ADMIN'])
 })
 
@@ -91,13 +91,12 @@ export async function createUser(data: FormData) {
   }
 
   try {
-    // Check for duplicate email
+    // Проверяем дубликат email
     const existing = await prisma.user.findUnique({ where: { email: validatedFields.data.email } })
     if (existing) {
-      return { errors: { email: ['Email already in use'] } }
+      return { errors: { email: ['Этот email уже используется'] } }
     }
 
-    // Hash the password
     const hashedPassword = await bcrypt.hash(validatedFields.data.password, 12)
 
     await prisma.user.create({
@@ -115,7 +114,7 @@ export async function createUser(data: FormData) {
   } catch (error) {
     console.error('Error creating user:', error)
     return {
-      errors: { general: ['Failed to create user'] }
+      errors: { general: ['Не удалось создать пользователя'] }
     }
   }
 }
@@ -155,7 +154,7 @@ export async function updateUser(id: number, data: FormData) {
   } catch (error) {
     console.error('Error updating user:', error)
     return {
-      errors: { general: ['Failed to update user'] }
+      errors: { general: ['Не удалось обновить пользователя'] }
     }
   }
 }
@@ -177,7 +176,7 @@ export async function deleteUser(id: number) {
   } catch (error) {
     console.error('Error deleting user:', error)
     return {
-      errors: { general: ['Failed to delete user'] }
+      errors: { general: ['Не удалось удалить пользователя'] }
     }
   }
 }

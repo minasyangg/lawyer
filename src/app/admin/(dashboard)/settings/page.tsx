@@ -1,119 +1,141 @@
+import { Suspense } from "react"
+import { getSiteSettings, getSecurityOverview } from "@/lib/actions/settings-actions"
+import { GeneralSettingsForm } from "@/components/admin/settings/GeneralSettingsForm"
+import { NotificationSettingsForm } from "@/components/admin/settings/NotificationSettingsForm"
+import { ShieldAlert, ShieldCheck, Lock } from "lucide-react"
+
+function SettingsCardSkeleton() {
+  return (
+    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+      <div className="h-5 bg-gray-200 rounded w-40 mb-4 animate-pulse" />
+      <div className="space-y-4">
+        <div className="h-9 bg-gray-100 rounded animate-pulse" />
+        <div className="h-9 bg-gray-100 rounded animate-pulse" />
+        <div className="h-9 bg-gray-200 rounded w-28 animate-pulse" />
+      </div>
+    </div>
+  )
+}
+
 export default function SettingsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Настройки</h1>
         <p className="text-gray-600">
-          Configure system settings and preferences.
+          Основные параметры сайта, уведомления и обзор безопасности.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">General Settings</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Site Name
-              </label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                defaultValue="Lawyer Admin Panel"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contact Email
-              </label>
-              <input
-                type="email"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                defaultValue="admin@lawyer.com"
-              />
-            </div>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
-              Save Changes
-            </button>
+        <Suspense fallback={<SettingsCardSkeleton />}>
+          <GeneralSettingsSection />
+        </Suspense>
+
+        <Suspense fallback={<SettingsCardSkeleton />}>
+          <NotificationSettingsSection />
+        </Suspense>
+
+        <Suspense fallback={<SettingsCardSkeleton />}>
+          <SecurityOverviewSection />
+        </Suspense>
+      </div>
+    </div>
+  )
+}
+
+async function GeneralSettingsSection() {
+  const settings = await getSiteSettings()
+  return (
+    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+      <h3 className="text-lg font-semibold mb-4">Общие настройки</h3>
+      <GeneralSettingsForm
+        initialSiteName={settings.siteName}
+        initialContactEmail={settings.contactEmail}
+      />
+      {settings.updatedByName && (
+        <p className="text-xs text-gray-400 mt-3">
+          Последнее изменение: {settings.updatedByName},{' '}
+          {new Intl.DateTimeFormat('ru-RU', { dateStyle: 'medium', timeStyle: 'short' }).format(settings.updatedAt)}
+        </p>
+      )}
+    </div>
+  )
+}
+
+async function NotificationSettingsSection() {
+  const settings = await getSiteSettings()
+  return (
+    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+      <h3 className="text-lg font-semibold mb-4">Уведомления</h3>
+      <NotificationSettingsForm
+        initialNotifyNewArticles={settings.notifyNewArticles}
+        initialNotifyLoginAlerts={settings.notifyLoginAlerts}
+      />
+      <p className="text-xs text-gray-400 mt-4">
+        Отправка писем требует настройки SMTP на сервере — пока переключатели только сохраняют выбор.
+      </p>
+    </div>
+  )
+}
+
+async function SecurityOverviewSection() {
+  const security = await getSecurityOverview()
+
+  return (
+    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm lg:col-span-2">
+      <h3 className="text-lg font-semibold mb-4">Обзор безопасности</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+          <ShieldCheck className="w-8 h-8 text-green-600 flex-shrink-0" />
+          <div>
+            <p className="text-xs text-gray-500">Успешных входов за 24ч</p>
+            <p className="text-xl font-bold text-gray-900">{security.successfulLogins24h}</p>
           </div>
         </div>
-
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Security Settings</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Two-Factor Authentication</p>
-                <p className="text-sm text-gray-600">Add an extra layer of security</p>
-              </div>
-              <button className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                Enabled
-              </button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Session Timeout</p>
-                <p className="text-sm text-gray-600">Automatically log out inactive users</p>
-              </div>
-              <select className="border border-gray-300 rounded-md px-3 py-1 text-sm">
-                <option>30 minutes</option>
-                <option>1 hour</option>
-                <option>2 hours</option>
-                <option>Never</option>
-              </select>
-            </div>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
-              Update Security
-            </button>
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+          <ShieldAlert className={`w-8 h-8 flex-shrink-0 ${security.failedLogins24h > 0 ? 'text-yellow-600' : 'text-gray-400'}`} />
+          <div>
+            <p className="text-xs text-gray-500">Неудачных входов за 24ч</p>
+            <p className="text-xl font-bold text-gray-900">{security.failedLogins24h}</p>
           </div>
         </div>
-
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Email Notifications</h3>
-          <div className="space-y-3">
-            {[
-              'New user registrations',
-              'System maintenance alerts',
-              'Security warnings',
-              'Weekly reports'
-            ].map((notification, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <span className="text-sm">{notification}</span>
-                <input
-                  type="checkbox"
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  defaultChecked={index < 2}
-                />
-              </div>
-            ))}
-          </div>
-          <button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
-            Save Preferences
-          </button>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4 text-red-600">Danger Zone</h3>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-gray-600 mb-2">
-                Clear all user sessions and force re-authentication
-              </p>
-              <button className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors text-sm">
-                Clear All Sessions
-              </button>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 mb-2">
-                Reset all system settings to default values
-              </p>
-              <button className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors text-sm">
-                Reset to Defaults
-              </button>
-            </div>
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+          <Lock className={`w-8 h-8 flex-shrink-0 ${security.lockedAccountsCount > 0 ? 'text-red-600' : 'text-gray-400'}`} />
+          <div>
+            <p className="text-xs text-gray-500">Заблокированных аккаунтов</p>
+            <p className="text-xl font-bold text-gray-900">{security.lockedAccountsCount}</p>
           </div>
         </div>
       </div>
+
+      {security.recentFailedAttempts.length > 0 && (
+        <div>
+          <p className="text-sm font-medium text-gray-700 mb-2">Последние неудачные попытки входа</p>
+          <div className="border border-gray-200 rounded-md divide-y divide-gray-100">
+            {security.recentFailedAttempts.map((attempt) => (
+              <div key={attempt.id} className="px-3 py-2 text-sm flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-gray-900 truncate">{attempt.email}</p>
+                  <p className="text-xs text-gray-500">
+                    {attempt.ipAddress || 'IP неизвестен'}
+                    {attempt.failureReason ? ` · ${attempt.failureReason}` : ''}
+                  </p>
+                </div>
+                <p className="text-xs text-gray-400 flex-shrink-0">
+                  {new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short', timeStyle: 'short' }).format(attempt.createdAt)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <p className="text-xs text-gray-400 mt-4">
+        Сессии авторизации хранятся в подписанном cookie (JWT) без серверного реестра,
+        поэтому принудительный сброс всех сессий или настройка времени жизни сессии
+        из интерфейса пока недоступны — только через переменные окружения.
+      </p>
     </div>
   )
 }

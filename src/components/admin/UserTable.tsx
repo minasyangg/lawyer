@@ -19,6 +19,12 @@ interface UserTableProps {
   users: User[]
 }
 
+const ROLE_LABELS: Record<User['userRole'], string> = {
+  ADMIN: 'Администратор',
+  EDITOR: 'Редактор',
+  USER: 'Пользователь',
+}
+
 export function UserTable({ users }: UserTableProps) {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editUser, setEditUser] = useState<User | null>(null)
@@ -38,12 +44,12 @@ export function UserTable({ users }: UserTableProps) {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-semibold">Users Management</h3>
-          <p className="text-sm text-gray-600">Manage system users and their roles</p>
+          <h3 className="text-lg font-semibold">Управление пользователями</h3>
+          <p className="text-sm text-gray-600">Пользователи системы и их роли доступа</p>
         </div>
         <Button onClick={() => setIsCreateOpen(true)}>
           <Plus className="w-4 h-4 mr-2" />
-          Add User
+          Добавить пользователя
         </Button>
       </div>
 
@@ -52,18 +58,18 @@ export function UserTable({ users }: UserTableProps) {
           <TableHeader>
             <TableRow>
               <TableHead>ID</TableHead>
-              <TableHead>Name</TableHead>
+              <TableHead>Имя</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Created At</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead>Роль</TableHead>
+              <TableHead>Дата создания</TableHead>
+              <TableHead className="text-right">Действия</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                  No users found. Create your first user to get started.
+                  Пользователи не найдены. Создайте первого пользователя.
                 </TableCell>
               </TableRow>
             ) : (
@@ -74,13 +80,13 @@ export function UserTable({ users }: UserTableProps) {
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      user.userRole === 'ADMIN' 
-                        ? 'bg-red-100 text-red-800' 
+                      user.userRole === 'ADMIN'
+                        ? 'bg-red-100 text-red-800'
                         : user.userRole === 'EDITOR'
                         ? 'bg-yellow-100 text-yellow-800'
                         : 'bg-green-100 text-green-800'
                     }`}>
-                      {user.userRole}
+                      {ROLE_LABELS[user.userRole]}
                     </span>
                   </TableCell>
                   <TableCell>{formatDate(user.createdAt)}</TableCell>
@@ -90,6 +96,8 @@ export function UserTable({ users }: UserTableProps) {
                         variant="outline"
                         size="sm"
                         onClick={() => setEditUser(user)}
+                        aria-label="Редактировать пользователя"
+                        title="Редактировать"
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -97,6 +105,8 @@ export function UserTable({ users }: UserTableProps) {
                         variant="destructive"
                         size="sm"
                         onClick={() => setDeleteUser(user)}
+                        aria-label="Удалить пользователя"
+                        title="Удалить"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -114,7 +124,7 @@ export function UserTable({ users }: UserTableProps) {
         onOpenChange={setIsCreateOpen}
         user={null}
       />
-      
+
       <UserDialog
         open={!!editUser}
         onOpenChange={() => setEditUser(null)}

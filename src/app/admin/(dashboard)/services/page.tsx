@@ -14,7 +14,7 @@ export default async function AdminServicesPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Услуги</h1>
-  <Link href="/admin/services/create" className="px-4 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors">Создать услугу</Link>
+        <Link href="/admin/services/create" className="px-4 py-2 rounded-md bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors">Создать услугу</Link>
       </div>
       {savedFlag && (
         <div className="rounded-md border border-emerald-300 bg-emerald-50 px-4 py-3 flex items-start gap-3">
@@ -46,7 +46,7 @@ export default async function AdminServicesPage() {
                 <td className="px-4 py-2 text-gray-500">{s.slug}</td>
                 <td className="px-4 py-2 truncate max-w-xs" title={s.description}>{s.description}</td>
                 <td className="px-4 py-2 flex gap-2">
-                  <Link href={`/admin/services/${s.id}/edit`} className="px-2 py-1 text-xs rounded bg-indigo-600 text-white hover:bg-indigo-700">Редактировать</Link>
+                  <Link href={`/admin/services/${s.id}/edit`} className="px-2 py-1 text-xs rounded border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">Редактировать</Link>
                   {(() => {
                     const formId = `delete-service-${s.id}`
                     return (

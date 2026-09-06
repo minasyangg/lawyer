@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -11,7 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { deleteArticle, Article } from "@/lib/actions/article-actions"
 
-type ActionResult = 
+type ActionResult =
   | { success: true }
   | { errors: { [key: string]: string[] } | { general: string[] } }
 
@@ -29,20 +30,21 @@ export function DeleteArticleDialog({ open, onOpenChange, article }: DeleteArtic
 
   async function handleDelete() {
     if (!article) return
-    
+
     setIsLoading(true)
     setError('')
 
     try {
       const result: ActionResult = await deleteArticle(article.id) as ActionResult
-      
+
       if ('success' in result) {
         onOpenChange(false)
       } else if ('errors' in result) {
-        setError(result.errors.general?.[0] || 'Failed to delete article')
+        const message = 'general' in result.errors ? result.errors.general[0] : 'Не удалось удалить статью'
+        setError(message)
       }
     } catch {
-      setError('Something went wrong')
+      setError('Что-то пошло не так')
     } finally {
       setIsLoading(false)
     }
@@ -52,21 +54,21 @@ export function DeleteArticleDialog({ open, onOpenChange, article }: DeleteArtic
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Delete Article</DialogTitle>
+          <DialogTitle>Удалить статью</DialogTitle>
         </DialogHeader>
-        
+
         <div className="py-4">
           <p className="text-sm text-gray-600 mb-4">
-            Are you sure you want to delete article <strong>{article.title}</strong>? 
-            This action cannot be undone.
+            Вы уверены, что хотите удалить статью <strong>{article.title}</strong>?
+            Это действие нельзя отменить.
           </p>
-          
+
           <div className="bg-gray-50 rounded-lg p-3">
-            <div className="text-sm">
-              <p><strong>Title:</strong> {article.title}</p>
-              <p><strong>Author:</strong> {article.author.name}</p>
-              <p><strong>Status:</strong> {article.published ? 'Published' : 'Draft'}</p>
-              <p><strong>Category:</strong> {article.category?.title || 'Uncategorized'}</p>
+            <div className="text-sm space-y-1">
+              <p><strong>Заголовок:</strong> {article.title}</p>
+              <p><strong>Автор:</strong> {article.author.name}</p>
+              <p><strong>Статус:</strong> {article.published ? 'Опубликована' : 'Черновик'}</p>
+              <p><strong>Категория:</strong> {article.category?.title || 'Без категории'}</p>
             </div>
           </div>
 
@@ -74,7 +76,7 @@ export function DeleteArticleDialog({ open, onOpenChange, article }: DeleteArtic
             <p className="text-sm text-red-600 mt-4">{error}</p>
           )}
         </div>
-        
+
         <DialogFooter>
           <Button
             type="button"
@@ -82,15 +84,21 @@ export function DeleteArticleDialog({ open, onOpenChange, article }: DeleteArtic
             onClick={() => onOpenChange(false)}
             disabled={isLoading}
           >
-            Cancel
+            Отмена
           </Button>
           <Button
             type="button"
             variant="destructive"
             onClick={handleDelete}
             disabled={isLoading}
+            className="min-w-[100px]"
           >
-            {isLoading ? 'Deleting...' : 'Delete Article'}
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Удаление...
+              </>
+            ) : 'Удалить'}
           </Button>
         </DialogFooter>
       </DialogContent>

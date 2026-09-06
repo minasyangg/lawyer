@@ -1,3 +1,16 @@
+// Настройки сайта — одна строка-синглтон (id всегда 1), редактируется из /admin/settings
+model SiteSettings {
+  id                  Int      @id @default(1)
+  siteName            String   @default("ПФК")
+  contactEmail        String   @default("info@pfc.moscow")
+  notifyNewArticles   Boolean  @default(false)
+  notifyLoginAlerts   Boolean  @default(true)
+  updatedAt           DateTime @updatedAt
+  updatedById         Int?
+
+  updatedBy           User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+}
+
 model FileEntity {
   id        Int      @id @default(autoincrement())
   userId    Int
@@ -109,7 +122,8 @@ model User {
   folders               Folder[]
   fileEntities          FileEntity[]
   loginLogs             LoginLog[]
-  
+  updatedSettings       SiteSettings[]
+
   // Кто создал/модерировал пользователя
   createdUsers          User[]    @relation("UserCreatedBy")
   createdBy             User?     @relation("UserCreatedBy", fields: [createdById], references: [id])

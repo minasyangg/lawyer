@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -10,6 +11,12 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { deleteUser, User } from "@/lib/actions/user-actions"
+
+const ROLE_LABELS: Record<User['userRole'], string> = {
+  ADMIN: 'Администратор',
+  EDITOR: 'Редактор',
+  USER: 'Пользователь',
+}
 
 interface DeleteUserDialogProps {
   open: boolean
@@ -25,20 +32,20 @@ export function DeleteUserDialog({ open, onOpenChange, user }: DeleteUserDialogP
 
   async function handleDelete() {
     if (!user) return
-    
+
     setIsLoading(true)
     setError('')
 
     try {
       const result = await deleteUser(user.id)
-      
+
       if (result.success) {
         onOpenChange(false)
       } else if (result.errors) {
-        setError(result.errors.general?.[0] || 'Failed to delete user')
+        setError(result.errors.general?.[0] || 'Не удалось удалить пользователя')
       }
     } catch {
-      setError('Something went wrong')
+      setError('Что-то пошло не так')
     } finally {
       setIsLoading(false)
     }
@@ -48,20 +55,20 @@ export function DeleteUserDialog({ open, onOpenChange, user }: DeleteUserDialogP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Delete User</DialogTitle>
+          <DialogTitle>Удалить пользователя</DialogTitle>
         </DialogHeader>
-        
+
         <div className="py-4">
           <p className="text-sm text-gray-600 mb-4">
-            Are you sure you want to delete user <strong>{user.name}</strong>? 
-            This action cannot be undone.
+            Вы уверены, что хотите удалить пользователя <strong>{user.name}</strong>?
+            Это действие нельзя отменить.
           </p>
-          
+
           <div className="bg-gray-50 rounded-lg p-3">
-            <div className="text-sm">
-              <p><strong>Name:</strong> {user.name}</p>
+            <div className="text-sm space-y-1">
+              <p><strong>Имя:</strong> {user.name}</p>
               <p><strong>Email:</strong> {user.email}</p>
-              <p><strong>Role:</strong> {user.userRole}</p>
+              <p><strong>Роль:</strong> {ROLE_LABELS[user.userRole]}</p>
             </div>
           </div>
 
@@ -69,7 +76,7 @@ export function DeleteUserDialog({ open, onOpenChange, user }: DeleteUserDialogP
             <p className="text-sm text-red-600 mt-4">{error}</p>
           )}
         </div>
-        
+
         <DialogFooter>
           <Button
             type="button"
@@ -77,15 +84,21 @@ export function DeleteUserDialog({ open, onOpenChange, user }: DeleteUserDialogP
             onClick={() => onOpenChange(false)}
             disabled={isLoading}
           >
-            Cancel
+            Отмена
           </Button>
           <Button
             type="button"
             variant="destructive"
             onClick={handleDelete}
             disabled={isLoading}
+            className="min-w-[100px]"
           >
-            {isLoading ? 'Deleting...' : 'Delete User'}
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Удаление...
+              </>
+            ) : 'Удалить'}
           </Button>
         </DialogFooter>
       </DialogContent>

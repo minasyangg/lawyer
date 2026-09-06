@@ -42,9 +42,9 @@ export default function UsersPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Users</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Пользователи</h1>
         <p className="text-gray-600">
-          Manage all system users, their roles, and permissions.
+          Управление пользователями системы, их ролями и правами доступа.
         </p>
       </div>
 

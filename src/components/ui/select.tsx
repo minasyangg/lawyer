@@ -63,16 +63,20 @@ SelectTrigger.displayName = "SelectTrigger"
 const SelectValue = React.forwardRef<
   HTMLSpanElement,
   React.HTMLAttributes<HTMLSpanElement> & { placeholder?: string }
->(({ className, placeholder, ...props }, ref) => {
+>(({ className, placeholder, children, ...props }, ref) => {
   const context = React.useContext(SelectContext)
-  
+
+  // children (если передан явно, например для маппинга кода в человекочитаемый
+  // лейбл) в приоритете над сырым значением из контекста; иначе — как раньше.
+  const content = children ?? context?.value ?? placeholder
+
   return (
     <span
       ref={ref}
       className={cn("block truncate", className)}
       {...props}
     >
-      {context?.value || placeholder}
+      {content || placeholder}
     </span>
   )
 })
