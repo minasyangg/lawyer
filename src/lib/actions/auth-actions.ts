@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { cookies } from 'next/headers'
+import { SESSION_COOKIE } from '@/lib/auth/session'
 
 
 const prisma = new PrismaClient()
@@ -77,6 +78,6 @@ export async function createAdminUser(data: FormData) {
 
 export async function logout() {
   const cookieStore = await cookies()
-  cookieStore.delete('admin-session')
+  cookieStore.delete(SESSION_COOKIE)
   // redirect('/') убран для корректной работы realtime logout
 }

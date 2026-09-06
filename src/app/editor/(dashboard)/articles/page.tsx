@@ -3,7 +3,7 @@ import { EditorArticleTable } from "@/components/editor/EditorArticleTable"
 import { getArticles } from "@/lib/actions/article-actions"
 import { getUsers } from "@/lib/actions/user-actions"
 import { PrismaClient } from '@prisma/client'
-import { cookies } from 'next/headers'
+import { getCurrentUser } from '@/lib/auth/session'
 
 const prisma = new PrismaClient()
 
@@ -46,18 +46,8 @@ function ArticleTableSkeleton() {
 }
 
 async function ArticleTableWrapper() {
-  // Получаем текущего пользователя из сессии
-  const cookieStore = await cookies()
-  const session = cookieStore.get('admin-session')
-  let currentUser = null
-  
-  if (session) {
-    try {
-      currentUser = JSON.parse(session.value)
-    } catch (error) {
-      console.error('Error parsing session:', error)
-    }
-  }
+  // Текущий пользователь — из подписанной cookie (доступ к зоне уже проверен в layout).
+  const currentUser = await getCurrentUser()
 
   const [articles, services, users] = await Promise.all([
     getArticles(),

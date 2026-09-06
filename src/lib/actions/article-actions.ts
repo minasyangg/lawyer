@@ -4,7 +4,8 @@ import { PrismaClient } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { resolveVirtualUrlsInContent } from '@/lib/virtualPaths'
-import { cookies } from 'next/headers'
+import { canEditArticle } from '@/lib/auth/permissions'
+import { getCurrentUser } from '@/lib/auth/session'
 
 interface ActionError {
   errors: { [key: string]: string[] } | { general: string[] }
@@ -17,20 +18,6 @@ interface ActionSuccess {
 const prisma = new PrismaClient()
 
 // Вспомогательная функция для получения текущего пользователя из сессии
-async function getCurrentUser() {
-  const cookieStore = await cookies()
-  const sessionCookie = cookieStore.get('admin-session')
-  
-  if (!sessionCookie?.value) {
-    return null
-  }
-
-  try {
-    return JSON.parse(sessionCookie.value)
-  } catch {
-    return null
-  }
-}
 
 // Вспомогательная функция для обработки файлов статьи
 async function processArticleFiles(articleId: number, fileIds: number[]) {
@@ -792,14 +779,30 @@ export async function deleteArticle(id: number): Promise<ActionSuccess | ActionE
 
 export async function toggleArticlePublished(id: number): Promise<ActionSuccess | ActionError> {
   try {
+    // Получаем текущего пользователя из сессии
+    const currentUser = await getCurrentUser()
+
+    if (!currentUser) {
+      return {
+        errors: { general: ['Authentication required'] }
+      }
+    }
+
     const article = await prisma.article.findUnique({
       where: { id }
     })
-    
+
     if (!article) {
       return { errors: { general: ['Article not found'] } }
     }
-    
+
+    // EDITOR может публиковать/снимать с публикации только свои статьи, ADMIN — любые
+    if (!canEditArticle(currentUser.userRole, currentUser.id, article.authorId)) {
+      return {
+        errors: { general: ['You can only publish/unpublish your own articles'] }
+      }
+    }
+
     await prisma.article.update({
       where: { id },
       data: { published: !article.published }

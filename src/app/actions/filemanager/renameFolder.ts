@@ -1,7 +1,7 @@
 "use server"
 
 import { PrismaClient } from '@prisma/client'
-import { cookies } from 'next/headers'
+import { getCurrentUser } from '@/lib/auth/session'
 import { createClient } from '@supabase/supabase-js'
 import { renameFolderSchema } from '@/lib/validations/folder'
 import { invalidateCache } from '@/lib/redis'
@@ -160,15 +160,12 @@ export async function renameFolder(folderId: number, newName: string): Promise<R
   try {
     console.log('🔍 RenameFolder: Starting rename process', { folderId, newName })
     
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('admin-session')
-    
-    if (!sessionCookie?.value) {
+    const user = await getCurrentUser()
+
+    if (!user) {
       console.log('❌ RenameFolder: No session cookie')
       return { success: false, error: 'Unauthorized' }
     }
-
-    const user = JSON.parse(sessionCookie.value)
 
     if (!user?.id) {
       console.log('❌ RenameFolder: No user ID in session')

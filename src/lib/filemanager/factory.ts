@@ -1,6 +1,6 @@
 "use server"
 
-import { cookies } from 'next/headers'
+import { getCurrentUser } from '@/lib/auth/session'
 import { UserRole } from '@prisma/client'
 import { RoleBasedFileManagerProvider } from './provider'
 import { FileManagerProvider } from './types'
@@ -10,14 +10,11 @@ import { FileManagerProvider } from './types'
  */
 export async function createFileManagerProvider(): Promise<FileManagerProvider | null> {
   try {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('admin-session')
-    
-    if (!sessionCookie?.value) {
+    const user = await getCurrentUser()
+
+    if (!user) {
       return null
     }
-
-    const user = JSON.parse(sessionCookie.value)
     
     if (!user?.id || !user?.userRole) {
       return null

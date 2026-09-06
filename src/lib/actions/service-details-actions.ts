@@ -3,18 +3,11 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { cookies } from 'next/headers'
 import { createSlugFromTitle } from '@/lib/services'
+import { getCurrentUser, type SessionUser } from '@/lib/auth/session'
 
 // Auth guard (ADMIN only)
-async function getCurrentUser() {
-  const store = await cookies()
-  const raw = store.get('admin-session')?.value
-  if (!raw) return null
-  try { return JSON.parse(raw) } catch { return null }
-}
 
-type SessionUser = { id: number; email: string; userRole: 'ADMIN' | 'EDITOR' | 'USER' }
 
 function assertAdmin(user: SessionUser | null) {
   if (!user || user.userRole !== 'ADMIN') {

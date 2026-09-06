@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { getFileUrl } from '@/lib/utils/universal-file-utils'
-import { cookies } from 'next/headers'
-
+import { getCurrentUser } from '@/lib/auth/session'
 const prisma = new PrismaClient()
 
 /**
@@ -32,14 +31,11 @@ export async function GET(
 
     // Проверяем доступ к файлу
     if (!file.isPublic) {
-      const cookieStore = await cookies()
-      const sessionCookie = cookieStore.get('admin-session')
-      
-      if (!sessionCookie?.value) {
+      const user = await getCurrentUser()
+
+    if (!user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
-
-      const user = JSON.parse(sessionCookie.value)
       
       if (!user?.id) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 })

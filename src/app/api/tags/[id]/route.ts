@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
-import { cookies } from 'next/headers'
-
+import { getCurrentUser } from '@/lib/auth/session'
 const prisma = new PrismaClient()
 
 function generateSlug(name: string): string {
@@ -49,14 +48,11 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('admin-session')
-    
-    if (!sessionCookie?.value) {
+    const user = await getCurrentUser()
+
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    const user = JSON.parse(sessionCookie.value)
 
     if (!user || user.userRole !== 'ADMIN') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
@@ -115,14 +111,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('admin-session')
-    
-    if (!sessionCookie?.value) {
+    const user = await getCurrentUser()
+
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    const user = JSON.parse(sessionCookie.value)
 
     if (!user || user.userRole !== 'ADMIN') {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })

@@ -1,7 +1,7 @@
 "use server"
 
 import { PrismaClient } from '@prisma/client'
-import { cookies } from 'next/headers'
+import { getCurrentUser } from '@/lib/auth/session'
 import { mkdir } from 'fs/promises'
 import { join } from 'path'
 import { getStorageInfo } from '@/lib/utils/universal-file-utils'
@@ -36,14 +36,11 @@ export async function createFolder(name: string, parentId: number | null = null)
   console.log('createFolder called with:', { name, parentId, storageProvider: process.env.STORAGE_PROVIDER })
   
   try {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('admin-session')
-    
-    if (!sessionCookie?.value) {
+    const user = await getCurrentUser()
+
+    if (!user) {
       return { success: false, error: 'Unauthorized' }
     }
-
-    const user = JSON.parse(sessionCookie.value)
 
     if (!user?.id) {
       return { success: false, error: 'User not found' }

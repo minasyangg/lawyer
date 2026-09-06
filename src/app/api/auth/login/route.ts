@@ -1,55 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateUser } from '@/lib/actions/auth-actions'
 import { cookies } from 'next/headers'
+import { createSessionToken, sessionCookieOptions, SESSION_COOKIE } from '@/lib/auth/session'
+import { z } from 'zod'
+
+const LoginBodySchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+})
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
-    console.log('🔍 Login attempt for email:', email)
+    const body: unknown = await request.json()
+    const parsed = LoginBodySchema.safeParse(body)
 
-    if (!email || !password) {
+    if (!parsed.success) {
       return NextResponse.json(
         { error: 'Email and password are required' },
         { status: 400 }
       )
     }
 
+    const { email, password } = parsed.data
     const user = await authenticateUser(email, password)
-    console.log('🔍 Authentication result:', user)
 
     if (!user) {
-      console.log('❌ Authentication failed - user not found or invalid password')
+      // Намеренно обезличенное сообщение: не раскрываем, существует ли аккаунт.
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
       )
     }
 
-    console.log('✅ User authenticated successfully:', {
+    const redirectUrl =
+      user.userRole === 'ADMIN' ? '/admin' : user.userRole === 'EDITOR' ? '/editor' : '/'
+
+    // Подписанный токен вместо прежнего plaintext JSON — подделать нельзя.
+    const token = await createSessionToken({
       id: user.id,
       email: user.email,
-      userRole: user.userRole
+      name: user.name,
+      userRole: user.userRole,
     })
 
-    // Prepare cookie data
-    const sessionData = JSON.stringify(user)
-    console.log('🍪 Setting session cookie with data:', sessionData)
-
-    // Determine redirect URL based on role so client can navigate appropriately
-    const redirectUrl = user.userRole === 'ADMIN' ? '/admin' : user.userRole === 'EDITOR' ? '/editor' : '/'
-
-    // Use NextResponse so Set-Cookie header is actually sent with fetch response
     const response = NextResponse.json({ success: true, user, redirectUrl })
-    response.cookies.set('admin-session', sessionData, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    })
+    response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions())
     return response
   } catch (error) {
-    console.error('❌ Login error:', error)
+    console.error('Login error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -59,7 +57,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   const cookieStore = await cookies()
-  cookieStore.delete('admin-session')
-  
+  cookieStore.delete(SESSION_COOKIE)
+
   return NextResponse.json({ success: true })
 }

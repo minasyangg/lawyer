@@ -1,7 +1,7 @@
 "use server"
 
 import { PrismaClient } from '@prisma/client'
-import { cookies } from 'next/headers'
+import { getCurrentUser } from '@/lib/auth/session'
 import { createVirtualFileUrl } from '@/lib/virtualPaths'
 import { checkMultipleFilesUsage } from './checkFileUsage'
 import { withCache, CACHE_KEYS, CACHE_TTL } from '@/lib/redis'
@@ -43,14 +43,11 @@ export async function listFiles(
   limit: number = 20
 ): Promise<ListFilesResult> {
   try {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('admin-session')
-    
-    if (!sessionCookie?.value) {
+    const user = await getCurrentUser()
+
+    if (!user) {
       throw new Error('Unauthorized')
     }
-
-    const user = JSON.parse(sessionCookie.value)
 
     if (!user?.id) {
       throw new Error('User not found')

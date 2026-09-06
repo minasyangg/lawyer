@@ -1,8 +1,7 @@
 "use server"
 
 import { PrismaClient } from '@prisma/client'
-import { cookies } from 'next/headers'
-
+import { getCurrentUser } from '@/lib/auth/session'
 const prisma = new PrismaClient()
 
 export interface VirtualLinkResult {
@@ -17,10 +16,9 @@ export interface VirtualLinkResult {
  */
 export async function getFileVirtualLink(fileId: number): Promise<VirtualLinkResult> {
   try {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('admin-session')
-    
-    if (!sessionCookie?.value) {
+    const user = await getCurrentUser()
+
+    if (!user) {
       return { success: false, error: 'Unauthorized' }
     }
 
@@ -32,8 +30,6 @@ export async function getFileVirtualLink(fileId: number): Promise<VirtualLinkRes
     if (!file) {
       return { success: false, error: 'File not found' }
     }
-
-    const user = JSON.parse(sessionCookie.value)
     if (file.uploadedBy !== user.id) {
       return { success: false, error: 'Access denied' }
     }
@@ -55,10 +51,9 @@ export async function getFileVirtualLink(fileId: number): Promise<VirtualLinkRes
  */
 export async function getFolderVirtualLink(folderId: number): Promise<VirtualLinkResult> {
   try {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('admin-session')
-    
-    if (!sessionCookie?.value) {
+    const user = await getCurrentUser()
+
+    if (!user) {
       return { success: false, error: 'Unauthorized' }
     }
 
@@ -70,8 +65,6 @@ export async function getFolderVirtualLink(folderId: number): Promise<VirtualLin
     if (!folder) {
       return { success: false, error: 'Folder not found' }
     }
-
-    const user = JSON.parse(sessionCookie.value)
     if (folder.ownerId !== user.id) {
       return { success: false, error: 'Access denied' }
     }

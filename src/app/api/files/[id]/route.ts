@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import { getFileUrl, getStorageInfo } from '@/lib/utils/universal-file-utils'
-import { cookies } from 'next/headers'
-
+import { getCurrentUser } from '@/lib/auth/session'
 const prisma = new PrismaClient()
 
 export async function GET(
@@ -58,17 +57,14 @@ export async function GET(
       });
     } else {
       // Для приватных файлов требуется авторизация
-      const cookieStore = await cookies()
-      const sessionCookie = cookieStore.get('admin-session')
-      
-      if (!sessionCookie?.value) {
+      const user = await getCurrentUser()
+
+    if (!user) {
         return NextResponse.json(
           { error: 'Unauthorized access to private file' },
           { status: 401 }
         )
       }
-
-      const user = JSON.parse(sessionCookie.value)
       
       if (!user?.id) {
         return NextResponse.json(

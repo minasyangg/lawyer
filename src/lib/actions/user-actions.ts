@@ -1,12 +1,11 @@
 "use server"
 
-import { PrismaClient, UserRole, UserStatus } from '@prisma/client'
+import { UserRole, UserStatus } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
-
-const prisma = new PrismaClient()
-
+import { requireAdmin, requireAdminOrEditor } from '@/lib/auth/session'
 
 const UserCreateSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -31,9 +30,26 @@ export type User = {
   updatedAt: Date
 }
 
+// Поля, которые безопасно отдавать в админку (без password/токенов восстановления/2FA-секретов)
+const SAFE_USER_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  userRole: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+} as const
+
+// Список пользователей нужен не только в /admin (управление пользователями),
+// но и в /editor (выбор/отображение автора статьи) — поэтому чтение разрешено
+// ADMIN и EDITOR, а не только ADMIN. Мутации (create/update/delete) — только ADMIN.
 export async function getUsers(): Promise<User[]> {
+  await requireAdminOrEditor()
+
   try {
     const users = await prisma.user.findMany({
+      select: SAFE_USER_SELECT,
       orderBy: { createdAt: 'desc' }
     })
     return users
@@ -44,9 +60,12 @@ export async function getUsers(): Promise<User[]> {
 }
 
 export async function getUserById(id: number): Promise<User | null> {
+  await requireAdminOrEditor()
+
   try {
     const user = await prisma.user.findUnique({
-      where: { id }
+      where: { id },
+      select: SAFE_USER_SELECT,
     })
     return user
   } catch (error) {
@@ -56,6 +75,8 @@ export async function getUserById(id: number): Promise<User | null> {
 }
 
 export async function createUser(data: FormData) {
+  await requireAdmin()
+
   const validatedFields = UserCreateSchema.safeParse({
     name: data.get('name'),
     email: data.get('email'),
@@ -88,7 +109,7 @@ export async function createUser(data: FormData) {
         status: 'ACTIVE'
       }
     })
-    
+
     revalidatePath('/admin')
     return { success: true }
   } catch (error) {
@@ -100,6 +121,8 @@ export async function createUser(data: FormData) {
 }
 
 export async function updateUser(id: number, data: FormData) {
+  const currentUser = await requireAdmin()
+
   const validatedFields = UserUpdateSchema.safeParse({
     name: data.get('name'),
     email: data.get('email'),
@@ -113,6 +136,11 @@ export async function updateUser(id: number, data: FormData) {
   }
 
   try {
+    // Нельзя понизить себе роль с ADMIN — иначе можно случайно потерять доступ
+    if (currentUser.id === id && validatedFields.data.userRole !== 'ADMIN') {
+      return { errors: { userRole: ['Нельзя понизить собственную роль администратора'] } }
+    }
+
     await prisma.user.update({
       where: { id },
       data: {
@@ -121,7 +149,7 @@ export async function updateUser(id: number, data: FormData) {
         userRole: validatedFields.data.userRole as UserRole,
       }
     })
-    
+
     revalidatePath('/admin')
     return { success: true }
   } catch (error) {
@@ -133,11 +161,17 @@ export async function updateUser(id: number, data: FormData) {
 }
 
 export async function deleteUser(id: number) {
+  const currentUser = await requireAdmin()
+
   try {
+    if (currentUser.id === id) {
+      return { errors: { general: ['Нельзя удалить собственную учётную запись'] } }
+    }
+
     await prisma.user.delete({
       where: { id }
     })
-    
+
     revalidatePath('/admin')
     return { success: true }
   } catch (error) {

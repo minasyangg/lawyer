@@ -1,6 +1,6 @@
 import { Users, LayoutDashboard, Settings, FileText, FolderOpen, Briefcase } from "lucide-react"
 import Link from "next/link"
-import { cookies } from 'next/headers'
+import { getCurrentUser } from '@/lib/auth/session'
 import { redirect } from 'next/navigation'
 import LogoutButton from '@/components/admin/LogoutButton'
 
@@ -9,19 +9,11 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  const cookieStore = await cookies()
-  const session = cookieStore.get('admin-session')
-  
-  // This layout only applies to protected admin routes
-  // Login page has its own layout
-  if (!session) {
-    redirect('/login')
-  }
-  
-  let user
-  try {
-    user = JSON.parse(session.value)
-  } catch {
+  // Сессия проверяется через общий helper: cookie подписана, подделать роль нельзя.
+  // Доступ к /admin дополнительно ограничен middleware (только ADMIN).
+  const user = await getCurrentUser()
+
+  if (!user) {
     redirect('/login')
   }
 

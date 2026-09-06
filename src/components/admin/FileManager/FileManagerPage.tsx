@@ -7,8 +7,7 @@ import {
   listFiles, 
   deleteFile, 
   deleteFolder,
-  getFolderTree,
-  debugSession,
+  getFolderTree,
   type FolderTreeNode,
   type DeleteFileResult,
   type DeleteFolderResult
@@ -375,13 +374,6 @@ export function FileManagerPage({ userRole = 'ADMIN', mode = 'full', onFileSelec
 
   // Загрузка данных при монтировании
   useEffect(() => {
-    // Отладочная информация о сессии
-    debugSession().then(result => {
-      console.log('🔍 Session debug result:', result)
-    }).catch(error => {
-      console.error('❌ Session debug error:', error)
-    })
-    
     loadFiles()
     loadFolderTree()
   }, [loadFiles, loadFolderTree])

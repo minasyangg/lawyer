@@ -24,7 +24,9 @@ interface EditorArticleTableProps {
   articles: Article[]
   services: { id: number; title: string }[]
   users: { id: number; name: string }[]
-  currentUser: { id: number; name: string; email: string; role: string } | null
+  // Поле роли называется userRole (как в модели Prisma). Раньше здесь значилось
+  // role, которого в сессии нет — при нетипизированном JSON.parse это молча давало undefined.
+  currentUser: { id: number; name: string; email: string; userRole: string } | null
 }
 
 export function EditorArticleTable({ articles, currentUser }: EditorArticleTableProps) {

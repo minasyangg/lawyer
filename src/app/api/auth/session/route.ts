@@ -1,18 +1,12 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { getCurrentUser } from '@/lib/auth/session'
 
 export async function GET() {
-  const cookieStore = await cookies()
-  const session = cookieStore.get('admin-session')
+  const user = await getCurrentUser()
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ authenticated: false })
   }
 
-  try {
-    const user = JSON.parse(session.value)
-    return NextResponse.json({ authenticated: true, user })
-  } catch {
-    return NextResponse.json({ authenticated: false, error: 'Invalid session' })
-  }
+  return NextResponse.json({ authenticated: true, user })
 }

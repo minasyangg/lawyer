@@ -1,7 +1,7 @@
 "use server"
 
 import { PrismaClient } from '@prisma/client'
-import { cookies } from 'next/headers'
+import { getCurrentUser } from '@/lib/auth/session'
 import { checkFileUsage } from './checkFileUsage'
 import { deleteFile as deleteFileFromStorage } from '@/lib/utils/universal-file-utils'
 import { invalidateCache } from '@/lib/redis'
@@ -22,14 +22,11 @@ export interface DeleteFileResult {
  */
 export async function deleteFile(fileId: number, force: boolean = false): Promise<DeleteFileResult> {
   try {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('admin-session')
-    
-    if (!sessionCookie?.value) {
+    const user = await getCurrentUser()
+
+    if (!user) {
       return { success: false, error: 'Unauthorized' }
     }
-
-    const user = JSON.parse(sessionCookie.value)
 
     if (!user?.id) {
       return { success: false, error: 'User not found' }

@@ -1,104 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
+
+// Middleware работает в Edge-рантайме, поэтому здесь используется getToken
+// (совместим с Edge), а не серверный helper из lib/auth/session.
+//
+// Cookie `admin-session` содержит подписанный JWT: подделать роль,
+// подставив свой JSON, больше нельзя.
+
+type Role = 'ADMIN' | 'EDITOR' | 'USER'
+
+async function readRole(request: NextRequest): Promise<Role | null> {
+  const secret = process.env.NEXTAUTH_SECRET
+  if (!secret) return null
+
+  try {
+    const token = await getToken({
+      req: request,
+      secret,
+      cookieName: 'admin-session',
+    })
+    const role = token?.userRole
+    return role === 'ADMIN' || role === 'EDITOR' || role === 'USER' ? role : null
+  } catch {
+    return null
+  }
+}
+
+function redirectToLogin(request: NextRequest, pathname: string) {
+  const url = new URL('/login', request.url)
+  url.searchParams.set('next', pathname)
+  return NextResponse.redirect(url)
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const role = await readRole(request)
 
   // Защита API роутов
-  if (pathname.startsWith('/api/upload') || 
-      pathname.startsWith('/api/tags')) {
-    
-    const sessionCookie = request.cookies.get('admin-session')
-
-    if (!sessionCookie?.value) {
+  if (pathname.startsWith('/api/upload') || pathname.startsWith('/api/tags')) {
+    if (!role) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    try {
-      const user = JSON.parse(sessionCookie.value)
-      
-      // Дополнительная проверка для административных операций с тегами
-      if ((pathname.startsWith('/api/tags') && 
-           (request.method === 'POST' || request.method === 'PUT' || request.method === 'DELETE')) ||
-          pathname.startsWith('/api/upload')) {
-        if (user.userRole !== 'ADMIN' && user.userRole !== 'EDITOR') {
-          return NextResponse.json({ error: 'Access denied' }, { status: 403 })
-        }
+    const isTagMutation =
+      pathname.startsWith('/api/tags') &&
+      (request.method === 'POST' || request.method === 'PUT' || request.method === 'DELETE')
+
+    if (isTagMutation || pathname.startsWith('/api/upload')) {
+      if (role !== 'ADMIN' && role !== 'EDITOR') {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 })
       }
-    } catch {
-      return NextResponse.json({ error: 'Invalid session' }, { status: 401 })
     }
   }
 
-  // Проверка доступа к админ панели
+  // Админ-панель: только ADMIN. EDITOR уводим в свою зону.
   if (pathname.startsWith('/admin')) {
-    console.log('🔍 Middleware: Checking admin access for path:', pathname)
-    const sessionCookie = request.cookies.get('admin-session')
-
-    if (!sessionCookie?.value) {
-      console.log('❌ Middleware: No session cookie found')
-      const url = new URL('/login', request.url)
-      url.searchParams.set('next', pathname)
-      return NextResponse.redirect(url)
+    if (!role) return redirectToLogin(request, pathname)
+    if (role === 'EDITOR') {
+      return NextResponse.redirect(new URL('/editor', request.url))
     }
-
-    try {
-      const user = JSON.parse(sessionCookie.value)
-      console.log('🔍 Middleware: Session data:', user)
-      
-      // Role-based handling: ADMIN can access /admin, EDITOR should be redirected to /editor
-      if (user.userRole === 'ADMIN') {
-        console.log('✅ Middleware: Admin access granted')
-      } else if (user.userRole === 'EDITOR') {
-        console.log('➡️ Middleware: Redirecting EDITOR to /editor')
-        return NextResponse.redirect(new URL('/editor', request.url))
-      } else {
-        console.log('❌ Middleware: Access denied - user role is:', user.userRole)
-        {
-          const url = new URL('/login', request.url)
-          url.searchParams.set('next', pathname)
-          return NextResponse.redirect(url)
-        }
-      }
-    } catch (error) {
-      console.log('❌ Middleware: Error parsing session cookie:', error)
-      const url = new URL('/login', request.url)
-      url.searchParams.set('next', pathname)
-      return NextResponse.redirect(url)
-    }
+    if (role !== 'ADMIN') return redirectToLogin(request, pathname)
   }
 
-  // Проверка доступа к editor панели
+  // Зона редактора: EDITOR работает здесь, ADMIN тоже допускается
+  // (раньше администратора выбрасывало на /login — это выглядело как сбой входа).
   if (pathname.startsWith('/editor')) {
-    const sessionCookie = request.cookies.get('admin-session')
-
-    if (!sessionCookie?.value) {
-      const url = new URL('/login', request.url)
-      url.searchParams.set('next', pathname)
-      return NextResponse.redirect(url)
+    if (!role) return redirectToLogin(request, pathname)
+    if (role !== 'EDITOR' && role !== 'ADMIN') {
+      return redirectToLogin(request, pathname)
     }
-
-    try {
-      const user = JSON.parse(sessionCookie.value)
-      
-      // Только EDITOR может заходить в editor область
-      if (user.userRole !== 'EDITOR') {
-        const url = new URL('/login', request.url)
-        url.searchParams.set('next', pathname)
-        return NextResponse.redirect(url)
-      }
-      
-    } catch {
-      const url = new URL('/login', request.url)
-      url.searchParams.set('next', pathname)
-      return NextResponse.redirect(url)
-    }
-  }
-
-  // Защищаем доступ к загруженным файлам
-  if (pathname.startsWith('/uploads/')) {
-    // Для простоты, пока разрешаем доступ ко всем файлам из uploads
-    // В продакшене нужно добавить проверку на использование файла в опубликованных статьях
-    return NextResponse.next()
   }
 
   return NextResponse.next()
@@ -107,10 +77,10 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/api/files/:path*',
-    '/api/upload/:path*', 
+    '/api/upload/:path*',
     '/api/tags/:path*',
     '/admin/:path*',
     '/editor/:path*',
-    '/uploads/:path*'
-  ]
+    '/uploads/:path*',
+  ],
 }

@@ -1,6 +1,6 @@
 import { FileText, FolderOpen, User } from "lucide-react"
 import Link from "next/link"
-import { cookies } from 'next/headers'
+import { getCurrentUser } from '@/lib/auth/session'
 import { redirect } from 'next/navigation'
 import LogoutButton from '@/components/admin/LogoutButton'
 
@@ -9,24 +9,20 @@ export default async function EditorLayout({
 }: {
   children: React.ReactNode
 }) {
-  const cookieStore = await cookies()
-  const session = cookieStore.get('admin-session')
-  
-  if (!session) {
-    redirect('/login')
-  }
-  
-  let user
-  try {
-    user = JSON.parse(session.value)
-    // Проверяем, что пользователь имеет роль EDITOR
-    if (user.userRole !== 'EDITOR') {
-      redirect('/login')
-    }
-  } catch {
+  // Сессия читается из подписанной cookie через общий helper.
+  // Раньше redirect() вызывался внутри try/catch — Next.js реализует его через
+  // исключение, поэтому catch перехватывал собственный редирект.
+  const user = await getCurrentUser()
+
+  if (!user) {
     redirect('/login')
   }
 
+  // Зона редактора доступна EDITOR и ADMIN.
+  if (user.userRole !== 'EDITOR' && user.userRole !== 'ADMIN') {
+    redirect('/login')
+  }
+  
   const navigation = [
     { name: 'Articles', href: '/editor/articles', icon: FileText },
     { name: 'File Manager', href: '/editor/files', icon: FolderOpen },

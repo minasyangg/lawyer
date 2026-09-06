@@ -1,7 +1,7 @@
 "use server"
 
 import { PrismaClient } from '@prisma/client'
-import { cookies } from 'next/headers'
+import { getCurrentUser } from '@/lib/auth/session'
 import { saveFileUniversalWithDetails, generateFileName, getFolderPhysicalPath, MAX_FILE_SIZE, ALLOWED_IMAGE_TYPES, ALLOWED_DOCUMENT_TYPES } from '@/lib/utils/file-utils'
 import { generateVirtualPath, createVirtualFileUrl } from '@/lib/virtualPaths'
 import { invalidateCache } from '@/lib/redis'
@@ -28,20 +28,15 @@ export interface UploadResult {
  */
 export async function uploadFile(formData: FormData): Promise<UploadResult> {
   try {
-    const cookieStore = await cookies()
-    const sessionCookie = cookieStore.get('admin-session')
-    
-    if (!sessionCookie?.value) {
+    const user = await getCurrentUser()
+
+    if (!user) {
       return { success: false, files: [], error: 'Unauthorized' }
     }
-
-    const user = JSON.parse(sessionCookie.value)
 
     if (!user?.id) {
       return { success: false, files: [], error: 'User not found' }
     }
-
-    console.log('🔍 Upload: User from session:', { id: user.id, email: user.email })
 
     // Проверяем, что пользователь существует в базе данных
     // Ищем по email, так как ID мог измениться после пересоздания БД
@@ -50,24 +45,12 @@ export async function uploadFile(formData: FormData): Promise<UploadResult> {
       select: { id: true, email: true, userRole: true }
     })
 
-    console.log('🔍 Upload: User from database:', dbUser)
-
     if (!dbUser) {
       return { success: false, files: [], error: 'User not found in database' }
     }
 
-    // Если ID в сессии не совпадает с ID в БД, обновляем сессию
-    if (user.id !== dbUser.id) {
-      console.log('🔄 Upload: Updating session with correct user ID:', dbUser.id)
-      const updatedUser = { ...user, id: dbUser.id }
-      const cookieStore = await cookies()
-      cookieStore.set('admin-session', JSON.stringify(updatedUser), {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-      })
-    }
+    // ID пользователя берём из БД (dbUser.id ниже), сессию НЕ переписываем:
+    // запись неподписанного JSON в cookie заново открыла бы подделку роли.
 
     const folderIdRaw = formData.get('folderId')
     const folderId = folderIdRaw ? Number(folderIdRaw) : null
@@ -137,7 +120,6 @@ export async function uploadFile(formData: FormData): Promise<UploadResult> {
       const virtualId = randomBytes(12).toString('base64url')
       
       // Создаем запись в базе данных
-      console.log('🔍 Upload: Creating file record with uploadedBy:', dbUser.id)
       const dbFile = await prisma.file.create({
         data: {
           originalName: file.name,
