@@ -1,14 +1,12 @@
 "use server"
 
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth/session'
 import { rmdir } from 'fs/promises'
 import { join } from 'path'
 import { deleteFile } from '@/lib/utils/universal-file-utils'
 import { getStorageInfo } from '@/lib/utils/universal-file-utils'
 import { invalidateCache } from '@/lib/redis'
-
-const prisma = new PrismaClient()
 
 /**
  * Рекурсивно проверяет, есть ли защищенные файлы в папке
@@ -172,13 +170,10 @@ export async function deleteFolder(folderId: number, force: boolean = false): Pr
       try {
         const absolutePath = join(process.cwd(), 'public', 'uploads', folder.path)
         await rmdir(absolutePath, { recursive: true })
-        console.log('Physical folder deleted from local storage')
       } catch (fsError) {
         console.error('Failed to delete folder from local filesystem:', fsError)
         // Не возвращаем ошибку, так как данные уже удалены из БД
       }
-    } else {
-      console.log('Skipping physical folder deletion (cloud storage)')
     }
 
     // Invalidate cache after successful deletion

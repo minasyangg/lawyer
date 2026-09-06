@@ -27,7 +27,7 @@ export default function HeroSection() {
           </h1>
 
           {/* Подзаголовок - адаптивный размер */}
-          <p className="text-[12px] md:text-[16px] lg:text-[20px] leading-relaxed mb-6 md:mb-7 lg:mb-8 opacity-90">
+          <p className="text-[15px] md:text-[16px] lg:text-[20px] leading-relaxed mb-6 md:mb-7 lg:mb-8 opacity-90">
             Консультации, сопровождение сделок, защита интересов в суде — полный спектр юридических услуг для вашего бизнеса
           </p>
 

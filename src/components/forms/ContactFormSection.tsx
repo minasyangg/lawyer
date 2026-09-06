@@ -85,15 +85,16 @@ export default function ContactFormSection() {
                 {/* Имя */}
                 <div className="flex flex-col gap-2">
                   <label htmlFor="firstName" className="text-[14px] md:text-[15px] lg:text-[16px] font-medium text-black leading-[1.5]">
-                    Имя
+                    Имя <span className="text-primary">*</span>
                   </label>
                   <input
                     type="text"
                     id="firstName"
                     name="firstName"
+                    required
                     value={formData.firstName}
                     onChange={handleChange}
-                    placeholder="Jane"
+                    placeholder="Иван"
                     className="w-full px-4 py-3 border border-[#E0E0E0] rounded-lg text-[14px] md:text-[15px] lg:text-[16px] text-[#828282] leading-[1.5] focus:outline-none focus:border-primary shadow-sm"
                   />
                 </div>
@@ -101,15 +102,16 @@ export default function ContactFormSection() {
                 {/* Фамилия */}
                 <div className="flex flex-col gap-2">
                   <label htmlFor="lastName" className="text-[14px] md:text-[15px] lg:text-[16px] font-medium text-black leading-[1.5]">
-                    Фамилия
+                    Фамилия <span className="text-primary">*</span>
                   </label>
                   <input
                     type="text"
                     id="lastName"
                     name="lastName"
+                    required
                     value={formData.lastName}
                     onChange={handleChange}
-                    placeholder="Smitherton"
+                    placeholder="Иванов"
                     className="w-full px-4 py-3 border border-[#E0E0E0] rounded-lg text-[14px] md:text-[15px] lg:text-[16px] text-[#828282] leading-[1.5] focus:outline-none focus:border-primary shadow-sm"
                   />
                 </div>
@@ -117,7 +119,7 @@ export default function ContactFormSection() {
                 {/* ОГРН */}
                 <div className="flex flex-col gap-2">
                   <label htmlFor="ogrn" className="text-[14px] md:text-[15px] lg:text-[16px] font-medium text-black leading-[1.5]">
-                    ОГРН / ОГРНИП
+                    ОГРН / ОГРНИП <span className="text-[#828282] font-normal">(необязательно)</span>
                   </label>
                   <input
                     type="text"
@@ -125,7 +127,7 @@ export default function ContactFormSection() {
                     name="ogrn"
                     value={formData.ogrn}
                     onChange={handleChange}
-                    placeholder="1111111111111"
+                    placeholder="1027700132195"
                     className="w-full px-4 py-3 border border-[#E0E0E0] rounded-lg text-[14px] md:text-[15px] lg:text-[16px] text-[#828282] leading-[1.5] focus:outline-none focus:border-primary shadow-sm"
                   />
                 </div>
@@ -133,15 +135,16 @@ export default function ContactFormSection() {
                 {/* Email */}
                 <div className="flex flex-col gap-2">
                   <label htmlFor="email" className="text-[14px] md:text-[15px] lg:text-[16px] font-medium text-black leading-[1.5]">
-                    Email
+                    Email <span className="text-primary">*</span>
                   </label>
                   <input
                     type="email"
                     id="email"
                     name="email"
+                    required
                     value={formData.email}
                     onChange={handleChange}
-                    placeholder="email@janesfakedomain.net"
+                    placeholder="ivanov@mail.ru"
                     className="w-full px-4 py-3 border border-[#E0E0E0] rounded-lg text-[14px] md:text-[15px] lg:text-[16px] text-[#828282] leading-[1.5] focus:outline-none focus:border-primary shadow-sm"
                   />
                 </div>
@@ -149,14 +152,15 @@ export default function ContactFormSection() {
                 {/* Вопрос */}
                 <div className="flex flex-col gap-2">
                   <label htmlFor="question" className="text-[14px] md:text-[15px] lg:text-[16px] font-medium text-black leading-[1.5]">
-                    Опишите Ваш вопрос
+                    Опишите Ваш вопрос <span className="text-primary">*</span>
                   </label>
                   <textarea
                     id="question"
                     name="question"
+                    required
                     value={formData.question}
                     onChange={handleChange}
-                    placeholder="Enter your question or message"
+                    placeholder="Кратко опишите вашу ситуацию — мы свяжемся для уточнения деталей"
                     rows={4}
                     className="w-full px-4 py-3 border border-[#E0E0E0] rounded-lg text-[14px] md:text-[15px] lg:text-[16px] text-[#828282] leading-[1.5] focus:outline-none focus:border-primary shadow-sm resize-none"
                   />
@@ -193,7 +197,7 @@ export default function ContactFormSection() {
               disabled={!formData.agreedToPolicy}
               className="w-full px-6 py-4 bg-[#060606] text-white text-[16px] font-bold leading-[1.5] rounded-lg hover:bg-[#1a1a1a] transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed md:mb-8 lg:mb-10"
             >
-              Обращение
+              Отправить обращение
             </button>
           </form>
         </div>

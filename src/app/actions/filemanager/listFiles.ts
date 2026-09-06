@@ -1,12 +1,10 @@
 "use server"
 
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth/session'
 import { createVirtualFileUrl } from '@/lib/virtualPaths'
 import { checkMultipleFilesUsage } from './checkFileUsage'
 import { withCache, CACHE_KEYS, CACHE_TTL } from '@/lib/redis'
-
-const prisma = new PrismaClient()
 
 export interface FileManagerItem {
   id: number
@@ -53,8 +51,14 @@ export async function listFiles(
       throw new Error('User not found')
     }
 
-    // Create cache key including user ID, folder ID, page, and limit
-    const cacheKey = CACHE_KEYS.FILES_LIST(`${user.id}:${folderId}:${page}:${limit}`)
+    // ADMIN видит все файлы/папки, остальные роли — только свои
+    // (та же модель прав, что используется в deleteFile.ts/deleteFolder.ts)
+    const isAdmin = user.userRole === 'ADMIN'
+
+    // Create cache key including user ID (для не-ADMIN — своя изоляция кэша;
+    // для ADMIN общий ключ, так как видимые данные не зависят от personal ownership),
+    // folder ID, page, and limit
+    const cacheKey = CACHE_KEYS.FILES_LIST(`${isAdmin ? 'admin' : user.id}:${folderId}:${page}:${limit}`)
 
     return await withCache(
       cacheKey,
@@ -63,8 +67,13 @@ export async function listFiles(
         const skip = (page - 1) * limit
 
         const where = {
-          uploadedBy: user.id,
+          ...(isAdmin ? {} : { uploadedBy: user.id }),
           ...(folderId ? { folderId: folderId } : { folderId: null })
+        }
+
+        const folderWhere = {
+          ...(isAdmin ? {} : { ownerId: user.id }),
+          ...(folderId ? { parentId: folderId } : { parentId: null })
         }
 
         // Получаем файлы и папки
@@ -79,19 +88,11 @@ export async function listFiles(
             take: limit,
           }),
           prisma.folder.findMany({
-            where: {
-              ownerId: user.id,
-              ...(folderId ? { parentId: folderId } : { parentId: null })
-            },
+            where: folderWhere,
             orderBy: { createdAt: 'desc' }
           }),
           prisma.file.count({ where }),
-          prisma.folder.count({
-            where: {
-              ownerId: user.id,
-              ...(folderId ? { parentId: folderId } : { parentId: null })
-            }
-          })
+          prisma.folder.count({ where: folderWhere })
         ])
 
         const filesWithUrls = files.map(file => ({

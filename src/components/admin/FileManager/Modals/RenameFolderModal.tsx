@@ -21,7 +21,7 @@ interface RenameFolderModalProps {
   onClose: () => void
   folderId: number
   currentName: string
-  onSuccess: () => void
+  onSuccess: (newName: string) => void
 }
 
 export function RenameFolderModal({
@@ -71,11 +71,12 @@ export function RenameFolderModal({
     setIsLoading(true)
 
     try {
-      const result = await renameFolder(folderId, newName.trim())
+      const trimmedName = newName.trim()
+      const result = await renameFolder(folderId, trimmedName)
 
       if (result.success) {
         toast.success('Папка успешно переименована')
-        onSuccess()
+        onSuccess(result.folder?.originalName || trimmedName)
         onClose()
       } else {
         setError(result.error || 'Ошибка при переименовании папки')

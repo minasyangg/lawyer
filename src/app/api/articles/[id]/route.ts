@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth/session'
-const prisma = new PrismaClient()
+import { deleteArticle } from '@/lib/actions/article-actions'
 
 export async function GET(
   request: NextRequest,
@@ -10,13 +10,18 @@ export async function GET(
   try {
     const { id: idParam } = await params
     const id = parseInt(idParam)
-    
+
     if (isNaN(id)) {
       return NextResponse.json(
         { error: 'Invalid article ID' },
         { status: 400 }
       )
     }
+
+    const currentUser = await getCurrentUser()
+    // Без авторизации отдаём только опубликованные статьи и не палим email автора —
+    // тот же принцип, что и в GET /api/articles (см. article-actions.ts getArticles()).
+    const isStaff = currentUser?.userRole === 'ADMIN' || currentUser?.userRole === 'EDITOR'
 
     const article = await prisma.article.findUnique({
       where: { id },
@@ -25,7 +30,7 @@ export async function GET(
           select: {
             id: true,
             name: true,
-            email: true,
+            ...(isStaff ? { email: true } : {}),
           }
         },
         category: {
@@ -54,7 +59,7 @@ export async function GET(
       }
     })
 
-    if (!article) {
+    if (!article || (!isStaff && !article.published)) {
       return NextResponse.json(
         { error: 'Article not found' },
         { status: 404 }
@@ -82,25 +87,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser()
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
-
-    if (!user || user.userRole !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      )
-    }
-
     const { id: idParam } = await params
     const id = parseInt(idParam)
-    
+
     if (isNaN(id)) {
       return NextResponse.json(
         { error: 'Invalid article ID' },
@@ -108,22 +97,18 @@ export async function DELETE(
       )
     }
 
-    // Check if article exists
-    const existingArticle = await prisma.article.findUnique({
-      where: { id }
-    })
+    // Делегируем в server action: там же единая логика прав доступа
+    // (ADMIN — любая статья, EDITOR — только свои) и очистка связанных файлов.
+    const result = await deleteArticle(id)
 
-    if (!existingArticle) {
-      return NextResponse.json(
-        { error: 'Article not found' },
-        { status: 404 }
-      )
+    if ('errors' in result) {
+      const message = 'general' in result.errors ? result.errors.general[0] : 'Failed to delete article'
+      const status = message === 'Authentication required' ? 401
+        : message === 'Article not found' ? 404
+        : message.includes('own articles') ? 403
+        : 500
+      return NextResponse.json({ error: message }, { status })
     }
-
-    // Delete article (tags will be deleted automatically due to cascade)
-    await prisma.article.delete({
-      where: { id }
-    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

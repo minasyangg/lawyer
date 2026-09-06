@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import { z } from 'zod'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 const CheckSlugSchema = z.object({
   slug: z.string().min(1, 'Slug is required'),

@@ -1,12 +1,10 @@
 "use server"
 
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth/session'
 import { checkFileUsage } from './checkFileUsage'
 import { deleteFile as deleteFileFromStorage } from '@/lib/utils/universal-file-utils'
 import { invalidateCache } from '@/lib/redis'
-
-const prisma = new PrismaClient()
 
 export interface DeleteFileResult {
   success: boolean
@@ -102,7 +100,6 @@ export async function deleteFile(fileId: number, force: boolean = false): Promis
         }
       }
       
-      console.log('Deleting file from storage:', filePath);
       const deleteResult = await deleteFileFromStorage(filePath);
       
       if (!deleteResult.success) {

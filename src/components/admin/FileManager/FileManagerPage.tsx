@@ -7,7 +7,7 @@ import {
   listFiles, 
   deleteFile, 
   deleteFolder,
-  getFolderTree,
+  getFolderTree,
   type FolderTreeNode,
   type DeleteFileResult,
   type DeleteFolderResult
@@ -45,7 +45,9 @@ export function FileManagerPage({ userRole = 'ADMIN', mode = 'full', onFileSelec
   const [files, setFiles] = useState<FileItem[]>([])
   const [folderTree, setFolderTree] = useState<FolderTreeNode[]>([])
   const [currentFolderId, setCurrentFolderId] = useState<number | null>(null)
-  const [currentFolderPath, setCurrentFolderPath] = useState<string>("")
+  // Стек реальных папок (id + name) от корня до текущей — строится по мере навигации,
+  // используется для хлебных крошек с рабочими ID вместо угадывания по строке пути
+  const [folderPathStack, setFolderPathStack] = useState<{ id: number; name: string }[]>([])
   const [loading, setLoading] = useState(false)
   
   // Состояние для поиска и фильтрации
@@ -140,57 +142,68 @@ export function FileManagerPage({ userRole = 'ADMIN', mode = 'full', onFileSelec
     }
   }, [])
 
-  // Навигация по папкам
-  const navigateToFolder = useCallback((folderId: number | null, path?: string) => {
+  // Навигация к корню или к папке, уже присутствующей в стеке пути (клик по хлебной крошке) —
+  // обрезает стек до нужной глубины вместо угадывания ID
+  const navigateToStackIndex = useCallback((index: number) => {
+    const newStack = index < 0 ? [] : folderPathStack.slice(0, index + 1)
+    const folderId = newStack.length > 0 ? newStack[newStack.length - 1].id : null
+    setFolderPathStack(newStack)
     setCurrentFolderId(folderId)
-    setCurrentFolderPath(path || "")
+    setCurrentPage(1)
+    loadFiles(folderId, 1)
+  }, [folderPathStack, loadFiles])
+
+  // Навигация "вглубь" — переход в папку, по которой кликнули в списке файлов
+  // (добавляет её в стек пути, используя реальные id/name этой папки)
+  const navigateIntoFolder = useCallback((folderId: number, folderName: string) => {
+    setFolderPathStack(prev => [...prev, { id: folderId, name: folderName }])
+    setCurrentFolderId(folderId)
     setCurrentPage(1)
     loadFiles(folderId, 1)
   }, [loadFiles])
 
-  // Создание хлебных крошек
+  // Общая навигация по id (используется деревом папок слева — там переход возможен на
+  // любую папку, а не только вглубь/к корню, поэтому стек сбрасывается на пустой путь
+  // с этой единственной папкой в качестве текущей; хлебные крошки в этом случае покажут
+  // только корень + текущую папку, что корректно, так как полный путь дереву не известен)
+  const navigateToFolder = useCallback((folderId: number | null, folderName?: string) => {
+    setFolderPathStack(folderId !== null && folderName ? [{ id: folderId, name: folderName }] : [])
+    setCurrentFolderId(folderId)
+    setCurrentPage(1)
+    loadFiles(folderId, 1)
+  }, [loadFiles])
+
+  // Создание хлебных крошек — на основе реального стека папок, все клики рабочие
   const createBreadcrumbs = useCallback((): BreadcrumbItem[] => {
     const breadcrumbs: BreadcrumbItem[] = [
       {
         id: null,
         name: 'Корень',
-        onClick: () => navigateToFolder(null)
+        onClick: () => navigateToStackIndex(-1)
       }
     ]
 
-    if (currentFolderPath) {
-      const pathParts = currentFolderPath.split('/').filter(Boolean)
-      
-      // Построение пути для каждой части
-      let buildPath = ''
-      pathParts.forEach((part, index) => {
-        buildPath += (buildPath ? '/' : '') + part
-        
-        // Нужно найти ID папки по пути - упрощенная версия
-        breadcrumbs.push({
-          id: index + 1, // Временное решение
-          name: part,
-          onClick: () => {
-            // Здесь нужна более сложная логика для получения правильного ID
-            console.log('Navigate to:', buildPath)
-          }
-        })
+    folderPathStack.forEach((folder, index) => {
+      breadcrumbs.push({
+        id: folder.id,
+        name: folder.name,
+        onClick: () => navigateToStackIndex(index)
       })
-    }
+    })
 
     return breadcrumbs
-  }, [currentFolderPath, navigateToFolder])
+  }, [folderPathStack, navigateToStackIndex])
 
   // Обработчики для файловых операций
   const handleFileClick = useCallback((file: FileItem) => {
     if (file.isFolder) {
-      navigateToFolder(file.id, file.path)
+      navigateIntoFolder(file.id, file.originalName)
     } else if (mode === 'dialog' && onFileSelect) {
       onFileSelect(file)
     } else {
       window.open(file.url, '_blank')
     }
-  }, [navigateToFolder, mode, onFileSelect])
+  }, [navigateIntoFolder, mode, onFileSelect])
 
   const handleUpload = useCallback(async (files: File[]) => {
     try {
@@ -512,7 +525,13 @@ export function FileManagerPage({ userRole = 'ADMIN', mode = 'full', onFileSelec
         onClose={() => setRenameFolderModal(null)}
         folderId={renameFolderModal?.id || 0}
         currentName={renameFolderModal?.name || ''}
-        onSuccess={() => {
+        onSuccess={(newName) => {
+          // Если переименованная папка входит в текущий путь (хлебные крошки),
+          // обновляем её имя в стеке, не дожидаясь повторной навигации
+          if (renameFolderModal) {
+            const { id } = renameFolderModal
+            setFolderPathStack(prev => prev.map(f => (f.id === id ? { ...f, name: newName } : f)))
+          }
           setRenameFolderModal(null)
           loadFiles(currentFolderId, currentPage)
           loadFolderTree()

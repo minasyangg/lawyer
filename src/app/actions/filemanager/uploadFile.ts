@@ -1,12 +1,10 @@
 "use server"
 
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth/session'
 import { saveFileUniversalWithDetails, generateFileName, getFolderPhysicalPath, MAX_FILE_SIZE, ALLOWED_IMAGE_TYPES, ALLOWED_DOCUMENT_TYPES } from '@/lib/utils/file-utils'
 import { generateVirtualPath, createVirtualFileUrl } from '@/lib/virtualPaths'
 import { invalidateCache } from '@/lib/redis'
-
-const prisma = new PrismaClient()
 
 export interface UploadResult {
   success: boolean

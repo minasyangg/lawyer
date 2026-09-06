@@ -7,7 +7,7 @@ import { FolderTreeNode } from '../types'
 interface FolderTreeProps {
   folderTree: FolderTreeNode[]
   currentFolderId: number | null
-  onFolderClick: (folderId: number | null, path?: string) => void
+  onFolderClick: (folderId: number | null, name?: string) => void
 }
 
 export function FolderTree({ folderTree, currentFolderId, onFolderClick }: FolderTreeProps) {
@@ -18,7 +18,7 @@ export function FolderTree({ folderTree, currentFolderId, onFolderClick }: Folde
           className={`flex items-center py-1 px-2 cursor-pointer hover:bg-gray-100 rounded ${
             currentFolderId === node.id ? 'bg-blue-50 text-blue-600' : ''
           }`}
-          onClick={() => onFolderClick(node.id, node.path)}
+          onClick={() => onFolderClick(node.id, node.name)}
         >
           <Folder className="w-4 h-4 mr-2" />
           <span className="text-sm truncate">{node.name}</span>

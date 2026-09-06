@@ -5,6 +5,7 @@ import Header from '@/components/ui/Header'
 import Footer from '@/components/ui/Footer'
 import { ArticleDocuments } from '@/components/ui/ArticleDocuments'
 import { getArticleBySlug, getPublishedArticles } from '@/lib/actions/article-actions'
+import { sanitizeArticleHtml } from '@/lib/utils/sanitize-html'
 
 interface ArticlePageProps {
   params: Promise<{
@@ -103,8 +104,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           <div className="mb-12">
             <div
               className="text-gray-800 leading-relaxed rich-text-content prose-custom"
-              // use processed HTML with lazy-loaded images
-              dangerouslySetInnerHTML={{ __html: addLazyToImages(article.content) }}
+              // use sanitized HTML with lazy-loaded images
+              dangerouslySetInnerHTML={{ __html: addLazyToImages(sanitizeArticleHtml(article.content)) }}
             />
           </div>
 

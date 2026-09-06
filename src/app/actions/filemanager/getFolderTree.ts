@@ -1,10 +1,8 @@
 "use server"
 
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth/session'
 import { withCache, CACHE_KEYS, CACHE_TTL } from '@/lib/redis'
-
-const prisma = new PrismaClient()
 
 export interface FolderTreeNode {
   id: number
@@ -30,18 +28,20 @@ export async function getFolderTree(): Promise<FolderTreeNode[]> {
       throw new Error('User not found')
     }
 
-    // Create cache key for user's folder tree
-    const cacheKey = `${CACHE_KEYS.FOLDER_TREE}:${user.id}`
+    // ADMIN видит дерево всех папок, остальные роли — только своих
+    // (та же модель прав, что и в listFiles.ts)
+    const isAdmin = user.userRole === 'ADMIN'
+
+    // Create cache key for the folder tree
+    const cacheKey = `${CACHE_KEYS.FOLDER_TREE}:${isAdmin ? 'admin' : user.id}`
 
     return await withCache(
       cacheKey,
       CACHE_TTL.FOLDER_TREE,
       async () => {
-        // Получаем все папки пользователя
+        // Получаем папки (все — для ADMIN, только свои — для остальных ролей)
         const folders = await prisma.folder.findMany({
-          where: {
-            ownerId: user.id
-          },
+          where: isAdmin ? {} : { ownerId: user.id },
           orderBy: {
             name: 'asc'
           }

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { getFileUrl } from '@/lib/utils/universal-file-utils'
 import { getCurrentUser } from '@/lib/auth/session'
-const prisma = new PrismaClient()
 
 /**
  * API route для получения прямого URL изображения

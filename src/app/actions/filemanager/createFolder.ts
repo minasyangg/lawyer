@@ -1,6 +1,6 @@
 "use server"
 
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth/session'
 import { mkdir } from 'fs/promises'
 import { join } from 'path'
@@ -8,8 +8,6 @@ import { getStorageInfo } from '@/lib/utils/universal-file-utils'
 import { validateAndProcessFolderName } from '@/lib/utils/folder-validation'
 import { createFolderSchema } from '@/lib/validations/folder'
 import { invalidateCache } from '@/lib/redis'
-
-const prisma = new PrismaClient()
 
 export interface CreateFolderResult {
   success: boolean
@@ -33,8 +31,6 @@ export interface CreateFolderResult {
  * @param parentId id родительской папки (null — корень)
  */
 export async function createFolder(name: string, parentId: number | null = null): Promise<CreateFolderResult> {
-  console.log('createFolder called with:', { name, parentId, storageProvider: process.env.STORAGE_PROVIDER })
-  
   try {
     const user = await getCurrentUser()
 
@@ -61,8 +57,7 @@ export async function createFolder(name: string, parentId: number | null = null)
 
     // Получаем информацию о провайдере хранения
     const storageType = getStorageInfo()
-    console.log('Creating folder with storage provider:', storageType.provider)
-    
+
     // Валидируем и обрабатываем название папки для файловой системы
     const validation = validateAndProcessFolderName(validatedName, storageType.provider as 'local' | 'supabase')
     
@@ -73,31 +68,28 @@ export async function createFolder(name: string, parentId: number | null = null)
       }
     }
     
-    const { originalName, safeName, wasTransliterated } = validation.data
-    
-    // Предупреждаем пользователя если название было изменено
-    if (wasTransliterated) {
-      console.log(`Folder name transliterated: "${originalName}" -> "${safeName}"`)
-    }
+    const { safeName } = validation.data
 
     // Определяем путь к папке
     let fullPath: string
     let parentFolder = null
-    
+
     if (parentId) {
-      // Если есть родительская папка, создаем подпапку
+      // Если есть родительская папка, создаем подпапку.
+      // ADMIN может создавать подпапки в любой папке, остальные роли — только в своих
+      // (та же модель прав, что и в listFiles.ts/getFolderTree.ts)
       parentFolder = await prisma.folder.findUnique({
-        where: { 
+        where: {
           id: parentId,
-          ownerId: user.id // Проверяем права доступа к родительской папке
+          ...(user.userRole === 'ADMIN' ? {} : { ownerId: user.id })
         },
         select: { path: true }
       })
-      
+
       if (!parentFolder) {
         return { success: false, error: 'Parent folder not found' }
       }
-      
+
       fullPath = `${parentFolder.path}/${name}`
     } else {
       // Корневая папка создается в пользовательской директории
@@ -116,18 +108,14 @@ export async function createFolder(name: string, parentId: number | null = null)
 
     // Создаем физические папки только для локального провайдера
     // В Supabase Storage папки создаются автоматически при загрузке файлов
-    const storageData = getStorageInfo();
-    console.log('Storage provider info:', storageData);
+    const storageData = getStorageInfo()
 
     if (storageData.isLocal) {
-      console.log('Creating physical folder for local storage provider')
       // Создаем физическую папку только для локального хранилища
       const uploadsDir = join(process.cwd(), 'public', 'uploads')
       const physicalPath = join(uploadsDir, fullPath)
-      
+
       await mkdir(physicalPath, { recursive: true })
-    } else {
-      console.log('Skipping physical folder creation (using cloud storage - folders created automatically)')
     }
 
     // Возвращаем папку в формате FileItem

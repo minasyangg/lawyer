@@ -1,3 +1,5 @@
+import { sanitizeArticleHtml } from '@/lib/utils/sanitize-html'
+
 interface RichTextContentProps {
   content: string
   className?: string
@@ -5,9 +7,9 @@ interface RichTextContentProps {
 
 export function RichTextContent({ content, className = '' }: RichTextContentProps) {
   return (
-    <div 
+    <div
       className={`rich-text-content ${className}`}
-      dangerouslySetInnerHTML={{ __html: content }}
+      dangerouslySetInnerHTML={{ __html: sanitizeArticleHtml(content) }}
     />
   )
 }

@@ -22,8 +22,14 @@ export default function ServicesCarousel({ services }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const sectionRef = useRef<HTMLElement | null>(null)
   const firstImageRef = useRef<HTMLDivElement>(null as unknown as HTMLDivElement)
+  // Оборачивает карусель карточек + точки-индикаторы — по нему меряем высоту
+  // синей секции на mobile/tablet, чтобы индикаторы не обрезались фоном
+  const carouselBlockRef = useRef<HTMLDivElement | null>(null)
   const [blueHeight, setBlueHeight] = useState<number | null>(null)
   const navRef = useRef<HTMLDivElement | null>(null)
+  // Индекс активной карточки в области видимости — используется для точек-индикаторов
+  // скролла на mobile/tablet, чтобы визуально показать, что карточек несколько
+  const [activeIndex, setActiveIndex] = useState(0)
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -44,13 +50,14 @@ export default function ServicesCarousel({ services }: Props) {
       const sectionRect = sectionRef.current.getBoundingClientRect()
       const imageRect = firstImageRef.current.getBoundingClientRect()
 
-      // For mobile/tablet ensure the blue section covers the full carousel so cards fit inside
+      // For mobile/tablet ensure the blue section covers the full carousel
+      // (including the scroll-indicator dots below the cards) so nothing is clipped
       const viewportWidth = window.innerWidth
-      if (viewportWidth < 1024 && scrollRef.current) {
-        const scRect = scrollRef.current.getBoundingClientRect()
-        const scBottomRelative = scRect.bottom - sectionRect.top
+      if (viewportWidth < 1024 && carouselBlockRef.current) {
+        const blockRect = carouselBlockRef.current.getBoundingClientRect()
+        const blockBottomRelative = blockRect.bottom - sectionRect.top
         // add small padding to avoid tight clipping
-        setBlueHeight(Math.max(0, Math.round(scBottomRelative + 16)))
+        setBlueHeight(Math.max(0, Math.round(blockBottomRelative + 16)))
         return
       }
 
@@ -86,15 +93,34 @@ export default function ServicesCarousel({ services }: Props) {
 
     alignNav()
     window.addEventListener('resize', alignNav)
+
+    // Отслеживаем, какая карточка ближе всего к левому краю видимой области,
+    // чтобы подсвечивать соответствующую точку-индикатор на mobile/tablet
+    function updateActiveIndex() {
+      const sc = scrollRef.current
+      if (!sc) return
+      const cardWidth = sc.firstElementChild instanceof HTMLElement
+        ? sc.firstElementChild.getBoundingClientRect().width + 20 // + gap-5
+        : 1
+      const index = Math.round(sc.scrollLeft / cardWidth)
+      setActiveIndex(Math.max(0, Math.min(services.length - 1, index)))
+    }
+
     const scEl = scrollRef.current
-    if (scEl) scEl.addEventListener('scroll', alignNav)
+    if (scEl) {
+      scEl.addEventListener('scroll', alignNav)
+      scEl.addEventListener('scroll', updateActiveIndex)
+    }
 
     return () => {
       window.removeEventListener('resize', recalc)
       window.removeEventListener('resize', alignNav)
-      if (scEl) scEl.removeEventListener('scroll', alignNav)
+      if (scEl) {
+        scEl.removeEventListener('scroll', alignNav)
+        scEl.removeEventListener('scroll', updateActiveIndex)
+      }
     }
-  }, [])
+  }, [services.length])
 
   return (
     <div className="relative w-full">
@@ -141,63 +167,87 @@ export default function ServicesCarousel({ services }: Props) {
               </div>
             </div>
 
-            {/* Карусель */}
-            <div className="relative z-20">
-              {/* Контейнер карусели - адаптивное количество карточек */}
-              <div
-                ref={scrollRef}
-                className="flex gap-5 overflow-x-auto overflow-y-hidden scroll-smooth"
-                style={{ 
-                  scrollbarWidth: 'none', 
-                  msOverflowStyle: 'none',
-                  maxWidth: '100%'
-                }}
-              >
-                {services.map((service) => (
-                  <div 
-                    key={service.id}
-                    className="flex-shrink-0"
-                    style={{
-                      // Mobile: показываем 1 карточку + 20% следующей
-                      // Tablet: показываем 2 карточки
-                      // Desktop: показываем 3.5 карточки (фиксированная ширина 344px)
-                      width: 'calc(80vw - 30px)',
-                      maxWidth: '344px'
-                    }}
+            {/* Карусель + точки-индикаторы — обёрнуты вместе, чтобы высота синей секции
+                на mobile/tablet (см. recalc()) включала и то, и другое */}
+            <div ref={carouselBlockRef}>
+              <div className="relative z-20">
+                {/* Контейнер карусели - адаптивное количество карточек */}
+                <div
+                  ref={scrollRef}
+                  className="flex gap-5 overflow-x-auto overflow-y-hidden scroll-smooth"
+                  style={{
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                    maxWidth: '100%'
+                  }}
+                >
+                  {services.map((service) => (
+                    <div
+                      key={service.id}
+                      className="flex-shrink-0"
+                      style={{
+                        // Mobile: показываем 1 карточку + 20% следующей
+                        // Tablet: показываем 2 карточки
+                        // Desktop: показываем 3.5 карточки (фиксированная ширина 344px)
+                        width: 'calc(80vw - 30px)',
+                        maxWidth: '344px'
+                      }}
+                    >
+                      <ServiceCard
+                        title={service.title}
+                        description={service.cardExcerpt || service.description}
+                        imageSrc={service.cardImage || service.heroImage || '/img/services-section-photo-6058bc.png'}
+                        imageContainerRef={service.id === services[0].id ? firstImageRef : undefined}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Затухание по правому краю — визуально подсказывает, что карточки продолжаются за пределами видимой области.
+                    Показываем на всех viewport: на mobile/tablet уже сама обрезанная карточка + fade дают понять, что это скролл. */}
+                <div
+                  className="pointer-events-none absolute top-0 right-0 bottom-0 w-10 md:w-12 lg:w-16 z-30"
+                  style={{ background: 'linear-gradient(to right, transparent, var(--color-primary))' }}
+                  aria-hidden="true"
+                />
+
+                {/* Навигация - скрываем на mobile/tablet, показываем только на desktop */}
+                <div ref={navRef} className="hidden lg:flex absolute bottom-[-100px] gap-0 z-30">
+                  {/* Стрелка влево */}
+                  <button
+                    onClick={() => scroll('left')}
+                    className="w-12 h-12 bg-white shadow-lg cursor-pointer flex items-center justify-center hover:bg-gray-100 transition-colors duration-200"
+                    aria-label="Предыдущая услуга"
                   >
-                    <ServiceCard
-                      title={service.title}
-                      description={service.cardExcerpt || service.description}
-                      imageSrc={service.cardImage || service.heroImage || '/img/services-section-photo-6058bc.png'}
-                      imageContainerRef={service.id === services[0].id ? firstImageRef : undefined}
-                    />
-                  </div>
-                ))}
+                    <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+
+                  {/* Стрелка вправо */}
+                  <button
+                    onClick={() => scroll('right')}
+                    className="w-12 h-12 bg-white shadow-lg flex cursor-pointer items-center justify-center hover:bg-gray-100 transition-colors duration-200"
+                    aria-label="Следующая услуга"
+                  >
+                    <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
-              {/* Навигация - скрываем на mobile/tablet, показываем только на desktop */}
-              <div ref={navRef} className="hidden lg:flex absolute bottom-[-100px] gap-0 z-30">
-                {/* Стрелка влево */}
-                <button
-                  onClick={() => scroll('left')}
-                  className="w-12 h-12 bg-white shadow-lg cursor-pointer flex items-center justify-center hover:bg-gray-100 transition-colors duration-200"
-                  aria-label="Предыдущая услуга"
-                >
-                  <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-
-                {/* Стрелка вправо */}
-                <button
-                  onClick={() => scroll('right')}
-                  className="w-12 h-12 bg-white shadow-lg flex cursor-pointer items-center justify-center hover:bg-gray-100 transition-colors duration-200"
-                  aria-label="Следующая услуга"
-                >
-                  <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+              {/* Точки-индикаторы скролла — видны только на mobile/tablet, где нет стрелок навигации.
+                  Дают понять, что карточек несколько и текущая позиция в списке. */}
+              <div className="flex lg:hidden justify-center gap-2 mt-4" aria-hidden="true">
+                {services.map((service, index) => (
+                  <span
+                    key={service.id}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      index === activeIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/40'
+                    }`}
+                  />
+                ))}
               </div>
             </div>
           </div>

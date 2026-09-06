@@ -8,78 +8,8 @@ import { prisma } from '@/lib/prisma'
  * @returns объект с информацией об использовании
  */
 export async function checkFileUsage(fileId: number) {
-  try {
-    // Получаем файл
-    const file = await prisma.file.findUnique({
-      where: { id: fileId }
-    })
-
-    if (!file) {
-      return { isUsed: false, usedIn: [] }
-    }
-
-    // Получаем все статьи
-    const articles = await prisma.article.findMany({
-      select: {
-        id: true,
-        title: true,
-        content: true,
-      }
-    })
-
-    const usedIn: Array<{ id: number; title: string; type: 'content' | 'document' }> = []
-
-    for (const article of articles) {
-      // Проверяем содержимое статьи на наличие ссылок на файл
-      if (article.content) {
-        // Проверяем ссылки через /api/files/[id]
-        const fileIdPattern = new RegExp(`/api/files/${fileId}(?![0-9])`, 'g')
-        
-        // Проверяем виртуальные ссылки если есть virtualId
-        let virtualIdPattern: RegExp | null = null
-        if (file.virtualId) {
-          virtualIdPattern = new RegExp(`/api/files/${file.virtualId}(?![a-zA-Z0-9_-])`, 'g')
-        }
-
-        // Проверяем прямые ссылки на файл
-        const filenamePattern = new RegExp(file.filename.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
-
-        if (fileIdPattern.test(article.content) || 
-            (virtualIdPattern && virtualIdPattern.test(article.content)) ||
-            filenamePattern.test(article.content)) {
-          usedIn.push({
-            id: article.id,
-            title: article.title,
-            type: 'content'
-          })
-        }
-      }
-
-      // Проверяем связи файла со статьями через ArticleFile
-      const articleFile = await prisma.articleFile.findFirst({
-        where: {
-          fileId: fileId,
-          articleId: article.id
-        }
-      })
-      
-      if (articleFile) {
-        usedIn.push({
-          id: article.id,
-          title: article.title,
-          type: 'document'
-        })
-      }
-    }
-
-    return {
-      isUsed: usedIn.length > 0,
-      usedIn
-    }
-  } catch (error) {
-    console.error('Error checking file usage:', error)
-    return { isUsed: false, usedIn: [] }
-  }
+  const results = await checkMultipleFilesUsage([fileId])
+  return results[fileId] || { isUsed: false, usedIn: [] }
 }
 
 /**
@@ -128,51 +58,48 @@ export async function checkMultipleFilesUsage(fileIds: number[]) {
       }
     })
 
-    // Получаем все статьи одним запросом (только те, которые могут содержать ссылки на файлы)
-    const articles = await prisma.article.findMany({
-      select: { id: true, title: true, content: true }
-    })
+    // Ищем упоминания файла в HTML-контенте статей через SQL contains (ILIKE в Postgres) —
+    // фильтрация выполняется в БД по индексируемому паттерну, а не загрузкой всего content
+    // в память Node.js и прогоном regex по каждой паре файл×статья (было O(файлы × статьи)
+    // с полным текстом каждой статьи, теперь один точечный запрос-кандидат на файл).
+    // Content кандидатов подгружается только для уже отфильтрованного небольшого набора —
+    // нужен для точной word-boundary проверки (чтобы /api/files/5 не совпал с /api/files/55).
+    await Promise.all(
+      files.map(async (file) => {
+        const needles = [`/api/files/${file.id}`, file.filename]
+        if (file.virtualId) needles.push(`/api/files/${file.virtualId}`)
 
-    // Проверяем содержимое статей на наличие ссылок на файлы
-    files.forEach(file => {
-      articles.forEach(article => {
-        if (!article.content) return
+        const candidates = await prisma.article.findMany({
+          where: {
+            OR: needles.map(needle => ({ content: { contains: needle } }))
+          },
+          select: { id: true, title: true, content: true }
+        })
 
-        let found = false
+        const fileIdPattern = new RegExp(`/api/files/${file.id}(?![0-9])`)
+        const virtualIdPattern = file.virtualId
+          ? new RegExp(`/api/files/${file.virtualId}(?![a-zA-Z0-9_-])`)
+          : null
+        const filenamePattern = new RegExp(file.filename.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
 
-        // Проверяем ссылки через /api/files/[id]
-        const fileIdPattern = new RegExp(`/api/files/${file.id}(?![0-9])`, 'g')
-        if (fileIdPattern.test(article.content)) {
-          found = true
-        }
+        candidates.forEach(article => {
+          const found =
+            fileIdPattern.test(article.content) ||
+            (virtualIdPattern?.test(article.content) ?? false) ||
+            filenamePattern.test(article.content)
 
-        // Проверяем виртуальные ссылки если есть virtualId
-        if (!found && file.virtualId) {
-          const virtualIdPattern = new RegExp(`/api/files/${file.virtualId}(?![a-zA-Z0-9_-])`, 'g')
-          if (virtualIdPattern.test(article.content)) {
-            found = true
+          if (found && !results[file.id].usedIn.some(u => u.id === article.id && u.type === 'content')) {
+            results[file.id].usedIn.push({
+              id: article.id,
+              title: article.title,
+              type: 'content'
+            })
+            results[file.id].isUsed = true
           }
-        }
-
-        // Проверяем прямые ссылки на файл
-        if (!found) {
-          const filenamePattern = new RegExp(file.filename.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
-          if (filenamePattern.test(article.content)) {
-            found = true
-          }
-        }
-
-        if (found && !results[file.id].usedIn.some(u => u.id === article.id && u.type === 'content')) {
-          results[file.id].usedIn.push({
-            id: article.id,
-            title: article.title,
-            type: 'content'
-          })
-          results[file.id].isUsed = true
-        }
+        })
       })
-    })
-    
+    )
+
     return results
   } catch (error) {
     console.error('Error checking multiple files usage:', error)

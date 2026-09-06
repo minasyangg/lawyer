@@ -1,11 +1,13 @@
 "use server"
 
-import { PrismaClient } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { prisma } from '@/lib/prisma'
 import { resolveVirtualUrlsInContent } from '@/lib/virtualPaths'
-import { canEditArticle } from '@/lib/auth/permissions'
+import { canEditArticle, canDeleteArticle } from '@/lib/auth/permissions'
 import { getCurrentUser } from '@/lib/auth/session'
+import { generateSlug } from '@/lib/utils/slug-utils'
+import { sanitizeArticleHtml } from '@/lib/utils/sanitize-html'
 
 interface ActionError {
   errors: { [key: string]: string[] } | { general: string[] }
@@ -15,101 +17,39 @@ interface ActionSuccess {
   success: boolean
 }
 
-const prisma = new PrismaClient()
+// Вспомогательная функция для обработки файлов статьи.
+// Связи создаются батчем через createMany (skipDuplicates), а флаги isPublic/isProtected
+// обновляются одним запросом updateMany — вместо последовательного цикла из 3 запросов на файл.
+async function processArticleFiles(articleId: number, fileIds: number[]): Promise<void> {
+  if (!fileIds || fileIds.length === 0) return
 
-// Вспомогательная функция для получения текущего пользователя из сессии
+  const existingFiles = await prisma.file.findMany({
+    where: { id: { in: fileIds } },
+    select: { id: true }
+  })
+  const existingFileIds = existingFiles.map(f => f.id)
 
-// Вспомогательная функция для обработки файлов статьи
-async function processArticleFiles(articleId: number, fileIds: number[]) {
-  console.log(`🔄 [processArticleFiles] START - Article ID: ${articleId}, File IDs:`, fileIds)
-  
-  if (!fileIds || fileIds.length === 0) {
-    console.log('❌ [processArticleFiles] No fileIds provided, skipping file processing')
-    return
-  }
+  if (existingFileIds.length === 0) return
 
-  // Создаем связи между статьей и файлами
-  for (const fileId of fileIds) {
-    console.log(`[Article Files] Processing file ID: ${fileId}`)
-    
-    // Проверяем существование файла
-    const file = await prisma.file.findUnique({
-      where: { id: fileId },
-      select: { id: true, originalName: true, isPublic: true, isProtected: true }
-    })
+  await prisma.articleFile.createMany({
+    data: existingFileIds.map(fileId => ({ articleId, fileId })),
+    skipDuplicates: true
+  })
 
-    if (file) {
-      console.log(`[Article Files] Found file: ${file.originalName} (ID: ${file.id})`)
-      console.log(`[Article Files] Current flags - isPublic: ${file.isPublic}, isProtected: ${file.isProtected}`)
-      
-      // Проверяем, существует ли уже связь
-      const existingLink = await prisma.articleFile.findUnique({
-        where: {
-          articleId_fileId: {
-            articleId,
-            fileId
-          }
-        }
-      })
-
-      if (!existingLink) {
-        // Создаем связь
-        await prisma.articleFile.create({
-          data: {
-            articleId,
-            fileId
-          }
-        })
-        console.log(`[Article Files] Created ArticleFile link for file ${fileId}`)
-      } else {
-        console.log(`[Article Files] ArticleFile link already exists for file ${fileId}`)
-      }
-
-      // Маркируем файл как защищенный и публичный
-      console.log(`[Article Files] BEFORE UPDATE - File ${fileId}: isPublic=${file.isPublic}, isProtected=${file.isProtected}`)
-      
-      const updatedFile = await prisma.file.update({
-        where: { id: fileId },
-        data: {
-          isProtected: true,
-          isPublic: true
-        }
-      })
-
-      console.log(`[Article Files] AFTER UPDATE - File ${fileId} (${file.originalName}):`)
-      console.log(`[Article Files] - isPublic: ${file.isPublic} -> ${updatedFile.isPublic}`)
-      console.log(`[Article Files] - isProtected: ${file.isProtected} -> ${updatedFile.isProtected}`)
-      console.log(`[Article Files] Successfully updated file ${fileId} flags!`)
-    } else {
-      console.log(`❌ [Article Files] File with ID ${fileId} not found in database`)
-    }
-  }
-  
-  console.log(`✅ [processArticleFiles] COMPLETED - Processed ${fileIds.length} files for article ${articleId}`)
+  await prisma.file.updateMany({
+    where: { id: { in: existingFileIds } },
+    data: { isProtected: true, isPublic: true }
+  })
 }
 
 // Вспомогательная функция для парсинга fileIds из FormData
 function parseFileIds(data: FormData): number[] {
-  // Получаем все значения для ключа 'fileIds'
   const fileIdValues = data.getAll('fileIds')
-  console.log('[Article Files] Raw fileIds from FormData:', fileIdValues)
-  
-  if (!fileIdValues || fileIdValues.length === 0) {
-    console.log('[Article Files] No fileIds found in FormData')
-    return []
-  }
+  if (!fileIdValues || fileIdValues.length === 0) return []
 
-  try {
-    // Преобразуем все значения в числа и фильтруем валидные
-    const validIds = fileIdValues
-      .map(id => parseInt(id as string, 10))
-      .filter(id => !isNaN(id))
-    console.log('[Article Files] Parsed fileIds:', validIds)
-    return validIds
-  } catch (error) {
-    console.error('[Article Files] Error parsing fileIds:', error)
-    return []
-  }
+  return fileIdValues
+    .map(id => parseInt(id as string, 10))
+    .filter(id => !isNaN(id))
 }
 
 const ArticleSchema = z.object({
@@ -161,13 +101,14 @@ export type Article = {
   }[]
 }
 
+// Для листинга статей (таблицы в админке/редакторе) HTML-контент не используется —
+// не запрашиваем его у БД, чтобы не гонять по сети потенциально большие поля.
 export async function getArticles(): Promise<Article[]> {
   try {
     const articles = await prisma.article.findMany({
       select: {
         id: true,
         title: true,
-        content: true,
         excerpt: true,
         slug: true,
         published: true,
@@ -208,9 +149,10 @@ export async function getArticles(): Promise<Article[]> {
       },
       orderBy: { createdAt: 'desc' }
     })
-    
+
     return articles.map(article => ({
       ...article,
+      content: '', // контент намеренно не запрашивается для листинга — используйте getArticleById для полной статьи
       tags: article.tags.map(at => at.tag),
       files: article.files.map(af => ({
         id: af.file.id,
@@ -454,26 +396,12 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
   }
 }
 
-function generateSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .trim()
-}
-
 export async function createArticle(data: FormData): Promise<ActionSuccess | ActionError> {
-  console.log('🚀 [CreateArticle] START - FormData keys:', Array.from(data.keys()))
-  console.log('🚀 [CreateArticle] FormData values:', Object.fromEntries(data.entries()))
-  
   const title = data.get('title') as string
-  console.log('🚀 [CreateArticle] Title:', title)
-  
+
   // Получаем текущего пользователя из сессии
   const currentUser = await getCurrentUser()
-  console.log('🚀 [CreateArticle] Current user:', currentUser)
-  
+
   if (!currentUser) {
     return {
       errors: { general: ['Authentication required'] }
@@ -482,28 +410,18 @@ export async function createArticle(data: FormData): Promise<ActionSuccess | Act
 
   // Используем ID текущего авторизованного пользователя как автора статьи
   const authorId = currentUser.id.toString()
-  
-  console.log('🚀 [CreateArticle] Author ID:', authorId)
-  
-  const validationData = {
+
+  const rawContent = (data.get('content') as string) || ''
+
+  const validatedFields = ArticleSchema.safeParse({
     title,
-    content: data.get('content'),
+    content: rawContent,
     excerpt: data.get('excerpt') || undefined, // Преобразуем null в undefined
     slug: data.get('slug') || generateSlug(title),
     published: data.get('published') === 'on',
     categoryId: data.get('categoryId') || undefined,
     authorId: authorId,
-  }
-  
-  console.log('🚀 [CreateArticle] Data for validation:', validationData)
-  
-  const validatedFields = ArticleSchema.safeParse(validationData)
-
-  console.log('🚀 [CreateArticle] Validation result:', validatedFields.success)
-  if (!validatedFields.success) {
-    console.log('❌ [CreateArticle] Validation errors:', validatedFields.error.flatten().fieldErrors)
-    console.log('❌ [CreateArticle] Validation issues:', validatedFields.error.issues)
-  }
+  })
 
   if (!validatedFields.success) {
     return {
@@ -512,12 +430,13 @@ export async function createArticle(data: FormData): Promise<ActionSuccess | Act
   }
 
   try {
-    const { categoryId, authorId: validatedAuthorId, ...articleData } = validatedFields.data
-    
-    // Создаем статью
+    const { categoryId, authorId: validatedAuthorId, content, ...articleData } = validatedFields.data
+
+    // Создаем статью — HTML-контент санитизируется перед сохранением (защита от stored XSS)
     const article = await prisma.article.create({
       data: {
         ...articleData,
+        content: sanitizeArticleHtml(content),
         categoryId: categoryId ? parseInt(categoryId) : null,
         authorId: parseInt(validatedAuthorId),
         published: validatedFields.data.published || false,
@@ -526,15 +445,10 @@ export async function createArticle(data: FormData): Promise<ActionSuccess | Act
 
     // Обрабатываем связанные файлы
     const fileIds = parseFileIds(data)
-    console.log(`[Create Article] Parsed fileIds for article ${article.id}:`, fileIds)
-    
     if (fileIds.length > 0) {
-      console.log(`[Create Article] Processing ${fileIds.length} files for article ${article.id}`)
       await processArticleFiles(article.id, fileIds)
-    } else {
-      console.log(`[Create Article] No files to process for article ${article.id}`)
     }
-    
+
     // Revalidate соответствующие пути в зависимости от роли
     if (currentUser.userRole === 'ADMIN') {
       revalidatePath('/admin/articles')
@@ -544,8 +458,7 @@ export async function createArticle(data: FormData): Promise<ActionSuccess | Act
     revalidatePath('/publications')
     return { success: true }
   } catch (error) {
-    console.error('❌ [CreateArticle] Error creating article:', error)
-    console.error('❌ [CreateArticle] Error stack:', error instanceof Error ? error.stack : 'Unknown error')
+    console.error('Error creating article:', error)
     return {
       errors: { general: ['Failed to create article'] }
     }
@@ -577,7 +490,7 @@ export async function updateArticle(id: number, data: FormData): Promise<ActionS
   }
 
   // EDITOR может редактировать только свои статьи, ADMIN может редактировать любые
-  if (currentUser.userRole === 'EDITOR' && existingArticle.authorId !== currentUser.id) {
+  if (!canEditArticle(currentUser.userRole, currentUser.id, existingArticle.authorId)) {
     return {
       errors: { general: ['You can only edit your own articles'] }
     }
@@ -605,31 +518,32 @@ export async function updateArticle(id: number, data: FormData): Promise<ActionS
   }
 
   try {
-    const { categoryId, authorId: validatedAuthorId, ...articleData } = validatedFields.data
-    
+    const { categoryId, authorId: validatedAuthorId, content, ...articleData } = validatedFields.data
+
     // Получаем данные тегов
     const tagIds = data.getAll('tagIds').map(id => parseInt(id as string)).filter(id => !isNaN(id))
-    
+
     // Обрабатываем файлы
     const newFileIds = parseFileIds(data)
-    
+
     // Получаем текущие файлы статьи
     const currentFiles = await prisma.articleFile.findMany({
       where: { articleId: id },
-      include: { file: true }
+      select: { fileId: true }
     })
-    
+
     const currentFileIds = currentFiles.map(af => af.fileId)
-    
+
     // Находим файлы для удаления и добавления
     const filesToRemove = currentFileIds.filter(id => !newFileIds.includes(id))
     const filesToAdd = newFileIds.filter(id => !currentFileIds.includes(id))
-    
-    // Обновляем статью
+
+    // Обновляем статью — HTML-контент санитизируется перед сохранением (защита от stored XSS)
     await prisma.article.update({
       where: { id },
       data: {
         ...articleData,
+        content: sanitizeArticleHtml(content),
         categoryId: categoryId ? parseInt(categoryId) : null,
         authorId: parseInt(validatedAuthorId),
         published: validatedFields.data.published || false,
@@ -642,30 +556,25 @@ export async function updateArticle(id: number, data: FormData): Promise<ActionS
       }
     })
 
-    // Обрабатываем удаление файлов
-    for (const fileId of filesToRemove) {
-      // Удаляем связь
-      await prisma.articleFile.delete({
-        where: { 
-          articleId_fileId: { articleId: id, fileId } 
-        }
+    // Обрабатываем удаление файлов (батчем вместо цикла)
+    if (filesToRemove.length > 0) {
+      await prisma.articleFile.deleteMany({
+        where: { articleId: id, fileId: { in: filesToRemove } }
       })
 
-      // Проверяем, используется ли файл в других статьях
-      const otherArticlesCount = await prisma.articleFile.count({
-        where: { fileId }
+      // Файлы, которые больше не используются ни в одной статье, снимаем с защиты
+      const stillUsed = await prisma.articleFile.findMany({
+        where: { fileId: { in: filesToRemove } },
+        select: { fileId: true }
       })
+      const stillUsedIds = new Set(stillUsed.map(af => af.fileId))
+      const orphanedFileIds = filesToRemove.filter(fileId => !stillUsedIds.has(fileId))
 
-      if (otherArticlesCount === 0) {
-        // Файл больше не используется, снимаем защиту
-        await prisma.file.update({
-          where: { id: fileId },
-          data: {
-            isProtected: false,
-            isPublic: false
-          }
+      if (orphanedFileIds.length > 0) {
+        await prisma.file.updateMany({
+          where: { id: { in: orphanedFileIds } },
+          data: { isProtected: false, isPublic: false }
         })
-        console.log(`[Article Update] File ${fileId} no longer protected - removed from all articles`)
       }
     }
 
@@ -673,7 +582,7 @@ export async function updateArticle(id: number, data: FormData): Promise<ActionS
     if (filesToAdd.length > 0) {
       await processArticleFiles(id, filesToAdd)
     }
-    
+
     // Revalidate соответствующие пути в зависимости от роли
     if (currentUser.userRole === 'ADMIN') {
       revalidatePath('/admin/articles')
@@ -720,47 +629,37 @@ export async function deleteArticle(id: number): Promise<ActionSuccess | ActionE
   }
 
   // EDITOR может удалять только свои статьи, ADMIN может удалять любые
-  if (currentUser.userRole === 'EDITOR' && existingArticle.authorId !== currentUser.id) {
+  if (!canDeleteArticle(currentUser.userRole, currentUser.id, existingArticle.authorId)) {
     return {
       errors: { general: ['You can only delete your own articles'] }
     }
   }
 
   try {
-    // Обрабатываем связанные файлы перед удалением статьи
-    const articleFiles = existingArticle.files
+    const articleFileIds = existingArticle.files.map(af => af.file.id)
 
     // Удаляем статью (связи в ArticleFile удалятся автоматически через CASCADE)
     await prisma.article.delete({
       where: { id }
     })
 
-    // Обрабатываем файлы, которые были связаны со статьей
-    for (const articleFile of articleFiles) {
-      const file = articleFile.file
-      
-      // Проверяем, используется ли файл в других статьях
-      const otherArticlesCount = await prisma.articleFile.count({
-        where: { fileId: file.id }
+    // Файлы, которые больше не используются ни в одной статье, снимаем с защиты
+    if (articleFileIds.length > 0) {
+      const stillUsed = await prisma.articleFile.findMany({
+        where: { fileId: { in: articleFileIds } },
+        select: { fileId: true }
       })
+      const stillUsedIds = new Set(stillUsed.map(af => af.fileId))
+      const orphanedFileIds = articleFileIds.filter(fileId => !stillUsedIds.has(fileId))
 
-      if (otherArticlesCount === 0) {
-        // Файл больше не используется ни в одной статье
-        // Снимаем флаги isProtected и isPublic
-        await prisma.file.update({
-          where: { id: file.id },
-          data: {
-            isProtected: false,
-            isPublic: false
-          }
+      if (orphanedFileIds.length > 0) {
+        await prisma.file.updateMany({
+          where: { id: { in: orphanedFileIds } },
+          data: { isProtected: false, isPublic: false }
         })
-        
-        console.log(`[Article Delete] File ${file.id} (${file.originalName}) is no longer protected - not used in any articles`)
-      } else {
-        console.log(`[Article Delete] File ${file.id} (${file.originalName}) still used in ${otherArticlesCount} other articles`)
       }
     }
-    
+
     // Revalidate соответствующие пути в зависимости от роли
     if (currentUser.userRole === 'ADMIN') {
       revalidatePath('/admin/articles')
@@ -816,56 +715,6 @@ export async function toggleArticlePublished(id: number): Promise<ActionSuccess 
     console.error('Error toggling article published status:', error)
     return {
       errors: { general: ['Failed to update article'] }
-    }
-  }
-}
-
-export async function createArticleForEditor(data: FormData, authorId: number): Promise<ActionSuccess | ActionError> {
-  const title = data.get('title') as string
-  
-  const EditorArticleSchema = z.object({
-    title: z.string().min(2, 'Title must be at least 2 characters'),
-    content: z.string().min(10, 'Content must be at least 10 characters'),
-    excerpt: z.string().optional(),
-    slug: z.string().min(2, 'Slug must be at least 2 characters'),
-    published: z.boolean().optional(),
-    categoryId: z.string().optional(),
-  })
-  
-  const validatedFields = EditorArticleSchema.safeParse({
-    title,
-    content: data.get('content'),
-    excerpt: data.get('excerpt'),
-    slug: data.get('slug') || generateSlug(title),
-    published: data.get('published') === 'on',
-    categoryId: data.get('categoryId') || undefined,
-  })
-
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-    }
-  }
-
-  try {
-    const { categoryId, ...articleData } = validatedFields.data
-    
-    await prisma.article.create({
-      data: {
-        ...articleData,
-        categoryId: categoryId ? parseInt(categoryId) : null,
-        authorId: authorId, // Автоматически устанавливаем из сессии
-        published: validatedFields.data.published || false,
-      }
-    })
-    
-    revalidatePath('/editor/articles')
-    revalidatePath('/publications')
-    return { success: true }
-  } catch (error) {
-    console.error('Error creating article:', error)
-    return {
-      errors: { general: ['Failed to create article'] }
     }
   }
 }
