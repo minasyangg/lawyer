@@ -3,9 +3,7 @@ import Header from '@/components/ui/Header'
 import Footer from '@/components/ui/Footer'
 import { ArticleList } from '@/components/ui/ArticleList'
 import { getPublishedArticlesPaginated } from '@/lib/actions/article-actions'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 async function getServices() {
   return await prisma.service.findMany({
