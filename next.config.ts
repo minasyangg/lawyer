@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // standalone-сборка нужна для VPS-деплоя через GitHub Actions: трассирует только
+  // реально используемые зависимости в .next/standalone (server.js без next start),
+  // вместо копирования всего node_modules (1.2GB) на сервер при каждом деплое.
+  // На Vercel эта опция безвредна — их пайплайн использует собственную упаковку.
+  output: 'standalone',
+
   // Настройки для загрузки файлов
   experimental: {
     serverActions: {

@@ -1,0 +1,101 @@
+name: Deploy to VPS
+
+# Сборка полностью происходит здесь (в Actions), на VPS уходит уже готовый
+# standalone-артефакт — сервер ничего не собирает, только запускает node server.js.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch: {}
+
+env:
+  DEPLOY_PATH: /var/www/pfc.moscow
+  RELEASES_TO_KEEP: 3
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Только генерация клиента — схема и миграции БД уже актуальны на момент
+      # push в master (накатываются отдельно через Vercel-деплой dev/master).
+      # VPS-workflow код БД не трогает вообще, только собирает и выкладывает.
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+      - name: Build (standalone)
+        run: node --max-old-space-size=4096 node_modules/next/dist/bin/next build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          NEXTAUTH_URL: https://pfc.moscow
+
+      # .next/standalone содержит только трассированные зависимости (не весь
+      # node_modules), но не включает .next/static и public — Next.js требует
+      # копировать их рядом вручную. Собираем всё в один каталог под релиз.
+      - name: Assemble release artifact
+        run: |
+          mkdir -p release/.next
+          cp -r .next/standalone/. release/
+          cp -r .next/static release/.next/static
+          cp -r public release/public
+
+      - name: Create release archive
+        run: tar -czf release.tar.gz -C release .
+
+      - name: Upload artifact to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_PORT }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: release.tar.gz
+          target: /tmp/
+          overwrite: true
+
+      - name: Release on server (atomic symlink switch)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_PORT }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -euo pipefail
+
+            DEPLOY_PATH="/var/www/pfc.moscow"
+            RELEASE_NAME="$(date +%Y%m%d%H%M%S)"
+            RELEASE_DIR="$DEPLOY_PATH/releases/$RELEASE_NAME"
+
+            mkdir -p "$RELEASE_DIR"
+            tar -xzf /tmp/release.tar.gz -C "$RELEASE_DIR"
+            rm -f /tmp/release.tar.gz
+
+            # .env.production живёт вне релизов, в shared/ — симлинкуем в новый релиз
+            ln -sf "$DEPLOY_PATH/shared/.env.production" "$RELEASE_DIR/.env.production"
+
+            # Атомарное переключение: симлинк current -> новый релиз
+            ln -sfn "$RELEASE_DIR" "$DEPLOY_PATH/current"
+
+            sudo systemctl restart pfc-app.service
+            sleep 2
+            sudo systemctl is-active pfc-app.service
+
+            # Подчистка старых релизов, оставляем последние N
+            cd "$DEPLOY_PATH/releases"
+            ls -1t | tail -n +$(( ${{ env.RELEASES_TO_KEEP }} + 1 )) | xargs -r rm -rf
