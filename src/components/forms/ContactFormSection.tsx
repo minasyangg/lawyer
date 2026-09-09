@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import Image from 'next/image'
+import { submitContactRequest } from '@/lib/actions/contact-actions'
 
 export default function ContactFormSection() {
   const [formData, setFormData] = useState({
@@ -12,11 +13,45 @@ export default function ContactFormSection() {
     question: '',
     agreedToPolicy: false
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Логика отправки формы
-    console.log('Form submitted:', formData)
+    setIsSubmitting(true)
+    setSubmitError(null)
+
+    try {
+      const payload = new FormData()
+      payload.set('firstName', formData.firstName)
+      payload.set('lastName', formData.lastName)
+      payload.set('ogrn', formData.ogrn)
+      payload.set('email', formData.email)
+      payload.set('message', formData.question)
+
+      const result = await submitContactRequest(payload)
+
+      if ('success' in result) {
+        setSubmitSuccess(true)
+        setFormData({
+          firstName: '',
+          lastName: '',
+          ogrn: '',
+          email: '',
+          question: '',
+          agreedToPolicy: false
+        })
+      } else {
+        const firstError = Object.values(result.errors)[0]?.[0]
+        setSubmitError(firstError || 'Не удалось отправить заявку. Попробуйте ещё раз позже.')
+      }
+    } catch (error) {
+      console.error('Submission error:', error)
+      setSubmitError('Не удалось отправить заявку. Попробуйте ещё раз позже.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -180,9 +215,9 @@ export default function ContactFormSection() {
               />
               <label htmlFor="agreedToPolicy" className="text-[14px] text-[#828282] leading-[1.5]">
                 Я согласен с{' '}
-                <a 
-                  href="/docs/confidence.txt" 
-                  target="_blank" 
+                <a
+                  href="/docs/confidence.txt"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
@@ -191,13 +226,25 @@ export default function ContactFormSection() {
               </label>
             </div>
 
+            {submitSuccess && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-700">
+                Спасибо за обращение! Мы свяжемся с вами в ближайшее время.
+              </div>
+            )}
+
+            {submitError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
+                {submitError}
+              </div>
+            )}
+
             {/* Кнопка отправки */}
             <button
               type="submit"
-              disabled={!formData.agreedToPolicy}
+              disabled={!formData.agreedToPolicy || isSubmitting}
               className="w-full px-6 py-4 bg-[#060606] text-white text-[16px] font-bold leading-[1.5] rounded-lg hover:bg-[#1a1a1a] transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed md:mb-8 lg:mb-10"
             >
-              Отправить обращение
+              {isSubmitting ? 'Отправка...' : 'Отправить обращение'}
             </button>
           </form>
         </div>

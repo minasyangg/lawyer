@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from "react";
+import { submitContactRequest } from '@/lib/actions/contact-actions'
 
 export default function ContactFormModal({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState({
@@ -9,15 +10,45 @@ export default function ContactFormModal({ onClose }: { onClose: () => void }) {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Здесь можно добавить отправку данных на сервер
-    setSubmitted(true);
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    // Поле "Имя" в модалке — одно на ФИО целиком, серверная форма ждёт
+    // firstName/lastName раздельно: делим по первому пробелу, а если
+    // пробела нет — фамилию оставляем пустой (в БД допустима).
+    const [firstName, ...rest] = form.name.trim().split(/\s+/);
+    const lastName = rest.join(' ');
+
+    try {
+      const payload = new FormData();
+      payload.set('firstName', firstName || '');
+      payload.set('lastName', lastName || '');
+      payload.set('email', form.email);
+      payload.set('message', form.message);
+
+      const result = await submitContactRequest(payload);
+
+      if ('success' in result) {
+        setSubmitted(true);
+      } else {
+        const firstError = Object.values(result.errors)[0]?.[0];
+        setSubmitError(firstError || 'Не удалось отправить заявку. Попробуйте ещё раз позже.');
+      }
+    } catch (error) {
+      console.error('Submission error:', error);
+      setSubmitError('Не удалось отправить заявку. Попробуйте ещё раз позже.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -74,11 +105,15 @@ export default function ContactFormModal({ onClose }: { onClose: () => void }) {
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
             </div>
+            {submitError && (
+              <p className="text-sm text-red-600">{submitError}</p>
+            )}
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow transition-colors duration-200"
+              disabled={isSubmitting}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Отправить
+              {isSubmitting ? 'Отправка...' : 'Отправить'}
             </button>
           </form>
         )}

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Users, LayoutDashboard, Settings, FileText, FolderOpen, Briefcase } from "lucide-react"
+import { Users, LayoutDashboard, Settings, FileText, FolderOpen, Briefcase, Mail } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 // Иконки резолвятся по имени внутри клиентского компонента, а не передаются
@@ -15,6 +15,7 @@ const ICONS: Record<string, LucideIcon> = {
   services: Briefcase,
   articles: FileText,
   files: FolderOpen,
+  contacts: Mail,
   settings: Settings,
 }
 
@@ -22,6 +23,7 @@ interface AdminNavLinkProps {
   href: string
   icon: keyof typeof ICONS
   children: React.ReactNode
+  badge?: number
 }
 
 /**
@@ -29,7 +31,7 @@ interface AdminNavLinkProps {
  * "/admin" считается активным только на точном совпадении (иначе он
  * подсвечивался бы всегда, будучи префиксом всех остальных путей).
  */
-export function AdminNavLink({ href, icon, children }: AdminNavLinkProps) {
+export function AdminNavLink({ href, icon, children, badge }: AdminNavLinkProps) {
   const pathname = usePathname()
   const isActive = href === '/admin' ? pathname === '/admin' : pathname.startsWith(href)
   const Icon = ICONS[icon]
@@ -45,7 +47,12 @@ export function AdminNavLink({ href, icon, children }: AdminNavLinkProps) {
       }`}
     >
       <Icon className="w-5 h-5 mr-3" />
-      {children}
+      <span className="flex-1">{children}</span>
+      {!!badge && badge > 0 && (
+        <span className="ml-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-600 text-white text-xs font-semibold">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </Link>
   )
 }

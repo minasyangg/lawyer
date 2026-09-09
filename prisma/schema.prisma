@@ -11,6 +11,29 @@ model SiteSettings {
   updatedBy           User?    @relation(fields: [updatedById], references: [id], onDelete: SetNull)
 }
 
+// Заявки с формы обратной связи на сайте.
+// При создании — попытка уведомления в Telegram и по email (best-effort,
+// см. lib/notifications); статус доставки хранится отдельными полями,
+// чтобы в админке было видно, если оповещение не дошло.
+model ContactRequest {
+  id          Int      @id @default(autoincrement())
+  firstName   String
+  lastName    String?
+  position    String?
+  ogrn        String?
+  email       String
+  phone       String?
+  message     String
+
+  isRead      Boolean  @default(false)
+  telegramSent Boolean @default(false)
+
+  createdAt   DateTime @default(now())
+
+  @@index([isRead])
+  @@index([createdAt])
+}
+
 model FileEntity {
   id        Int      @id @default(autoincrement())
   userId    Int

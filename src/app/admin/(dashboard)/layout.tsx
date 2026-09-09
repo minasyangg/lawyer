@@ -2,6 +2,7 @@ import { getCurrentUser } from '@/lib/auth/session'
 import { redirect } from 'next/navigation'
 import LogoutButton from '@/components/admin/LogoutButton'
 import { AdminNavLink } from '@/components/admin/AdminNavLink'
+import { getUnreadContactRequestsCount } from '@/lib/actions/contact-actions'
 
 // Компонент-иконка (функция) нельзя передать как проп из Server Component
 // в Client Component — вместо этого передаём ключ, а AdminNavLink сам
@@ -12,6 +13,7 @@ const navigation = [
   { name: 'Услуги', href: '/admin/services', icon: 'services' as const },
   { name: 'Статьи', href: '/admin/articles', icon: 'articles' as const },
   { name: 'Файлы', href: '/admin/files', icon: 'files' as const },
+  { name: 'Заявки', href: '/admin/contacts', icon: 'contacts' as const },
   { name: 'Настройки', href: '/admin/settings', icon: 'settings' as const },
 ]
 
@@ -28,6 +30,8 @@ export default async function AdminLayout({
     redirect('/login')
   }
 
+  const unreadContactRequests = await getUnreadContactRequestsCount()
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
@@ -38,7 +42,12 @@ export default async function AdminLayout({
 
         <nav className="flex-1 px-4 py-6 space-y-1">
           {navigation.map((item) => (
-            <AdminNavLink key={item.name} href={item.href} icon={item.icon}>
+            <AdminNavLink
+              key={item.name}
+              href={item.href}
+              icon={item.icon}
+              badge={item.icon === 'contacts' ? unreadContactRequests : undefined}
+            >
               {item.name}
             </AdminNavLink>
           ))}

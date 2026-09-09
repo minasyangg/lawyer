@@ -9,7 +9,12 @@ export default function HomeClient() {
 
   return (
     <>
-      <ButtonFeedback onClick={() => setShowForm(true)} />
+      <ButtonFeedback
+        onClick={(event) => {
+          event.preventDefault()
+          setShowForm(true)
+        }}
+      />
       {showForm && <ContactFormModal onClose={() => setShowForm(false)} />}
     </>
   );

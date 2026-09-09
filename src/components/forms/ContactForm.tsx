@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { submitContactRequest } from '@/lib/actions/contact-actions'
 
 interface FormData {
   firstName: string
@@ -36,6 +37,7 @@ export default function ContactForm() {
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   // Email validation
   const validateEmail = (email: string): boolean => {
@@ -112,24 +114,38 @@ export default function ContactForm() {
     }
 
     setIsSubmitting(true)
-    
+    setSubmitError(null)
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      console.log('Form submitted:', formData)
-      
-      setSubmitSuccess(true)
-      setFormData({
-        firstName: '',
-        lastName: '',
-        position: '',
-        ogrn: '',
-        email: '',
-        phone: '',
-        message: ''
-      })
+      const payload = new FormData()
+      payload.set('firstName', formData.firstName)
+      payload.set('lastName', formData.lastName)
+      payload.set('position', formData.position)
+      payload.set('ogrn', formData.ogrn)
+      payload.set('email', formData.email)
+      payload.set('phone', formData.phone)
+      payload.set('message', formData.message)
+
+      const result = await submitContactRequest(payload)
+
+      if ('success' in result) {
+        setSubmitSuccess(true)
+        setFormData({
+          firstName: '',
+          lastName: '',
+          position: '',
+          ogrn: '',
+          email: '',
+          phone: '',
+          message: ''
+        })
+      } else {
+        const firstError = Object.values(result.errors)[0]?.[0]
+        setSubmitError(firstError || 'Не удалось отправить заявку. Попробуйте ещё раз позже.')
+      }
     } catch (error) {
       console.error('Submission error:', error)
+      setSubmitError('Не удалось отправить заявку. Попробуйте ещё раз позже.')
     } finally {
       setIsSubmitting(false)
     }
@@ -289,6 +305,12 @@ export default function ContactForm() {
         />
         {errors.message && <p className="text-sm text-red-600">{errors.message}</p>}
       </div>
+
+      {submitError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
+          {submitError}
+        </div>
+      )}
 
       {/* Submit Button */}
       <button
