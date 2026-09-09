@@ -5,6 +5,13 @@ const nextConfig: NextConfig = {
   // реально используемые зависимости в .next/standalone (server.js без next start),
   // вместо копирования всего node_modules (1.2GB) на сервер при каждом деплое.
   // На Vercel эта опция безвредна — их пайплайн использует собственную упаковку.
+  //
+  // Self-host за Nginx также требует experimental.trustHostHeader=true, чтобы
+  // Next.js строил абсолютные URL для редиректов (middleware.ts) из Host-заголовка
+  // запроса, а не из своего bind-адреса (иначе редиректы после логина ведут на
+  // localhost вместо pfc.moscow). Задать эту опцию здесь нельзя — Next.js вырезает
+  // её из next.config.ts как нераспознанную; вместо этого workflow деплоя на VPS
+  // патчит готовый .next/standalone/server.js после сборки (см. deploy-vps.yml).
   output: 'standalone',
 
   // Настройки для загрузки файлов

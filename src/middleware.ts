@@ -26,8 +26,15 @@ async function readRole(request: NextRequest): Promise<Role | null> {
   }
 }
 
+// request.nextUrl.clone() (а не new URL(path, request.url)) — официально
+// рекомендованный Next.js способ строить redirect-URL в middleware: он
+// гарантированно наследует origin текущего запроса, тогда как request.url
+// в self-host за reverse-proxy может резолвиться в адрес, на котором слушает
+// сам Node-процесс (см. next-server.js: initURL), а не в реальный домен.
 function redirectToLogin(request: NextRequest, pathname: string) {
-  const url = new URL('/login', request.url)
+  const url = request.nextUrl.clone()
+  url.pathname = '/login'
+  url.search = ''
   url.searchParams.set('next', pathname)
   return NextResponse.redirect(url)
 }
@@ -57,7 +64,10 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/admin')) {
     if (!role) return redirectToLogin(request, pathname)
     if (role === 'EDITOR') {
-      return NextResponse.redirect(new URL('/editor', request.url))
+      const url = request.nextUrl.clone()
+      url.pathname = '/editor'
+      url.search = ''
+      return NextResponse.redirect(url)
     }
     if (role !== 'ADMIN') return redirectToLogin(request, pathname)
   }

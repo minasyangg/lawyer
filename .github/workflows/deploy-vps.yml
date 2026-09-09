@@ -54,6 +54,17 @@ jobs:
           cp -r .next/static release/.next/static
           cp -r public release/public
 
+      # Next.js не даёt включить experimental.trustHostHeader через next.config.ts
+      # (валидатор вырезает нераспознанное поле) — эта опция нужна self-host за
+      # Nginx-прокси, чтобы редиректы (next-auth middleware) строились из реального
+      # Host-заголовка запроса, а не localhost. Патчим сгенерированный server.js
+      # напрямую, тем же значением, что Next.js сам проставил бы себе на Vercel.
+      - name: Patch server.js for reverse-proxy deployment
+        run: |
+          grep -q '"trustHostHeader":false' release/server.js
+          sed -i 's/"trustHostHeader":false/"trustHostHeader":true/' release/server.js
+          grep -q '"trustHostHeader":true' release/server.js
+
       - name: Create release archive
         run: tar -czf release.tar.gz -C release .
 
