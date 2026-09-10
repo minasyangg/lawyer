@@ -1,13 +1,12 @@
 "use server"
 
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { cookies } from 'next/headers'
 import { SESSION_COOKIE } from '@/lib/auth/session'
 
 
-const prisma = new PrismaClient()
 
 const LoginSchema = z.object({
   email: z.string().email('Invalid email address'),

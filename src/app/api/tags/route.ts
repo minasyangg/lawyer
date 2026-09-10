@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth/session'
-const prisma = new PrismaClient()
 
 function generateSlug(name: string): string {
   return name

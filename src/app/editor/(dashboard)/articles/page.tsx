@@ -2,10 +2,9 @@ import { Suspense } from "react"
 import { EditorArticleTable } from "@/components/editor/EditorArticleTable"
 import { getArticles } from "@/lib/actions/article-actions"
 import { getUsers } from "@/lib/actions/user-actions"
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth/session'
 
-const prisma = new PrismaClient()
 
 async function getServices() {
   return await prisma.service.findMany({

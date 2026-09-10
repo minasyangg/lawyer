@@ -1,8 +1,7 @@
 import { Suspense } from "react"
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { CreateArticleForm } from "@/components/admin/CreateArticleForm"
 
-const prisma = new PrismaClient()
 
 async function getServices() {
   return await prisma.service.findMany({

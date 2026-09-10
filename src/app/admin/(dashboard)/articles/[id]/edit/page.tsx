@@ -1,10 +1,9 @@
 import { Suspense } from "react"
 import { getArticleById } from "@/lib/actions/article-actions"
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { EditArticleForm } from "@/components/admin/EditArticleForm"
 import { notFound } from "next/navigation"
 
-const prisma = new PrismaClient()
 
 interface PageProps {
   params: Promise<{ id: string }>

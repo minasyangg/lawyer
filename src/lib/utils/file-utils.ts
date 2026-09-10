@@ -132,29 +132,28 @@ export function getUserUploadPath(userId: number): string {
 export async function getFolderPhysicalPath(folderId: number | null): Promise<string | null> {
   if (!folderId) return null
   
-  const { PrismaClient } = await import('@prisma/client')
-  const prisma = new PrismaClient()
-  
-  try {
-    const pathParts: string[] = []
-    let currentFolderId: number | null = folderId
-    
-    while (currentFolderId) {
-      const folder: { name: string; parentId: number | null } | null = await prisma.folder.findUnique({
-        where: { id: currentFolderId },
-        select: { name: true, parentId: true }
-      })
-      
-      if (!folder) break
-      
-      pathParts.unshift(folder.name)
-      currentFolderId = folder.parentId
-    }
-    
-    return pathParts.length > 0 ? pathParts.join('/') : null
-  } finally {
-    await prisma.$disconnect()
+  // Используется общий singleton (@/lib/prisma), а не свой PrismaClient:
+  // каждый экземпляр клиента открывает собственный пул соединений, и в
+  // долгоживущем процессе (self-host на VPS) такие пулы накапливаются,
+  // исчерпывая лимит соединений БД.
+  const { prisma } = await import('@/lib/prisma')
+
+  const pathParts: string[] = []
+  let currentFolderId: number | null = folderId
+
+  while (currentFolderId) {
+    const folder: { name: string; parentId: number | null } | null = await prisma.folder.findUnique({
+      where: { id: currentFolderId },
+      select: { name: true, parentId: true }
+    })
+
+    if (!folder) break
+
+    pathParts.unshift(folder.name)
+    currentFolderId = folder.parentId
   }
+
+  return pathParts.length > 0 ? pathParts.join('/') : null
 }
 
 export function getPublicFileUrl(filePath: string): string {
