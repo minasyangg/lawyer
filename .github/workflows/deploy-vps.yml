@@ -2,6 +2,16 @@ name: Deploy to VPS
 
 # Сборка полностью происходит здесь (в Actions), на VPS уходит уже готовый
 # standalone-артефакт — сервер ничего не собирает, только запускает node server.js.
+#
+# БД: приложение на VPS работает с локальным PostgreSQL 17 (127.0.0.1:5432,
+# база pfc). Так сделано намеренно — при работе с удалённой БД (Supabase,
+# eu-central-2) канал Москва→Цюрих терял пакеты, транзакции Prisma рвались
+# на середине и зависали в состоянии `idle in transaction`, пул соединений
+# исчерпывался, страницы отваливались по 20-50 секунд.
+# Секреты DATABASE_URL/DIRECT_URL ниже нужны только для `prisma generate`
+# и сборки; рантайм читает /var/www/pfc.moscow/shared/.env.production.
+# Бэкапы локальной БД: systemd-таймер pfc-backup.timer, ежедневно в 04:00,
+# в /var/backups/pfc, хранение 14 дней.
 on:
   push:
     branches: [master]
@@ -45,14 +55,15 @@ jobs:
           NEXTAUTH_URL: https://pfc.moscow
 
       # .next/standalone содержит только трассированные зависимости (не весь
-      # node_modules), но не включает .next/static и public — Next.js требует
-      # копировать их рядом вручную. Собираем всё в один каталог под релиз.
+      # node_modules), но не включает .next/static — Next.js требует копировать
+      # её рядом вручную. public/ в архив НЕ кладём: она весит ~140 МБ и почти
+      # не меняется между сборками, поэтому живёт в shared/ и симлинкуется в
+      # релиз (иначе три хранимых релиза держали бы три копии одних картинок).
       - name: Assemble release artifact
         run: |
           mkdir -p release/.next
           cp -r .next/standalone/. release/
           cp -r .next/static release/.next/static
-          cp -r public release/public
 
       - name: Create release archive
         run: tar -czf release.tar.gz -C release .
@@ -67,6 +78,20 @@ jobs:
           source: release.tar.gz
           target: /tmp/
           overwrite: true
+
+      # public/ синхронизируется отдельно и только по изменениям.
+      # --delete держит shared/public в точном соответствии с репозиторием,
+      # чтобы удалённые из проекта файлы не оставались на сервере навсегда.
+      - name: Sync public/ to shared
+        uses: burnett01/rsync-deployments@7.0.2
+        with:
+          switches: -rlptz --delete
+          path: public/
+          remote_path: /var/www/pfc.moscow/shared/public/
+          remote_host: ${{ secrets.VPS_HOST }}
+          remote_port: ${{ secrets.VPS_PORT }}
+          remote_user: ${{ secrets.VPS_USER }}
+          remote_key: ${{ secrets.VPS_SSH_KEY }}
 
       - name: Release on server (atomic symlink switch)
         uses: appleboy/ssh-action@v1.2.0
@@ -86,8 +111,11 @@ jobs:
             tar -xzf /tmp/release.tar.gz -C "$RELEASE_DIR"
             rm -f /tmp/release.tar.gz
 
-            # .env.production живёт вне релизов, в shared/ — симлинкуем в новый релиз
+            # .env.production и public/ живут вне релизов, в shared/ —
+            # симлинкуем в новый релиз (см. шаги сборки и rsync выше)
             ln -sf "$DEPLOY_PATH/shared/.env.production" "$RELEASE_DIR/.env.production"
+            rm -rf "$RELEASE_DIR/public"
+            ln -sfn "$DEPLOY_PATH/shared/public" "$RELEASE_DIR/public"
 
             # Атомарное переключение: симлинк current -> новый релиз
             ln -sfn "$RELEASE_DIR" "$DEPLOY_PATH/current"
