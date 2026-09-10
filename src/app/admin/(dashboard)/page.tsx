@@ -1,40 +1,9 @@
 import { Suspense } from "react"
 import { Users, FileText, ShieldAlert } from "lucide-react"
 import { UserTable } from "@/components/admin/UserTable"
-import { getUsers } from "@/lib/actions/user-actions"
+import { getUsers, type User } from "@/lib/actions/user-actions"
 import { getArticles } from "@/lib/actions/article-actions"
 import { getSecurityOverview } from "@/lib/actions/settings-actions"
-
-function UserTableSkeleton() {
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div>
-          <div className="h-6 bg-gray-200 rounded w-40 animate-pulse"></div>
-          <div className="h-4 bg-gray-200 rounded w-64 mt-1 animate-pulse"></div>
-        </div>
-        <div className="h-9 bg-gray-200 rounded w-24 animate-pulse"></div>
-      </div>
-
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        <div className="p-4">
-          <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="flex space-x-4">
-                <div className="h-4 bg-gray-200 rounded w-12 animate-pulse"></div>
-                <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
-                <div className="h-4 bg-gray-200 rounded w-48 animate-pulse"></div>
-                <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
-                <div className="h-4 bg-gray-200 rounded w-32 animate-pulse"></div>
-                <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function StatCardSkeleton() {
   return (
@@ -50,12 +19,20 @@ function StatCardSkeleton() {
   )
 }
 
-async function UserTableWrapper() {
-  const users = await getUsers()
+function UserTableWrapper({ users }: { users: User[] }) {
   return <UserTable users={users} />
 }
 
-export default function AdminDashboard() {
+export default async function AdminDashboard() {
+  // getUsers() запрашивается один раз здесь и передаётся вниз пропсами —
+  // раньше UsersStatCard и UserTableWrapper вызывали его независимо (каждый
+  // в своём Suspense boundary), и вместе с getSecurityOverview (5 запросов
+  // внутри Promise.all) один заход на /admin открывал ~9-10 параллельных
+  // Prisma-подключений одновременно. На Supabase pgbouncer с небольшим
+  // connection_limit это упиралось в P2024 (connection pool timeout) уже
+  // при одном пользователе — см. lib/prisma.ts.
+  const users = await getUsers()
+
   return (
     <div className="space-y-8">
       <div>
@@ -66,9 +43,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Suspense fallback={<StatCardSkeleton />}>
-          <UsersStatCard />
-        </Suspense>
+        <UsersStatCard users={users} />
         <Suspense fallback={<StatCardSkeleton />}>
           <ArticlesStatCard />
         </Suspense>
@@ -77,15 +52,12 @@ export default function AdminDashboard() {
         </Suspense>
       </div>
 
-      <Suspense fallback={<UserTableSkeleton />}>
-        <UserTableWrapper />
-      </Suspense>
+      <UserTableWrapper users={users} />
     </div>
   )
 }
 
-async function UsersStatCard() {
-  const users = await getUsers()
+function UsersStatCard({ users }: { users: User[] }) {
   return (
     <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
       <div className="flex items-center">
