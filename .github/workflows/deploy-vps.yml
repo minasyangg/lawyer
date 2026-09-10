@@ -83,7 +83,7 @@ jobs:
       # --delete держит shared/public в точном соответствии с репозиторием,
       # чтобы удалённые из проекта файлы не оставались на сервере навсегда.
       - name: Sync public/ to shared
-        uses: burnett01/rsync-deployments@7.0.2
+        uses: burnett01/rsync-deployments@9.0.1
         with:
           switches: -rlptz --delete
           path: public/
