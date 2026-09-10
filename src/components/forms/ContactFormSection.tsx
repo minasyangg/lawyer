@@ -105,8 +105,43 @@ export default function ContactFormSection() {
         </div>
 
         {/* Правая часть - Форма (60% на desktop, 100% на mobile) */}
-        <div className="w-full md:w-[60%] bg-white flex items-center justify-center p-6 md:p-8 lg:p-10">
-          <form onSubmit={handleSubmit} className="w-full max-w-[512px] flex flex-col gap-[24px] md:gap-[29px] lg:gap-[34px]">
+        <div className="relative w-full md:w-[60%] bg-white flex items-center justify-center p-6 md:p-8 lg:p-10">
+          {/* Подтверждение отправки — оверлеем поверх формы, а не в потоке:
+              вставка блока в разметку сдвигала кнопку вниз (см. UX-правку). */}
+          {submitSuccess && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-sm p-6"
+            >
+              <div className="max-w-[420px] rounded-2xl border border-green-200 bg-white px-6 py-8 text-center shadow-lg">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
+                  <svg className="h-7 w-7 text-green-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h4 className="mb-2 text-[20px] font-semibold text-black">Спасибо за обращение!</h4>
+                <p className="mb-6 text-[15px] leading-[1.5] text-[#4F4F4F]">
+                  Мы свяжемся с вами в ближайшее время.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSubmitSuccess(false)}
+                  className="rounded-lg bg-[#060606] px-6 py-3 text-[15px] font-bold text-white transition-colors duration-300 hover:bg-[#1a1a1a]"
+                >
+                  Отправить ещё одно
+                </button>
+              </div>
+            </div>
+          )}
+
+          <form
+            onSubmit={handleSubmit}
+            aria-hidden={submitSuccess}
+            className={`w-full max-w-[512px] flex flex-col gap-[24px] md:gap-[29px] lg:gap-[34px] transition-all duration-300 ${
+              submitSuccess ? 'pointer-events-none blur-sm select-none' : ''
+            }`}
+          >
             <div className="flex flex-col gap-[20px] md:gap-[23px] lg:gap-[26px]">
               {/* Заголовок */}
               <div className="h-auto md:h-[51px]">
@@ -226,12 +261,8 @@ export default function ContactFormSection() {
               </label>
             </div>
 
-            {submitSuccess && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-700">
-                Спасибо за обращение! Мы свяжемся с вами в ближайшее время.
-              </div>
-            )}
-
+            {/* Успех показывается оверлеем над формой (см. выше). Ошибка остаётся
+                в потоке — рядом с полями, чтобы можно было исправить ввод. */}
             {submitError && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
                 {submitError}
